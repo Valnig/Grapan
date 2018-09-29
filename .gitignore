@@ -1,7 +1,9 @@
 # Build folders
 Build/
-Debug/
-x64/
+build/
+lib_test/Build/
+Library/Build/
+
 
 #Visual Studio stuff
 .vs/
