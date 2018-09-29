@@ -1,5 +1,7 @@
-# Build folder
-build/
+# Build folders
+Build/
+Debug/
+x64/
 
 #Visual Studio stuff
 .vs/
