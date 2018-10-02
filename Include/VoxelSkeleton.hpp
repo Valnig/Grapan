@@ -88,9 +88,9 @@ namespace grapholon {
 			GRint final_y = x + rel_y;
 			GRint final_z = x + rel_z;
 
-			final_x = MAX(0, MIN(final_x, width_ - 1));
-			final_y = MAX(0, MIN(final_y, height_ - 1));
-			final_z = MAX(0, MIN(final_z, slice_ - 1));
+			final_x = MAX(0, MIN(final_x, (GRint)width_ - 1));
+			final_y = MAX(0, MIN(final_y, (GRint)height_ - 1));
+			final_z = MAX(0, MIN(final_z, (GRint)slice_ - 1));
 
 			return voxel_coordinates_to_id(final_x, final_y, final_z);
 		}
