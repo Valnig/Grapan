@@ -1,0 +1,6 @@
+﻿  grapholon.cpp
+c:\users\valentin\desktop\valentin\invasked\grapholon\include\voxelskeleton.hpp(91): warning C4018: '<': signed/unsigned mismatch
+c:\users\valentin\desktop\valentin\invasked\grapholon\include\voxelskeleton.hpp(92): warning C4018: '<': signed/unsigned mismatch
+c:\users\valentin\desktop\valentin\invasked\grapholon\include\voxelskeleton.hpp(93): warning C4018: '<': signed/unsigned mismatch
+  grapholon.vcxproj -> C:\Users\Valentin\Desktop\Valentin\INVASKED\Grapholon\Debug\grapholon.exe
+  grapholon.vcxproj -> C:\Users\Valentin\Desktop\Valentin\INVASKED\Grapholon\Debug\grapholon.pdb (Partial PDB)
