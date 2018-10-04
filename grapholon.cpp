@@ -32,23 +32,60 @@ using namespace std;
 using namespace grapholon;
 
 
+void sand_box() {
+	GRuint w(100), h(100), s(100);
+
+	VoxelSkeleton skeleton(w, h, s);
+
+	skeleton.generate_random_skeleton_like(5000, 15164);
+
+	skeleton.compute_voxel_attributes();
+
+	std::cout << "total number of voxels : " << skeleton.true_voxels_.size() << std::endl;
+
+	//voxel list
+	/*for (GRuint i(0); i< skeleton.true_voxels_.size(); i++){
+	GRuint voxel_id = skeleton.true_voxels_[i];
+	GRuint x, y, z;
+	skeleton.voxel_id_to_coordinates(voxel_id,x,y,z);
+	if (true || skeleton.voxels_[voxel_id].topological_class_ == INTERIOR_POINT) {
+	std::cout << " voxel " << voxel_id << " at : " << x << ", " << y << ", " << z << " : " << skeleton.voxels_[voxel_id].topological_class_ << std::endl;
+	}
+	}*/
+
+	//ids list
+	/*for (GRuint i(0); i < skeleton.true_voxels_.size(); i++) {
+	std::cout << " " << skeleton.true_voxels_[i];
+	}
+	std::cout << endl;
+	*/
+
+	//inside count
+	GRuint inside_count(0);
+	for (GRuint i(0); i < skeleton.true_voxels_.size(); i++) {
+		inside_count += (skeleton.voxels_[skeleton.true_voxels_[i]].topological_class_ == BORDER_POINT);
+	}
+	std::cout << "number of inside points : " << inside_count << std::endl;
+
+}
+
+void BertandStructureTests(){
+
+
+
+}
 
 int main()
 {
-	GRuint w(10), h(10), s(10);
+	
 
-	VoxelSkeleton skeleton(w,h,s);
+	VoxelSkeleton* skeleton = VoxelSkeleton::BertrandStructure();
 
-	for (GRuint i(0); i < w; i++) {
-		cout << " width " << i << " : " << endl;
-		for (GRuint j(0); j < h; j++) {
-			for (GRuint k(0); k < s; k++) {
-				std::cout << "voxel " << i << "," << j << "," << k << " : " << skeleton.voxel(i,j,k).value_<< std::endl;
-			}
-			cout << endl;
-		}
-		cout << endl << endl;
-	}
+	std::cout<<"Bertrand's structure has a critical 2-clique : "
+		<<skeleton->has_critical_2clique(3, 2, 2, 3, 3, 2);
+
+	std::cout << "Bertrand's structure has a critical 2-clique : "
+		<< skeleton->has_critical_2clique(4, 2, 2, 4, 3, 2);
 
 
 	while (true);

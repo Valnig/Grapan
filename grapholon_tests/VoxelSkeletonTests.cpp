@@ -75,5 +75,86 @@ namespace grapholon_tests
 			}
 		}
 
+		TEST_METHOD(adjencyTests) {
+			VoxelSkeleton skeleton(3, 3, 3);
+			for (GRuint i(0); i < 9; i++) {
+				skeleton.set_voxel(i);
+			}
+
+			//checking the 6-neighborhood
+			Assert::IsTrue(skeleton.are_2adjacent(1, 1, 1, 1, 1, 0));
+			Assert::IsTrue(skeleton.are_2adjacent(1, 1, 1, 1, 0, 1));
+			Assert::IsTrue(skeleton.are_2adjacent(1, 1, 1, 0, 1, 1));
+			Assert::IsTrue(skeleton.are_2adjacent(1, 1, 1, 2, 1, 1));
+			Assert::IsTrue(skeleton.are_2adjacent(1, 1, 1, 1, 2, 1));
+			Assert::IsTrue(skeleton.are_2adjacent(1, 1, 1, 1, 1, 2));
+
+			//checking the 18-neighborhood
+			Assert::IsTrue(skeleton.are_1adjacent(1, 1, 1, 1, 0, 0));
+			Assert::IsTrue(skeleton.are_1adjacent(1, 1, 1, 0, 1, 0));
+			Assert::IsTrue(skeleton.are_1adjacent(1, 1, 1, 2, 1, 0));
+			Assert::IsTrue(skeleton.are_1adjacent(1, 1, 1, 1, 2, 0));
+
+			Assert::IsTrue(skeleton.are_1adjacent(1, 1, 1, 0, 0, 1));
+			Assert::IsTrue(skeleton.are_1adjacent(1, 1, 1, 2, 0, 1));
+			Assert::IsTrue(skeleton.are_1adjacent(1, 1, 1, 0, 2, 1));
+			Assert::IsTrue(skeleton.are_1adjacent(1, 1, 1, 2, 2, 1));
+
+			Assert::IsTrue(skeleton.are_1adjacent(1, 1, 1, 1, 0, 2));
+			Assert::IsTrue(skeleton.are_1adjacent(1, 1, 1, 0, 1, 2));
+			Assert::IsTrue(skeleton.are_1adjacent(1, 1, 1, 2, 1, 2));
+			Assert::IsTrue(skeleton.are_1adjacent(1, 1, 1, 1, 2, 2));
+			
+			//checking the 26-neighborhood
+			Assert::IsTrue(skeleton.are_0adjacent(1, 1, 1, 0, 0, 0));
+			Assert::IsTrue(skeleton.are_0adjacent(1, 1, 1, 0, 2, 0));
+			Assert::IsTrue(skeleton.are_0adjacent(1, 1, 1, 2, 0, 0));
+			Assert::IsTrue(skeleton.are_0adjacent(1, 1, 1, 2, 2, 0));
+
+			Assert::IsTrue(skeleton.are_0adjacent(1, 1, 1, 0, 0, 2));
+			Assert::IsTrue(skeleton.are_0adjacent(1, 1, 1, 0, 2, 2));
+			Assert::IsTrue(skeleton.are_0adjacent(1, 1, 1, 2, 0, 2));
+			Assert::IsTrue(skeleton.are_0adjacent(1, 1, 1, 2, 2, 2));
+			
+			//double check :
+			for (GRuint i(0); i < 26; i++) {
+				if (i != 13) {//id of voxel (1,1,1)
+					Assert::IsTrue(skeleton.are_0adjacent(13, i));
+				}
+			}
+		}
+
+		TEST_METHOD(zeroConnectednessTest) {
+			VoxelSkeleton skeleton(5, 5, 5);
+
+			skeleton.set_voxel(0, 0, 0);
+			skeleton.set_voxel(0, 0, 1);
+			skeleton.set_voxel(0, 0, 2);
+			skeleton.set_voxel(0, 0, 3);
+			skeleton.set_voxel(0, 1, 4);
+			skeleton.set_voxel(0, 2, 5);
+
+			Assert::IsTrue(skeleton.is_0connected(skeleton.true_voxels_));
+		}
+
+		TEST_METHOD(zeroNotConnectednessTest) {
+			VoxelSkeleton skeleton(5, 5, 5);
+
+			skeleton.set_voxel(0, 0, 0);
+			skeleton.set_voxel(0, 0, 1);
+			skeleton.set_voxel(0, 0, 2);
+			skeleton.set_voxel(0, 1, 4);
+			skeleton.set_voxel(0, 2, 5);
+
+			Assert::IsFalse(skeleton.is_0connected(skeleton.true_voxels_));
+		}
+
+		/*TEST_METHOD(CriticalCliquesInBertrandStructure)
+		{
+
+			VoxelSkeleton* skeleton = VoxelSkeleton::BertrandStructure();
+
+			Assert::IsTrue(skeleton->has_critical_2clique(2, 1, 1, 2, 2, 1));
+		}*/
 	};
 }
