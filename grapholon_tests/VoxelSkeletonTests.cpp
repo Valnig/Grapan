@@ -149,12 +149,25 @@ namespace grapholon_tests
 			Assert::IsFalse(skeleton.is_0connected(skeleton.true_voxels_));
 		}
 
-		/*TEST_METHOD(CriticalCliquesInBertrandStructure)
+		TEST_METHOD(CriticalCliquesInBertrandStructure)
 		{
-
 			VoxelSkeleton* skeleton = VoxelSkeleton::BertrandStructure();
 
-			Assert::IsTrue(skeleton->has_critical_2clique(2, 1, 1, 2, 2, 1));
-		}*/
+			//critical 2-cliques
+			Assert::IsTrue(skeleton->is_critical_2clique(2, 1, 1, 2, 2, 1));
+			Assert::IsTrue(skeleton->is_critical_2clique(2, 2, 1, 2, 1, 1));
+			Assert::IsTrue(skeleton->is_critical_2clique(3, 1, 1, 3, 2, 1));
+			Assert::IsTrue(skeleton->is_critical_2clique(3, 2, 1, 3, 2, 2));
+
+			//non-critical 2-cliques
+			Assert::IsFalse(skeleton->is_critical_2clique(1, 0, 0, 1, 1, 0));
+			Assert::IsFalse(skeleton->is_critical_2clique(0, 1, 2, 0, 2, 2));
+			Assert::IsFalse(skeleton->is_critical_2clique(0, 2, 2, 1, 2, 2));
+			Assert::IsFalse(skeleton->is_critical_2clique(2, 1, 1, 3, 1, 1));
+
+			delete skeleton;
+		}
+
+		//TODO check symetry {A,B} - {B,A} with random voxel sets and cliques
 	};
 }

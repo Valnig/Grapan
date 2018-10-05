@@ -26,11 +26,16 @@
 #include <sstream>
 #include <algorithm>
 #include <iterator>
+#include <bitset>
 
 #include "GrapholonTypes.hpp"
 #include "common.hpp"
 
 namespace grapholon {
+
+#define NON_EXISTENT_ID (0xffffffff1)
+#define NON_EXISTENT_COORDINATE (0xffffffff)
+#define K2Y_CONFIGURATIONS (64*1024)
 
 	enum VoxelState {
 		visible = 0,
@@ -82,19 +87,41 @@ namespace grapholon {
 		}
 
 		SkeletonVoxel& voxel(GRuint id) {
-			return voxels_[id];
+			if (id < nb_voxels_) {
+				return voxels_[id];
+			}
+			else {
+				return SkeletonVoxel({ false, UNCLASSIFIED });
+			}
 		}
 
 		const SkeletonVoxel& voxel(GRuint id) const {
-			return voxels_[id];
+			if (id < nb_voxels_) {
+				return voxels_[id];
+			}
+			else {
+				return SkeletonVoxel({ false, UNCLASSIFIED });
+			}
 		}
 
 		SkeletonVoxel& voxel(GRuint x, GRuint y, GRuint z) {
-			return voxels_[voxel_coordinates_to_id(x, y, z)];
+			GRuint id(voxel_coordinates_to_id(x, y, z));
+			if (id != NON_EXISTENT_ID) {
+				return voxels_[id];
+			}
+			else {
+				return SkeletonVoxel({ false, UNCLASSIFIED });
+			}
 		}
 
 		const SkeletonVoxel& voxel(GRuint x, GRuint y, GRuint z) const{
-			return voxels_[voxel_coordinates_to_id(x, y, z)];
+			GRuint id(voxel_coordinates_to_id(x, y, z));
+			if (id != NON_EXISTENT_ID) {
+				return voxels_[id];
+			}
+			else {
+				return SkeletonVoxel({ false, UNCLASSIFIED });
+			}
 		}
 
 		const std::vector<GRuint>& true_voxels()const {
@@ -103,6 +130,9 @@ namespace grapholon {
 
 
 		GRuint voxel_coordinates_to_id(GRuint x, GRuint y, GRuint z) const {
+			if (x >= width_ || y >= height_ || z >= slice_) {
+				return NON_EXISTENT_ID;
+			}
 			return x + (y + z * height_) * width_;
 		}
 
@@ -114,14 +144,21 @@ namespace grapholon {
 			GRint final_y = x + rel_y;
 			GRint final_z = x + rel_z;
 
-			final_x = MAX(0, MIN(final_x, (GRint)width_ - 1));
-			final_y = MAX(0, MIN(final_y, (GRint)height_ - 1));
-			final_z = MAX(0, MIN(final_z, (GRint)slice_ - 1));
+			if ((GRuint)final_x >= width_ || (GRuint)final_y >= height_ || (GRuint)final_z >= slice_) {
+				return NON_EXISTENT_ID;
+			}
 
 			return voxel_coordinates_to_id(final_x, final_y, final_z);
 		}
 		
 		void voxel_id_to_coordinates(GRuint id, GRuint& x, GRuint& y, GRuint& z) const {
+			if (id >= nb_voxels_) {
+				x = NON_EXISTENT_COORDINATE;
+				y = NON_EXISTENT_COORDINATE;
+				z = NON_EXISTENT_COORDINATE;
+				return;
+			}
+
 			z = id / (width_ * height_);
 			GRint rem = id % (width_ * height_);
 			y = rem / width_;
@@ -149,25 +186,14 @@ namespace grapholon {
 				true_voxels_.erase(std::remove(true_voxels_.begin(), true_voxels_.end(), id), true_voxels_.end());
 			}
 
-/*
-std::cout << "set voxel : " << id << ". true voxel list is now : " << std::endl;
-for (GRuint i(0); i < true_voxels_.size(); i++) {
-	std::cout << " " << true_voxels_[i];
-}
-std::cout << std::endl;
-*/
-
-return true;
+			return true;
 		}
+
 
 		bool set_voxel(GRuint x, GRuint y, GRuint z, bool value = true) {
 			return set_voxel(voxel_coordinates_to_id(x, y, z), value);
 		}
 
-		bool match_mask(GRuint x, GRuint y, GRuint z, GRuint mask_width, GRuint mask_height, GRuint mask_slice, SkeletonVoxel*** mask) {
-
-			return true;
-		}
 
 
 		//only does interior and border points for now
@@ -249,11 +275,12 @@ return true;
 
 		//NOTE : this is very greedy (O(n^2), n = voxels_ids.size()) but it is not used at runtime so it's fine 
 		bool is_0connected(std::vector<GRuint> voxel_ids) {
-			std::cout << "checking 0-connectdedness of voxels : ";
+			/*std::cout << "checking 0-connectdedness of voxels : ";
 			for (GRuint i(0); i < voxel_ids.size(); i++) {
 				std::cout << " " << voxel_ids[i];
 			}
 			std::cout << std::endl;
+			*/
 
 			std::vector<bool> visited(voxel_ids.size(), false);
 			std::vector<bool> explored(voxel_ids.size(), false);
@@ -270,7 +297,7 @@ return true;
 					if (!visited[i] && are_0adjacent(voxel_ids[last_explored_index],
 						voxel_ids[i])) {
 						visited[i] = true;
-						std::cout << "visited voxel : " << i << std::endl;
+						//std::cout << "visited voxel : " << i << std::endl;
 					}
 				}
 				explored[last_explored_index] = true;
@@ -285,12 +312,12 @@ return true;
 					if (visited[next_explored_index] && !explored[next_explored_index]) {
 						found_unexplored = true;
 						last_explored_index = next_explored_index;
-						std::cout << "found unexplored : " << next_explored_index << std::endl;
+					//	std::cout << "found unexplored : " << next_explored_index << std::endl;
 					}
 					next_explored_index++;
 				}
 
-				std::cout << "last explored index is now : " << last_explored_index << std::endl;
+				//std::cout << "last explored index is now : " << last_explored_index << std::endl;
 
 				//if we reached the end of the array, we check if all voxels have been visited
 				if (!found_unexplored || last_explored_index == explored.size() - 1) {
@@ -307,6 +334,7 @@ return true;
 						result = all_visited;
 					}
 				}
+				/*
 				std::cout << "visited : ";
 				for (GRuint i(0); i < visited.size(); i++) {
 					std::cout << " " << visited[i];
@@ -317,9 +345,10 @@ return true;
 					std::cout << " " << explored[i];
 				}
 				std::cout << std::endl;
+				*/
 			}
 
-			std::cout << " nb voxels : " << voxel_ids.size() << ", iterations : " << iteration_count << std::endl;
+			//std::cout << " nb voxels : " << voxel_ids.size() << ", iterations : " << iteration_count << std::endl;
 
 			return result;
 		}
@@ -328,32 +357,23 @@ return true;
 		/**K_2 mask matchings. the letter corresponds to the axis
 		TODO : check if symmetric (i.e. matches_k2x(x,y,z,x2,y2,z2) = matches_k2x(x2,y2,z2,x,y,z)*/
 
+		/**This is basically a copy of the K2Y mask method... It's pretty ugly and I will try to find a better solution later*/
 		bool matches_K2X_mask(GRuint x, GRuint y, GRuint z, GRuint x2, GRuint y2, GRuint z2) {
-			return false;
-		}
-
-		bool matches_K2Y_mask(GRuint x, GRuint y, GRuint z, GRuint x2, GRuint y2, GRuint z2) {
 
 			//first create the list of voxels in {X0,...,X7, Y0,...,Y7}AND X (at most 16 voxels)
 			std::vector<GRuint> mask_neighborhood_intersection;
-
-			std::cout << "checking clique (" << x << ", " << y << ", " << z<<") - ("<<x2<<", "<<y2<<", "<<z2<<")"<< std::endl;
 
 
 			for (GRuint i(0); i < 3; i++) {
 				for (GRuint j(0); j < 3; j++) {
 					if (!(i == 1 && j == 1)) {
-						std::cout << "checking interesection at coordinates " << x - 1 + i<<", "<< y<<", "<< z - 1 + j << std::endl;
-						if (voxels_[voxel_coordinates_to_id(x - 1 + i, y, z - 1 + j)].value_) {
+						if (voxels_[voxel_coordinates_to_id(x, y - 1 + i, z - 1 + j)].value_) {
 							mask_neighborhood_intersection.push_back(
-								voxel_coordinates_to_id(x - 1 + i, y, z - 1 + j));
-							std::cout << "found X neighbor" << std::endl;
+								voxel_coordinates_to_id(x, y - 1 + i, z - 1 + j));
 						}
-						std::cout << "checking interesection at coordinates " << x2 - 1 + i << ", " << y2 << ", " << z2 - 1 + j << std::endl;
-						if (voxels_[voxel_coordinates_to_id(x2 - 1 + i, y2, z2 - 1 + j)].value_) {
+						if (voxels_[voxel_coordinates_to_id(x2, y2 - 1 + i, z2 - 1 + j)].value_) {
 							mask_neighborhood_intersection.push_back(
-								voxel_coordinates_to_id(x2 - 1 + i, y2, z2 - 1 + j));
-							std::cout << "found Y neighbor" << std::endl;
+								voxel_coordinates_to_id(x2, y2 - 1 + i, z2 - 1 + j));
 						}
 					}
 				}
@@ -365,17 +385,82 @@ return true;
 				return true;
 			}
 
-			std::cout << "neighborhood is non-empty..." << std::endl;
+			//then check if they are 0-connected 
+			//(i.e. if even one voxel of the mask has no 0-neighbor
+			if (!is_0connected(mask_neighborhood_intersection)) {
+				return true;
+			}
+
+			return false;
+			//finally check if for each i in {0,2,4,6}, Xi or Yi is in X
+
+			bool is_in_subset =
+				(voxels_[voxel_coordinates_to_id(x, y + 1, z)].value_ //X0
+					|| voxels_[voxel_coordinates_to_id(x2, y2 + 1, z2)].value_)//Y0
+				&& (voxels_[voxel_coordinates_to_id(x, y, z + 1)].value_ //X2
+					|| voxels_[voxel_coordinates_to_id(x2, y2, z2 + 1)].value_)//Y2
+				&& (voxels_[voxel_coordinates_to_id(x, y - 1, z)].value_ //X2
+					|| voxels_[voxel_coordinates_to_id(x2, y2 - 1, z2)].value_)//Y2
+				&& (voxels_[voxel_coordinates_to_id(x, y, z - 1)].value_ //X2
+					|| voxels_[voxel_coordinates_to_id(x2, y2, z2 - 1)].value_);//Y2
+
+
+			return is_in_subset;
+		}
+
+		bool matches_K2Y_mask(GRuint x, GRuint y, GRuint z, GRuint x2, GRuint y2, GRuint z2) {
+
+			//first create the list of voxels in {X0,...,X7, Y0,...,Y7}AND X (at most 16 voxels)
+			std::vector<GRuint> mask_neighborhood_intersection;
+
+			//std::cout << "checking clique (" << x << ", " << y << ", " << z<<") - ("<<x2<<", "<<y2<<", "<<z2<<")"<< std::endl;
+
+
+			for (GRuint i(0); i < 3; i++) {
+				for (GRuint j(0); j < 3; j++) {
+					if (!(i == 1 && j == 1)) {
+						//std::cout << "checking interesection at coordinates " << x - 1 + i<<", "<< y<<", "<< z - 1 + j << std::endl;
+						GRuint X_neighbor_id = voxel_coordinates_to_id(x - 1 + i, y, z - 1 + j);
+						//std::cout << "X neighbor id : " << X_neighbor_id << std::endl;
+
+						if (X_neighbor_id != NON_EXISTENT_ID && voxels_[X_neighbor_id].value_) {
+							mask_neighborhood_intersection.push_back(X_neighbor_id);
+							//std::cout << "found X neighbor" << std::endl;
+						}
+						//std::cout << "checking interesection at coordinates " << x2 - 1 + i << ", " << y2 << ", " << z2 - 1 + j << std::endl;
+						GRuint Y_neighbor_id = voxel_coordinates_to_id(x2 - 1 + i, y2, z2 - 1 + j);
+					//	std::cout << "Y neighbor id : " << Y_neighbor_id << std::endl;
+
+						if (Y_neighbor_id != NON_EXISTENT_ID && voxels_[Y_neighbor_id].value_) {
+							mask_neighborhood_intersection.push_back(Y_neighbor_id);
+							//std::cout << "found Y neighbor" << std::endl;
+						}
+					}
+				}
+			}
+
+
+			//first check if the set of intersection is empty
+			if (!mask_neighborhood_intersection.size()) {
+				return true;
+			}
+
+			//std::cout << "neighborhood is non-empty..." << std::endl;
 
 			//then check if they are 0-connected 
 			//(i.e. if even one voxel of the mask has no 0-neighbor
 			if (!is_0connected(mask_neighborhood_intersection)) {
 				return true;
 			}
-			std::cout << "neighborhood is 0-connected" << std::endl;
+		//	std::cout << "neighborhood is 0-connected" << std::endl;
 
 			return false;
 			//finally check if for each i in {0,2,4,6}, Xi or Yi is in X
+			/*bool i_th_subset_is_in_neighborhood[4] = { false };
+			for (GRuint i(0); i < mask_neighborhood_intersection.size(); i++) {
+				if()
+			}*/
+
 			bool is_in_subset =
 				(voxels_[voxel_coordinates_to_id(x + 1, y, z)].value_ //X0
 					|| voxels_[voxel_coordinates_to_id(x2 + 1, y2, z2)].value_)//Y0
@@ -387,68 +472,297 @@ return true;
 					|| voxels_[voxel_coordinates_to_id(x2, y2, z2 - 1)].value_);//Y2
 
 
-			if (is_in_subset) {
+			
+			/*if (is_in_subset) {
 				std::cout << "there is a voxel in each Xi or Yi" << std::endl;
 			} else {
 				std::cout << "there is not a voxel in each Xi or Yi" << std::endl;
-
-			}
+			}*/
+			
 
 			return is_in_subset;
 		}
 
+
 		bool matches_K2Z_mask(GRuint x, GRuint y, GRuint z, GRuint x2, GRuint y2, GRuint z2) {
+
+			//first create the list of voxels in {X0,...,X7, Y0,...,Y7}AND X (at most 16 voxels)
+			std::vector<GRuint> mask_neighborhood_intersection;
+
+
+			for (GRuint i(0); i < 3; i++) {
+				for (GRuint j(0); j < 3; j++) {
+					if (!(i == 1 && j == 1)) {
+						if (voxels_[voxel_coordinates_to_id(x - 1 + i, y - 1 + j, z)].value_) {
+							mask_neighborhood_intersection.push_back(
+								voxel_coordinates_to_id(x - 1 + i, y - 1 + j, z ));
+						}
+						if (voxels_[voxel_coordinates_to_id(x2 - 1 + i, y2 - 1 + j, z2)].value_) {
+							mask_neighborhood_intersection.push_back(
+								voxel_coordinates_to_id(x2 - 1 + i, y2 - 1 + j, z2));
+						}
+					}
+				}
+			}
+
+
+			//first check if the set of intersection is empty
+			if (!mask_neighborhood_intersection.size()) {
+				return true;
+			}
+
+			//then check if they are 0-connected 
+			//(i.e. if even one voxel of the mask has no 0-neighbor
+			if (!is_0connected(mask_neighborhood_intersection)) {
+				return true;
+			}
+
 			return false;
+			//finally check if for each i in {0,2,4,6}, Xi or Yi is in X
+
+			bool is_in_subset =
+				(voxels_[voxel_coordinates_to_id(x + 1, y, z)].value_ //X0
+					|| voxels_[voxel_coordinates_to_id(x2 + 1, y2, z2)].value_)//Y0
+				&& (voxels_[voxel_coordinates_to_id(x, y + 1, z)].value_ //X2
+					|| voxels_[voxel_coordinates_to_id(x2, y2 + 1, z2)].value_)//Y2
+				&& (voxels_[voxel_coordinates_to_id(x - 1, y, z)].value_ //X2
+					|| voxels_[voxel_coordinates_to_id(x2 - 1, y2, z2)].value_)//Y2
+				&& (voxels_[voxel_coordinates_to_id(x, y - 1, z)].value_ //X2
+					|| voxels_[voxel_coordinates_to_id(x2, y2 - 1, z2)].value_);//Y2
+
+
+			return is_in_subset;
 		}
 
-		bool has_critical_2clique(GRuint x, GRuint y, GRuint z, GRuint x2, GRuint y2, GRuint z2) {
+
+		bool matches_axis_mask(GRuint x, GRuint y, GRuint z, GRuint x2, GRuint y2, GRuint z2, GRuint axis) {
+
+			if (axis > 3) {
+			std::cerr << "wrong axis to apply K2 mask. Returning false" << std::endl;
+			}
+
+			//first create the list of voxels in {X0,...,X7, Y0,...,Y7}AND X (at most 16 voxels)
+			std::vector<GRuint> mask_neighborhood_intersection;
+
+			//std::cout << "checking clique (" << x << ", " << y << ", " << z<<") - ("<<x2<<", "<<y2<<", "<<z2<<") on axis "<<axis<< std::endl;
+
+			for (GRuint i(0); i < 3; i++) {
+				for (GRuint j(0); j < 3; j++) {
+					if (!(i == 1 && j == 1)) {
+
+						GRuint X_neighbor_id;
+						GRuint Y_neighbor_id;
+
+						switch (axis) {
+						case 0: {
+							X_neighbor_id = voxel_coordinates_to_id(x,  y  - 1 + i, z  - 1 + j);
+							Y_neighbor_id = voxel_coordinates_to_id(x2, y2 - 1 + i, z2 - 1 + j);
+							break;
+						}
+						case 1: {
+							X_neighbor_id = voxel_coordinates_to_id(x  - 1 + i, y,  z  - 1 + j);
+							Y_neighbor_id = voxel_coordinates_to_id(x2 - 1 + i, y2, z2 - 1 + j);
+
+							break;
+						}
+						case 2: {
+							X_neighbor_id = voxel_coordinates_to_id(x  - 1 + i, y  - 1 + j, z);
+							Y_neighbor_id = voxel_coordinates_to_id(x2 - 1 + i, y2 - 1 + j, z2);
+							break;
+						}
+						default: {//the default shouldn't be necessary but you never know...
+							std::cerr << "wrong axis to apply K2 mask. Returning false" << std::endl;
+							return false;
+						}
+						}
+
+						//std::cout << "checking interesection at coordinates " << x - 1 + i << ", " << y << ", " << z - 1 + j << std::endl;
+						//std::cout << "X neighbor id : " << X_neighbor_id << std::endl;
+
+						if (X_neighbor_id != NON_EXISTENT_ID && voxels_[X_neighbor_id].value_) {
+							mask_neighborhood_intersection.push_back(X_neighbor_id);
+							//std::cout << "found X neighbor" << std::endl;
+						}
+
+						//std::cout << "checking interesection at coordinates " << x2 - 1 + i << ", " << y2 << ", " << z2 - 1 + j << std::endl;
+						//std::cout << "Y neighbor id : " << Y_neighbor_id << std::endl;
+
+						if (Y_neighbor_id != NON_EXISTENT_ID && voxels_[Y_neighbor_id].value_) {
+							mask_neighborhood_intersection.push_back(Y_neighbor_id);
+							//std::cout << "found Y neighbor" << std::endl;
+						}
+					}
+				}
+			}
+
+
+			//first check if the set of intersection is empty
+			if (!mask_neighborhood_intersection.size()) {
+				return true;
+			}
+
+			//std::cout << "neighborhood is non-empty..." << std::endl;
+
+			//then check if they are 0-connected 
+			//(i.e. if even one voxel of the mask has no 0-neighbor
+			if (!is_0connected(mask_neighborhood_intersection)) {
+				return true;
+			}
+			//	std::cout << "neighborhood is 0-connected" << std::endl;
+
+			return false;
+			//finally check if for each i in {0,2,4,6}, Xi or Yi is in X
+			/*bool i_th_subset_is_in_neighborhood[4] = { false };
+			for (GRuint i(0); i < mask_neighborhood_intersection.size(); i++) {
+			if()
+			}*/
+
+			GRuint a = axis;//to light the expressions
+
+			bool is_in_subset =
+				(voxels_[voxel_coordinates_to_id(x + (a !=0), y + (a==0), z)].value_ //X0
+					|| voxels_[voxel_coordinates_to_id(x2 + (a != 0), y2 + (a == 0), z2)].value_)//Y0
+				&& (voxels_[voxel_coordinates_to_id(x + (a==2), y, z +  (a+=2))].value_ //X2
+					|| voxels_[voxel_coordinates_to_id(x2 + (a == 2), y2, z2 + (a += 2))].value_)//Y2
+				&& (voxels_[voxel_coordinates_to_id(x - (a != 0), y - (a==0), z)].value_ //X2
+					|| voxels_[voxel_coordinates_to_id(x2 - (a != 0), y2 - (a == 0), z2)].value_)//Y2
+				&& (voxels_[voxel_coordinates_to_id(x - (a==2), y, z - (a!=2))].value_ //X2
+					|| voxels_[voxel_coordinates_to_id(x2 - (a == 2), y2, z2 - (a != 2))].value_);//Y2
+
+
+
+
+			return is_in_subset;
+		}
+
+
+		bool is_critical_2clique(GRuint x, GRuint y, GRuint z, GRuint x2, GRuint y2, GRuint z2) {
 			
 			if (!are_2adjacent(x, y, z, x2, y2, z2)) {
 				return false;
 			}
 
 			if (x != x2) {
-				return matches_K2X_mask(x, y, z, x2, y2, z2);
+				return matches_axis_mask(x, y, z, x2, y2, z2, 0);
 			}
 			else if(y != y2) {
-				return matches_K2Y_mask(x, y, z, x2, y2, z2);
+				return matches_axis_mask(x, y, z, x2, y2, z2, 1);
 			}
 			else if (z != z2) {
-				return matches_K2Z_mask(x, y, z, x2, y2, z2);
+				return matches_axis_mask(x, y, z, x2, y2, z2, 2);
 			}
 			else {
 				std::cerr << " ERROR - 'are_2neighbors' probably failed" << std::endl;
 				exit(EXIT_FAILURE);
 			}
 
-
 			return false;
 		}
+
+		
+
+
+
+		/*MASK PRECOMPUTATIONS */
+
+		/** Precomputes the critical 2-cliques masks
+		Basically, each mask is an integer which represents one of the 65k possible configuration
+		for the neighborhood of a 2-clique. Each possible configuration is tested and then stored
+		as a single bit in a 2^16-bits bitset. This allows to convert any neighborhood into 
+		and integer 'mask' and then check if bitset[mask] is true in O(1).
+		NOTE : around 25k configurations are critical 2-cliques among the 65k possible configs*/
+		static void PrecomputeK2YMasks(std::bitset<K2Y_CONFIGURATIONS>& critical_2_cliques_indices) {
+
+			//std::vector<GRuint> masks;
+
+			for (GRuint mask_value(0); mask_value < K2Y_CONFIGURATIONS; mask_value++) {
+
+				//set up neighborhood skeleton
+				VoxelSkeleton skeleton(10, 10, 10);
+
+				//create bit mask
+				std::bitset<18> bit_mask(mask_value);
+
+				//set center (voxels {A,B})
+				skeleton.set_voxel(1, 0, 1);
+				skeleton.set_voxel(1, 1, 1);
+
+				//set neighborhood according to mask value
+				for (GRuint i(0); i < 3; i++) {
+					for (GRuint j(0); j < 2; j++) {
+						for (GRuint k(0); k < 3; k++) {
+							//std::cout << "checking bit " << i + (j + k * 2) * 3 << std::endl;
+							if (bit_mask[i + (j + k * 2) * 3]) {
+								//std::cout << "bit " << i + (j + k * 2) * 3 << " is true " << std::endl;
+								skeleton.set_voxel(i, j, k);
+							}
+						}
+					}
+				}
+
+				//and check if mask is indeed a critical 2-clique :
+				if (skeleton.is_critical_2clique(1, 0, 1, 1, 1, 1)) {
+
+					//if yes, we set the corresponding bit to 1
+					critical_2_cliques_indices[mask_value] = true;
+
+					/*
+					std::cout << " __________________________" << std::endl;
+					std::cout << " found 2-clique mask : " << std::endl;
+					std::cout << "mask value : " << mask_value << std::endl;
+
+					std::cout << "bit mask : " << std::endl;
+					for (GRuint i(0); i < 18; i++) {
+					std::cout << bit_mask[i];
+					}
+					std::cout << std::endl;
+
+					std::cout << "voxel list : " << std::endl;
+					for (GRuint i(0); i < skeleton.true_voxels_.size(); i++) {
+					GRuint x, y, z;
+					skeleton.voxel_id_to_coordinates(skeleton.true_voxels_[i], x, y, z);
+					std::cout << " " << x << ", " << y << ", " << z << std::endl; ;
+					}
+
+					std::cout << std::endl;
+					*/
+				}
+			}
+
+			/*std::cout << " among " << nb_maks_to_test << " possible configurations, " << masks.size() << " were critical 2-cliques : " << std::endl;
+			std::cout << "masks  : " << std::endl;
+			for (GRuint i(0); i < masks.size(); i++) {
+				std::cout << masks[i] << " ";
+				critical_2_cliques_indices[masks[i]] = true;
+			}
+			std::cout << std::endl;*/
+		}
+
+
+		/**SKELETON GENERATION METHODS (random, vessel-like, Bertrand, etc.)*/
 
 		static VoxelSkeleton* BertrandStructure() {
 			GRuint w(10), h(10), s(10);
 
 			VoxelSkeleton* skeleton = new VoxelSkeleton(w, h, s);
 
+			skeleton->set_voxel(1, 0, 0);
+			skeleton->set_voxel(1, 1, 0);
+			skeleton->set_voxel(4, 1, 0);
 			skeleton->set_voxel(2, 1, 1);
+			skeleton->set_voxel(3, 1, 1);
 			skeleton->set_voxel(2, 2, 1);
-			skeleton->set_voxel(5, 2, 1);
+			skeleton->set_voxel(3, 2, 1);
+			skeleton->set_voxel(0, 1, 2);
+			skeleton->set_voxel(0, 2, 2);
+			skeleton->set_voxel(1, 2, 2);
 			skeleton->set_voxel(3, 2, 2);
-			skeleton->set_voxel(4, 2, 2);
-			skeleton->set_voxel(3, 3, 2);
 			skeleton->set_voxel(4, 3, 2);
-			skeleton->set_voxel(1, 2, 3);
-			skeleton->set_voxel(1, 3, 3);
-			skeleton->set_voxel(2, 3, 3);
-			skeleton->set_voxel(4, 3, 3);
-			skeleton->set_voxel(5, 4, 3);
 
 
 			return skeleton;
 		}
 
-
-		/**RANDOM GENERATION METHODS*/
 		void generate_random(GRuint nb_voxels, GRuint seed = 1234) {
 			srand(seed);
 

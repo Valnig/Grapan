@@ -25,6 +25,7 @@
 
 #include "stdafx.h"
 #include <iostream>
+#include <bitset>
 
 #include "VoxelSkeleton.hpp"
 
@@ -72,21 +73,51 @@ void sand_box() {
 void BertandStructureTests(){
 
 
+	VoxelSkeleton* skeleton = VoxelSkeleton::BertrandStructure();
+	
+	std::cout << "Bertrand's structure has a critical 2-clique at 211-221: "
+		<< skeleton->is_critical_2clique(2, 1, 1, 2, 2, 1) << std::endl;
+	std::cout << "Bertrand's structure has a critical 2-clique at 221-211: "
+		<< skeleton->is_critical_2clique(2, 2, 1, 2, 1, 1) << std::endl;
+
+	
+	std::cout << "Bertrand's structure has a critical 2-clique at 311-321: "
+		<< skeleton->is_critical_2clique(3, 1, 1, 3, 2, 1) << std::endl;
+	std::cout << "Bertrand's structure has a critical 2-clique at 321-311: "
+		<< skeleton->is_critical_2clique(3, 2, 1, 3, 1, 1) << std::endl;
+
+	std::cout << "Bertrand's structure has a critical 2-clique at 321-322: "
+		<< skeleton->is_critical_2clique(3, 2, 1, 3, 2, 2) << std::endl;
+	std::cout << "Bertrand's structure has a critical 2-clique at 322-321: "
+		<< skeleton->is_critical_2clique(3, 2, 2, 3, 2, 1) << std::endl;
+
+	std::cout << "Bertrand's structure has a critical 2-clique at 022-122: "
+		<< skeleton->is_critical_2clique(0, 2, 2, 1, 2, 2)<<std::endl;
+	std::cout << "Bertrand's structure has a critical 2-clique at 122-022: "
+		<< skeleton->is_critical_2clique(1, 2, 2, 0, 2, 2) << std::endl;
+	
+
+	delete skeleton;
 
 }
 
+
+void TableLookupVSOnTheFlyCliqueCheck(){
+	std::bitset<K2Y_CONFIGURATIONS> bitset_masks(0);
+
+	VoxelSkeleton::PrecomputeK2YMasks(bitset_masks);
+	std::cout << std::endl << std::endl << " lookup table : " << std::endl;
+	for (GRuint i(0); i < 100; i++) {
+		std::cout << " " << bitset_masks[i];
+	}
+
+}
+
+
 int main()
 {
-	
 
-	VoxelSkeleton* skeleton = VoxelSkeleton::BertrandStructure();
-
-	std::cout<<"Bertrand's structure has a critical 2-clique : "
-		<<skeleton->has_critical_2clique(3, 2, 2, 3, 3, 2);
-
-	std::cout << "Bertrand's structure has a critical 2-clique : "
-		<< skeleton->has_critical_2clique(4, 2, 2, 4, 3, 2);
-
+	BertandStructureTests();
 
 	while (true);
     return 0;
