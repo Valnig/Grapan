@@ -105,29 +105,16 @@ namespace grapholon {
 		}
 
 		SkeletonVoxel& voxel(GRuint x, GRuint y, GRuint z) {
-			GRuint id(voxel_coordinates_to_id(x, y, z));
-			if (id != NON_EXISTENT_ID) {
-				return voxels_[id];
-			}
-			else {
-				return SkeletonVoxel({ false, UNCLASSIFIED });
-			}
+			return voxel(voxel_coordinates_to_id(x, y, z));
 		}
 
 		const SkeletonVoxel& voxel(GRuint x, GRuint y, GRuint z) const{
-			GRuint id(voxel_coordinates_to_id(x, y, z));
-			if (id != NON_EXISTENT_ID) {
-				return voxels_[id];
-			}
-			else {
-				return SkeletonVoxel({ false, UNCLASSIFIED });
-			}
+			return voxel(voxel_coordinates_to_id(x, y, z));
 		}
 
 		const std::vector<GRuint>& true_voxels()const {
 			return true_voxels_;
 		}
-
 
 		GRuint voxel_coordinates_to_id(GRuint x, GRuint y, GRuint z) const {
 			if (x >= width_ || y >= height_ || z >= slice_) {
@@ -228,6 +215,9 @@ namespace grapholon {
 		}
 
 		bool are_0adjacent(GRuint id, GRuint id2) {
+			if (id >= nb_voxels_ || id2 >= nb_voxels_) {
+				return false;
+			}
 			return id + 1 + width_ + width_ * height_ == id2
 				|| id + 1 + width_ - width_ * height_ == id2
 				|| id + 1 - width_ + width_ * height_ == id2
@@ -240,6 +230,9 @@ namespace grapholon {
 		}
 
 		bool are_1adjacent(GRuint id, GRuint id2) {
+			if (id >= nb_voxels_ || id2 >= nb_voxels_) {
+				return false;
+			}
 			return id + 1 + width_ == id2
 				|| id + 1 - width_ == id2
 				|| id - 1 + width_ == id2
@@ -255,7 +248,11 @@ namespace grapholon {
 				|| are_2adjacent(id, id2);
 		}
 
+
 		bool are_2adjacent(GRuint id, GRuint id2) {
+			if (id >= nb_voxels_ || id2 >= nb_voxels_) {
+				return false;
+			}
 			return id + 1 == id2
 				|| id - 1 == id2
 				|| id + width_ == id2
@@ -263,6 +260,7 @@ namespace grapholon {
 				|| id + width_ * height_ == id2
 				|| id - width_ * height_ == id2;
 		}
+
 		bool are_0adjacent(GRuint x, GRuint y, GRuint z, GRuint x2, GRuint y2, GRuint z2) {
 			return are_0adjacent(voxel_coordinates_to_id(x, y, z), voxel_coordinates_to_id(x2, y2, z2));
 		}
@@ -354,188 +352,10 @@ namespace grapholon {
 		}
 
 
-		/**K_2 mask matchings. the letter corresponds to the axis
+		/**K_2 mask matchings. 
+		\param axis 0:X-axis, 1:Y-axis, 2:Z-axis
 		TODO : check if symmetric (i.e. matches_k2x(x,y,z,x2,y2,z2) = matches_k2x(x2,y2,z2,x,y,z)*/
-
-		/**This is basically a copy of the K2Y mask method... It's pretty ugly and I will try to find a better solution later*/
-		bool matches_K2X_mask(GRuint x, GRuint y, GRuint z, GRuint x2, GRuint y2, GRuint z2) {
-
-			//first create the list of voxels in {X0,...,X7, Y0,...,Y7}AND X (at most 16 voxels)
-			std::vector<GRuint> mask_neighborhood_intersection;
-
-
-			for (GRuint i(0); i < 3; i++) {
-				for (GRuint j(0); j < 3; j++) {
-					if (!(i == 1 && j == 1)) {
-						if (voxels_[voxel_coordinates_to_id(x, y - 1 + i, z - 1 + j)].value_) {
-							mask_neighborhood_intersection.push_back(
-								voxel_coordinates_to_id(x, y - 1 + i, z - 1 + j));
-						}
-						if (voxels_[voxel_coordinates_to_id(x2, y2 - 1 + i, z2 - 1 + j)].value_) {
-							mask_neighborhood_intersection.push_back(
-								voxel_coordinates_to_id(x2, y2 - 1 + i, z2 - 1 + j));
-						}
-					}
-				}
-			}
-
-
-			//first check if the set of intersection is empty
-			if (!mask_neighborhood_intersection.size()) {
-				return true;
-			}
-
-			//then check if they are 0-connected 
-			//(i.e. if even one voxel of the mask has no 0-neighbor
-			if (!is_0connected(mask_neighborhood_intersection)) {
-				return true;
-			}
-
-			return false;
-			//finally check if for each i in {0,2,4,6}, Xi or Yi is in X
-
-			bool is_in_subset =
-				(voxels_[voxel_coordinates_to_id(x, y + 1, z)].value_ //X0
-					|| voxels_[voxel_coordinates_to_id(x2, y2 + 1, z2)].value_)//Y0
-				&& (voxels_[voxel_coordinates_to_id(x, y, z + 1)].value_ //X2
-					|| voxels_[voxel_coordinates_to_id(x2, y2, z2 + 1)].value_)//Y2
-				&& (voxels_[voxel_coordinates_to_id(x, y - 1, z)].value_ //X2
-					|| voxels_[voxel_coordinates_to_id(x2, y2 - 1, z2)].value_)//Y2
-				&& (voxels_[voxel_coordinates_to_id(x, y, z - 1)].value_ //X2
-					|| voxels_[voxel_coordinates_to_id(x2, y2, z2 - 1)].value_);//Y2
-
-
-			return is_in_subset;
-		}
-
-		bool matches_K2Y_mask(GRuint x, GRuint y, GRuint z, GRuint x2, GRuint y2, GRuint z2) {
-
-			//first create the list of voxels in {X0,...,X7, Y0,...,Y7}AND X (at most 16 voxels)
-			std::vector<GRuint> mask_neighborhood_intersection;
-
-			//std::cout << "checking clique (" << x << ", " << y << ", " << z<<") - ("<<x2<<", "<<y2<<", "<<z2<<")"<< std::endl;
-
-
-			for (GRuint i(0); i < 3; i++) {
-				for (GRuint j(0); j < 3; j++) {
-					if (!(i == 1 && j == 1)) {
-						//std::cout << "checking interesection at coordinates " << x - 1 + i<<", "<< y<<", "<< z - 1 + j << std::endl;
-						GRuint X_neighbor_id = voxel_coordinates_to_id(x - 1 + i, y, z - 1 + j);
-						//std::cout << "X neighbor id : " << X_neighbor_id << std::endl;
-
-						if (X_neighbor_id != NON_EXISTENT_ID && voxels_[X_neighbor_id].value_) {
-							mask_neighborhood_intersection.push_back(X_neighbor_id);
-							//std::cout << "found X neighbor" << std::endl;
-						}
-						//std::cout << "checking interesection at coordinates " << x2 - 1 + i << ", " << y2 << ", " << z2 - 1 + j << std::endl;
-						GRuint Y_neighbor_id = voxel_coordinates_to_id(x2 - 1 + i, y2, z2 - 1 + j);
-					//	std::cout << "Y neighbor id : " << Y_neighbor_id << std::endl;
-
-						if (Y_neighbor_id != NON_EXISTENT_ID && voxels_[Y_neighbor_id].value_) {
-							mask_neighborhood_intersection.push_back(Y_neighbor_id);
-							//std::cout << "found Y neighbor" << std::endl;
-						}
-					}
-				}
-			}
-
-
-			//first check if the set of intersection is empty
-			if (!mask_neighborhood_intersection.size()) {
-				return true;
-			}
-
-			//std::cout << "neighborhood is non-empty..." << std::endl;
-
-			//then check if they are 0-connected 
-			//(i.e. if even one voxel of the mask has no 0-neighbor
-			if (!is_0connected(mask_neighborhood_intersection)) {
-				return true;
-			}
-		//	std::cout << "neighborhood is 0-connected" << std::endl;
-
-			return false;
-			//finally check if for each i in {0,2,4,6}, Xi or Yi is in X
-			/*bool i_th_subset_is_in_neighborhood[4] = { false };
-			for (GRuint i(0); i < mask_neighborhood_intersection.size(); i++) {
-				if()
-			}*/
-
-			bool is_in_subset =
-				(voxels_[voxel_coordinates_to_id(x + 1, y, z)].value_ //X0
-					|| voxels_[voxel_coordinates_to_id(x2 + 1, y2, z2)].value_)//Y0
-				&& (voxels_[voxel_coordinates_to_id(x, y, z + 1)].value_ //X2
-					|| voxels_[voxel_coordinates_to_id(x2, y2, z2 + 1)].value_)//Y2
-				&& (voxels_[voxel_coordinates_to_id(x - 1, y, z)].value_ //X2
-					|| voxels_[voxel_coordinates_to_id(x2 - 1, y2, z2)].value_)//Y2
-				&& (voxels_[voxel_coordinates_to_id(x, y, z - 1)].value_ //X2
-					|| voxels_[voxel_coordinates_to_id(x2, y2, z2 - 1)].value_);//Y2
-
-
-			
-			/*if (is_in_subset) {
-				std::cout << "there is a voxel in each Xi or Yi" << std::endl;
-			} else {
-				std::cout << "there is not a voxel in each Xi or Yi" << std::endl;
-			}*/
-			
-
-			return is_in_subset;
-		}
-
-
-		bool matches_K2Z_mask(GRuint x, GRuint y, GRuint z, GRuint x2, GRuint y2, GRuint z2) {
-
-			//first create the list of voxels in {X0,...,X7, Y0,...,Y7}AND X (at most 16 voxels)
-			std::vector<GRuint> mask_neighborhood_intersection;
-
-
-			for (GRuint i(0); i < 3; i++) {
-				for (GRuint j(0); j < 3; j++) {
-					if (!(i == 1 && j == 1)) {
-						if (voxels_[voxel_coordinates_to_id(x - 1 + i, y - 1 + j, z)].value_) {
-							mask_neighborhood_intersection.push_back(
-								voxel_coordinates_to_id(x - 1 + i, y - 1 + j, z ));
-						}
-						if (voxels_[voxel_coordinates_to_id(x2 - 1 + i, y2 - 1 + j, z2)].value_) {
-							mask_neighborhood_intersection.push_back(
-								voxel_coordinates_to_id(x2 - 1 + i, y2 - 1 + j, z2));
-						}
-					}
-				}
-			}
-
-
-			//first check if the set of intersection is empty
-			if (!mask_neighborhood_intersection.size()) {
-				return true;
-			}
-
-			//then check if they are 0-connected 
-			//(i.e. if even one voxel of the mask has no 0-neighbor
-			if (!is_0connected(mask_neighborhood_intersection)) {
-				return true;
-			}
-
-			return false;
-			//finally check if for each i in {0,2,4,6}, Xi or Yi is in X
-
-			bool is_in_subset =
-				(voxels_[voxel_coordinates_to_id(x + 1, y, z)].value_ //X0
-					|| voxels_[voxel_coordinates_to_id(x2 + 1, y2, z2)].value_)//Y0
-				&& (voxels_[voxel_coordinates_to_id(x, y + 1, z)].value_ //X2
-					|| voxels_[voxel_coordinates_to_id(x2, y2 + 1, z2)].value_)//Y2
-				&& (voxels_[voxel_coordinates_to_id(x - 1, y, z)].value_ //X2
-					|| voxels_[voxel_coordinates_to_id(x2 - 1, y2, z2)].value_)//Y2
-				&& (voxels_[voxel_coordinates_to_id(x, y - 1, z)].value_ //X2
-					|| voxels_[voxel_coordinates_to_id(x2, y2 - 1, z2)].value_);//Y2
-
-
-			return is_in_subset;
-		}
-
-
-		bool matches_axis_mask(GRuint x, GRuint y, GRuint z, GRuint x2, GRuint y2, GRuint z2, GRuint axis) {
+		bool clique_matches_K2_mask(GRuint x, GRuint y, GRuint z, GRuint x2, GRuint y2, GRuint z2, GRuint axis) {
 
 			if (axis > 3) {
 			std::cerr << "wrong axis to apply K2 mask. Returning false" << std::endl;
@@ -617,7 +437,7 @@ namespace grapholon {
 			if()
 			}*/
 
-			GRuint a = axis;//to light the expressions
+			GRuint a = axis;//to lighten the expressions
 
 			bool is_in_subset =
 				(voxels_[voxel_coordinates_to_id(x + (a !=0), y + (a==0), z)].value_ //X0
@@ -629,27 +449,25 @@ namespace grapholon {
 				&& (voxels_[voxel_coordinates_to_id(x - (a==2), y, z - (a!=2))].value_ //X2
 					|| voxels_[voxel_coordinates_to_id(x2 - (a == 2), y2, z2 - (a != 2))].value_);//Y2
 
-
-
-
 			return is_in_subset;
 		}
 
 
 		bool is_critical_2clique(GRuint x, GRuint y, GRuint z, GRuint x2, GRuint y2, GRuint z2) {
 			
+			//two voxels cannot be a 2-clique if they are not 2-adjacent
 			if (!are_2adjacent(x, y, z, x2, y2, z2)) {
 				return false;
 			}
 
 			if (x != x2) {
-				return matches_axis_mask(x, y, z, x2, y2, z2, 0);
+				return clique_matches_K2_mask(x, y, z, x2, y2, z2, 0);
 			}
 			else if(y != y2) {
-				return matches_axis_mask(x, y, z, x2, y2, z2, 1);
+				return clique_matches_K2_mask(x, y, z, x2, y2, z2, 1);
 			}
 			else if (z != z2) {
-				return matches_axis_mask(x, y, z, x2, y2, z2, 2);
+				return clique_matches_K2_mask(x, y, z, x2, y2, z2, 2);
 			}
 			else {
 				std::cerr << " ERROR - 'are_2neighbors' probably failed" << std::endl;
@@ -660,7 +478,6 @@ namespace grapholon {
 		}
 
 		
-
 
 
 		/*MASK PRECOMPUTATIONS */
@@ -741,6 +558,9 @@ namespace grapholon {
 
 		/**SKELETON GENERATION METHODS (random, vessel-like, Bertrand, etc.)*/
 
+		/** Generates the voxel set described in [Bertrand 2016]. 
+		Used to compare the result of the various computations (e.g. critical clique detection)
+		with those given in the aforementioned paper*/
 		static VoxelSkeleton* BertrandStructure() {
 			GRuint w(10), h(10), s(10);
 
@@ -763,6 +583,8 @@ namespace grapholon {
 			return skeleton;
 		}
 
+
+		/**Generates a random connected voxel set*/
 		void generate_random(GRuint nb_voxels, GRuint seed = 1234) {
 			srand(seed);
 
@@ -809,7 +631,8 @@ namespace grapholon {
 
 		}
 
-
+		/** Generates a random skeleton-like voxel set.
+		It first creates a random skeleton and then randomly add voxels to the skeleton*/
 		void generate_random_skeleton_like(GRuint nb_voxels, GRuint seed = 1234) {
 
 			srand(seed);
