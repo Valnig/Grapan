@@ -76,26 +76,24 @@ void BertandStructureTests(){
 	VoxelSkeleton* skeleton = VoxelSkeleton::BertrandStructure();
 	
 	std::cout << "Bertrand's structure has a critical 2-clique at 211-221: "
-		<< skeleton->is_critical_2clique(2, 1, 1, 2, 2, 1) << std::endl;
-	std::cout << "Bertrand's structure has a critical 2-clique at 221-211: "
-		<< skeleton->is_critical_2clique(2, 2, 1, 2, 1, 1) << std::endl;
+		<< skeleton->is_critical_2clique(2, 1, 1, 1) << std::endl;
 
 	
 	std::cout << "Bertrand's structure has a critical 2-clique at 311-321: "
-		<< skeleton->is_critical_2clique(3, 1, 1, 3, 2, 1) << std::endl;
-	std::cout << "Bertrand's structure has a critical 2-clique at 321-311: "
-		<< skeleton->is_critical_2clique(3, 2, 1, 3, 1, 1) << std::endl;
+		<< skeleton->is_critical_2clique(3, 1, 1, 1) << std::endl;
 
 	std::cout << "Bertrand's structure has a critical 2-clique at 321-322: "
-		<< skeleton->is_critical_2clique(3, 2, 1, 3, 2, 2) << std::endl;
-	std::cout << "Bertrand's structure has a critical 2-clique at 322-321: "
-		<< skeleton->is_critical_2clique(3, 2, 2, 3, 2, 1) << std::endl;
+		<< skeleton->is_critical_2clique(3, 2, 1, 2) << std::endl;
 
+	std::cout << "Bertrand's structure has a critical 2-clique at 100-110: "
+		<< skeleton->is_critical_2clique(1, 0, 0, 1)<<std::endl;
+	std::cout << "Bertrand's structure has a critical 2-clique at 012-022: "
+		<< skeleton->is_critical_2clique(0, 1, 2, 1) << std::endl;
 	std::cout << "Bertrand's structure has a critical 2-clique at 022-122: "
-		<< skeleton->is_critical_2clique(0, 2, 2, 1, 2, 2)<<std::endl;
-	std::cout << "Bertrand's structure has a critical 2-clique at 122-022: "
-		<< skeleton->is_critical_2clique(1, 2, 2, 0, 2, 2) << std::endl;
-	
+		<< skeleton->is_critical_2clique(0, 2, 2, 0) << std::endl;
+	std::cout << "Bertrand's structure has a critical 2-clique at 211-311: "
+		<< skeleton->is_critical_2clique(2, 1, 1, 0) << std::endl;
+
 
 	delete skeleton;
 
@@ -105,11 +103,14 @@ void BertandStructureTests(){
 void TableLookupVSOnTheFlyCliqueCheck(){
 	std::bitset<K2Y_CONFIGURATIONS> bitset_masks(0);
 
-	VoxelSkeleton::PrecomputeK2YMasks(bitset_masks);
+	VoxelSkeleton::precompute_K2_masks(bitset_masks);
+
 	std::cout << std::endl << std::endl << " lookup table : " << std::endl;
 	for (GRuint i(0); i < 100; i++) {
-		std::cout << " " << bitset_masks[i];
+		std::cout << " " << bitset_masks[i + 1024 + 128];
 	}
+
+	std::cout << "lookup table size : " << sizeof(bitset_masks) << std::endl;
 
 }
 
@@ -117,7 +118,7 @@ void TableLookupVSOnTheFlyCliqueCheck(){
 int main()
 {
 
-	BertandStructureTests();
+	TableLookupVSOnTheFlyCliqueCheck();
 
 	while (true);
     return 0;

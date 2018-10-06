@@ -33,9 +33,14 @@
 
 namespace grapholon {
 
-#define NON_EXISTENT_ID (0xffffffff1)
-#define NON_EXISTENT_COORDINATE (0xffffffff)
-#define K2Y_CONFIGURATIONS (64*1024)
+#define NON_EXISTENT_ID (0xffff)
+#define NON_EXISTENT_COORDINATE (0xffff)
+
+#define K2Y_CONFIGURATIONS (262144) //2^18
+#define K2_MASK_WIDTH 3
+#define K2_MASK_HEIGHT 2
+#define K2_MASK_SLICE 3
+
 
 	enum VoxelState {
 		visible = 0,
@@ -91,7 +96,8 @@ namespace grapholon {
 				return voxels_[id];
 			}
 			else {
-				return SkeletonVoxel({ false, UNCLASSIFIED });
+				std::cerr << "ERROR, cannot get voxel with id " << id << " in " << nb_voxels_ << " voxels structure. Exiting" << std::endl;
+				exit(EXIT_FAILURE);
 			}
 		}
 
@@ -100,7 +106,8 @@ namespace grapholon {
 				return voxels_[id];
 			}
 			else {
-				return SkeletonVoxel({ false, UNCLASSIFIED });
+				std::cerr << "ERROR, cannot get voxel with id " << id << " in " << nb_voxels_ << " voxels structure. Exiting" << std::endl;
+				exit(EXIT_FAILURE);
 			}
 		}
 
@@ -355,11 +362,23 @@ namespace grapholon {
 		/**K_2 mask matchings. 
 		\param axis 0:X-axis, 1:Y-axis, 2:Z-axis
 		TODO : check if symmetric (i.e. matches_k2x(x,y,z,x2,y2,z2) = matches_k2x(x2,y2,z2,x,y,z)*/
-		bool clique_matches_K2_mask(GRuint x, GRuint y, GRuint z, GRuint x2, GRuint y2, GRuint z2, GRuint axis) {
+		bool clique_matches_K2_mask(GRuint x, GRuint y, GRuint z, GRuint axis) {
 
-			if (axis > 3) {
-			std::cerr << "wrong axis to apply K2 mask. Returning false" << std::endl;
+			if (axis > 2) {
+				std::cerr << "wrong axis to apply K2 mask. Returning false" << std::endl;
+				return false;
 			}
+
+			//compute voxel B's coordinates
+			GRuint x2(x + (axis == 0));
+			GRuint y2(y + (axis == 1));
+			GRuint z2(z + (axis == 2));
+
+			//first checking if the voxel and its neighbor in the axis' direction are set
+			if (!voxel(x, y, z).value_ || !voxel(x2, y2, z2).value_) {
+				return false;
+			}
+
 
 			//first create the list of voxels in {X0,...,X7, Y0,...,Y7}AND X (at most 16 voxels)
 			std::vector<GRuint> mask_neighborhood_intersection;
@@ -439,6 +458,7 @@ namespace grapholon {
 
 			GRuint a = axis;//to lighten the expressions
 
+			//TODO : replace these with calls to voxel()
 			bool is_in_subset =
 				(voxels_[voxel_coordinates_to_id(x + (a !=0), y + (a==0), z)].value_ //X0
 					|| voxels_[voxel_coordinates_to_id(x2 + (a != 0), y2 + (a == 0), z2)].value_)//Y0
@@ -453,46 +473,99 @@ namespace grapholon {
 		}
 
 
-		bool is_critical_2clique(GRuint x, GRuint y, GRuint z, GRuint x2, GRuint y2, GRuint z2) {
-			
-			//two voxels cannot be a 2-clique if they are not 2-adjacent
-			if (!are_2adjacent(x, y, z, x2, y2, z2)) {
-				return false;
-			}
-
-			if (x != x2) {
-				return clique_matches_K2_mask(x, y, z, x2, y2, z2, 0);
-			}
-			else if(y != y2) {
-				return clique_matches_K2_mask(x, y, z, x2, y2, z2, 1);
-			}
-			else if (z != z2) {
-				return clique_matches_K2_mask(x, y, z, x2, y2, z2, 2);
-			}
-			else {
-				std::cerr << " ERROR - 'are_2neighbors' probably failed" << std::endl;
-				exit(EXIT_FAILURE);
-			}
-
-			return false;
+		/*Eventually this will be replaced with a mask table lookup*/
+		bool is_critical_2clique(GRuint x, GRuint y, GRuint z, GRuint axis) {
+		
+			return clique_matches_K2_mask(x, y, z, axis);
 		}
 
 		
 
 
+
 		/*MASK PRECOMPUTATIONS */
 
+		/** This takes the coordinates of the voxel A and the axis on which voxel B is 
+		(always in the axis' direction so the two voxels are 
+		This converts the standard K2_Y mask neighborhood into world coordinates
+		after apply a rotation corresponding to the axis given in argument.
+		If the axis is 1 (Y-axis) no rotation is done since it's the reference axis
+		NOTE : check if loop unrolling helps*/
+		GRuint extract_neighborhood_mask_value_on_axis(GRuint x, GRuint y, GRuint z, GRuint axis) {
+
+			if (axis > 2) {
+				std::cerr << " ERROR - axis should be in {0,1,2}. Returning NON_EXISTENT_ID " << std::endl;
+				return NON_EXISTENT_ID;
+			}
+
+			//create bit mask
+			std::bitset<18> bit_mask(0);
+
+			//set neighborhood according to mask value
+			for (GRuint i(0); i < K2_MASK_WIDTH; i++) {
+				for (GRuint j(0); j < K2_MASK_HEIGHT; j++) {
+					for (GRuint k(0); k < K2_MASK_SLICE; k++) {
+						//std::cout << "checking bit " << i + (j + k * 2) * 3 << std::endl;
+
+						GRint rotated_x = i - 1;
+						GRint rotated_y = j;
+						GRint rotated_z = k - 1;
+
+						//rotate the relative coordinates (i,j,k) to match the axis
+						switch (axis) {
+						case 0: {
+							rotated_x = j;
+							rotated_y = i;
+							break;
+						}
+						case 1: {
+							//do nothing since the reference is the y axis
+							break;
+						}
+						case 2: {
+							rotated_y = k;
+							rotated_z = j;
+							break;
+						}
+						}
+
+						//convert relative coordinates to world coordinates
+						GRuint world_x = x + rotated_x;
+						GRuint world_y = y + rotated_y;
+						GRuint world_z = z + rotated_z;
+
+						//if the voxel at the coordinates is set then we update the mask bitset
+						//NOTE this takes the root voxels ({A,B}) into account
+						if (voxel(world_x, world_y, world_z).value_) {
+							//std::cout << "bit " << i + (j + k * 2) * 3 << " is true " << std::endl;
+							bit_mask[i + (j + k * K2_MASK_HEIGHT) * K2_MASK_WIDTH] = true;
+						}
+					}
+				}
+			}
+
+			return bit_mask.to_ulong();
+		}
+
+		
+
+
 		/** Precomputes the critical 2-cliques masks
-		Basically, each mask is an integer which represents one of the 65k possible configuration
+		Basically, each mask is an integer which represents one of the 266'144 possible configuration
 		for the neighborhood of a 2-clique. Each possible configuration is tested and then stored
-		as a single bit in a 2^16-bits bitset. This allows to convert any neighborhood into 
+		as a single bit in a 2^18-bits bitset. This allows to convert any neighborhood into 
 		and integer 'mask' and then check if bitset[mask] is true in O(1).
-		NOTE : around 25k configurations are critical 2-cliques among the 65k possible configs*/
-		static void PrecomputeK2YMasks(std::bitset<K2Y_CONFIGURATIONS>& critical_2_cliques_indices) {
+		NOTE : around 15k configurations are critical 2-cliques among the 2^18 possible configs*/
+		static void precompute_K2_masks(std::bitset<K2Y_CONFIGURATIONS>& critical_2_cliques_indices) {
 
 			//std::vector<GRuint> masks;
 
-			for (GRuint mask_value(0); mask_value < K2Y_CONFIGURATIONS; mask_value++) {
+			GRuint critical_masks_count(0);
+
+			//this value corresponds to the mask for the isolated 2-clique
+			GRuint first_valid_mask(1024 + 128);
+
+			for (GRuint mask_value(first_valid_mask); mask_value < K2Y_CONFIGURATIONS; mask_value++) {
 
 				//set up neighborhood skeleton
 				VoxelSkeleton skeleton(10, 10, 10);
@@ -500,54 +573,80 @@ namespace grapholon {
 				//create bit mask
 				std::bitset<18> bit_mask(mask_value);
 
-				//set center (voxels {A,B})
-				skeleton.set_voxel(1, 0, 1);
-				skeleton.set_voxel(1, 1, 1);
-
-				//set neighborhood according to mask value
-				for (GRuint i(0); i < 3; i++) {
-					for (GRuint j(0); j < 2; j++) {
-						for (GRuint k(0); k < 3; k++) {
-							//std::cout << "checking bit " << i + (j + k * 2) * 3 << std::endl;
-							if (bit_mask[i + (j + k * 2) * 3]) {
-								//std::cout << "bit " << i + (j + k * 2) * 3 << " is true " << std::endl;
-								skeleton.set_voxel(i, j, k);
+				/*if the bits corresponding to both the center voxels ((1,0,1) and (1,1,1))
+				 are not set we can skip testing this configuration*/
+				if (bit_mask[7] && bit_mask[10]) {
+					//set neighborhood according to mask value
+					for (GRuint i(0); i < 3; i++) {
+						for (GRuint j(0); j < 2; j++) {
+							for (GRuint k(0); k < 3; k++) {
+								//std::cout << "checking bit " << i + (j + k * 2) * 3 << std::endl;
+								if (bit_mask[i + (j + k * 2) * 3]) {
+									//std::cout << i << " " << j << " " <<k<< std::endl;
+									//std::cout << "bit " << i + (j + k * 2) * 3 << " is true " << std::endl;
+									skeleton.set_voxel(i, j, k);
+								}
 							}
 						}
 					}
-				}
 
-				//and check if mask is indeed a critical 2-clique :
-				if (skeleton.is_critical_2clique(1, 0, 1, 1, 1, 1)) {
-
-					//if yes, we set the corresponding bit to 1
-					critical_2_cliques_indices[mask_value] = true;
-
+					/**used to check the reciprocity of neighborhood->mask and mask->neighborhood*/
 					/*
-					std::cout << " __________________________" << std::endl;
-					std::cout << " found 2-clique mask : " << std::endl;
-					std::cout << "mask value : " << mask_value << std::endl;
-
-					std::cout << "bit mask : " << std::endl;
-					for (GRuint i(0); i < 18; i++) {
-					std::cout << bit_mask[i];
+					GRuint computed_mask_value(skeleton.extract_neighborhood_mask_value_on_axis(1, 0, 1, 1));
+					if (computed_mask_value != mask_value) {
+						std::bitset<18> computed_bit_mask(computed_mask_value);
+						std::cerr << "error  ! Expected " << mask_value << " and got " << computed_mask_value << std::endl;
+						std::cerr << " bitwise comparison : " << std::endl;
+						for (GRuint i(0); i < 18; i++) {
+							std::cerr << bit_mask[i];
+						}
+						std::cerr << std::endl;
+						for (GRuint i(0); i < 18; i++) {
+							std::cerr << computed_bit_mask[i];
+						}
+						std::cerr << std::endl;
+						std::cerr << std::endl;
 					}
-					std::cout << std::endl;
-
-					std::cout << "voxel list : " << std::endl;
-					for (GRuint i(0); i < skeleton.true_voxels_.size(); i++) {
-					GRuint x, y, z;
-					skeleton.voxel_id_to_coordinates(skeleton.true_voxels_[i], x, y, z);
-					std::cout << " " << x << ", " << y << ", " << z << std::endl; ;
+					else {
+						//	std::cerr << " looking good for value " << mask_value << std::endl;
 					}
-
-					std::cout << std::endl;
 					*/
+
+
+					//and check if mask is indeed a critical 2-clique :
+					if (skeleton.is_critical_2clique(1, 0, 1, 1)) {
+
+						//if yes, we set the corresponding bit to 1
+						critical_2_cliques_indices[mask_value] = true;
+
+						critical_masks_count++;
+						/*
+						std::cout << " __________________________" << std::endl;
+						std::cout << " found 2-clique mask : " << std::endl;
+						std::cout << "mask value : " << mask_value << std::endl;
+
+						std::cout << "bit mask : " << std::endl;
+						for (GRuint i(0); i < 18; i++) {
+						std::cout << bit_mask[i];
+						}
+						std::cout << std::endl;
+
+						std::cout << "voxel list : " << std::endl;
+						for (GRuint i(0); i < skeleton.true_voxels_.size(); i++) {
+						GRuint x, y, z;
+						skeleton.voxel_id_to_coordinates(skeleton.true_voxels_[i], x, y, z);
+						std::cout << " " << x << ", " << y << ", " << z << std::endl; ;
+						}
+
+						std::cout << std::endl;
+						*/
+					}
 				}
 			}
 
-			/*std::cout << " among " << nb_maks_to_test << " possible configurations, " << masks.size() << " were critical 2-cliques : " << std::endl;
-			std::cout << "masks  : " << std::endl;
+			std::cout << " among " << K2Y_CONFIGURATIONS << " possible configurations, " << critical_masks_count << " were critical 2-cliques : " << std::endl;
+			
+			/*std::cout << "masks  : " << std::endl;
 			for (GRuint i(0); i < masks.size(); i++) {
 				std::cout << masks[i] << " ";
 				critical_2_cliques_indices[masks[i]] = true;

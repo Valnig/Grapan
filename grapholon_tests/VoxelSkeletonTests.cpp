@@ -154,20 +154,20 @@ namespace grapholon_tests
 			VoxelSkeleton* skeleton = VoxelSkeleton::BertrandStructure();
 
 			//critical 2-cliques
-			Assert::IsTrue(skeleton->is_critical_2clique(2, 1, 1, 2, 2, 1));
-			Assert::IsTrue(skeleton->is_critical_2clique(2, 2, 1, 2, 1, 1));
-			Assert::IsTrue(skeleton->is_critical_2clique(3, 1, 1, 3, 2, 1));
-			Assert::IsTrue(skeleton->is_critical_2clique(3, 2, 1, 3, 2, 2));
+			Assert::IsTrue(skeleton->is_critical_2clique(2, 1, 1, 1));
+			Assert::IsTrue(skeleton->is_critical_2clique(3, 1, 1, 1));
+			Assert::IsTrue(skeleton->is_critical_2clique(3, 2, 1, 2));
 
 			//non-critical 2-cliques
-			Assert::IsFalse(skeleton->is_critical_2clique(1, 0, 0, 1, 1, 0));
-			Assert::IsFalse(skeleton->is_critical_2clique(0, 1, 2, 0, 2, 2));
-			Assert::IsFalse(skeleton->is_critical_2clique(0, 2, 2, 1, 2, 2));
-			Assert::IsFalse(skeleton->is_critical_2clique(2, 1, 1, 3, 1, 1));
+			Assert::IsFalse(skeleton->is_critical_2clique(1, 0, 0, 1));
+			Assert::IsFalse(skeleton->is_critical_2clique(0, 1, 2, 1));
+			Assert::IsFalse(skeleton->is_critical_2clique(0, 2, 2, 0));
+			Assert::IsFalse(skeleton->is_critical_2clique(2, 1, 1, 0));
 
 			delete skeleton;
 		}
 
-		//TODO check symetry {A,B} - {B,A} with random voxel sets and cliques
+		//todo : test rotations of the K2 mask
+
 	};
 }
