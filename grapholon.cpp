@@ -42,7 +42,7 @@ void sand_box() {
 
 	skeleton.compute_voxel_attributes();
 
-	std::cout << "total number of voxels : " << skeleton.true_voxels_.size() << std::endl;
+	std::cout << "total number of voxels : " << skeleton.true_voxels().size() << std::endl;
 
 	//voxel list
 	/*for (GRuint i(0); i< skeleton.true_voxels_.size(); i++){
@@ -63,8 +63,8 @@ void sand_box() {
 
 	//inside count
 	GRuint inside_count(0);
-	for (GRuint i(0); i < skeleton.true_voxels_.size(); i++) {
-		inside_count += (skeleton.voxels_[skeleton.true_voxels_[i]].topological_class_ == BORDER_POINT);
+	for (GRuint i(0); i < skeleton.true_voxels().size(); i++) {
+		inside_count += (skeleton.voxel(skeleton.true_voxels()[i]).topological_class_ == BORDER_POINT);
 	}
 	std::cout << "number of inside points : " << inside_count << std::endl;
 
@@ -114,11 +114,30 @@ void TableLookupVSOnTheFlyCliqueCheck(){
 
 }
 
+void SimpleVoxelTests() {
+	VoxelSkeleton* skeleton = VoxelSkeleton::BertrandStructure();
+
+	//std::cout << " voxel  1 2 2 is simple : " << skeleton->is_simple(1, 2, 2) << std::endl;
+	bool simple = skeleton->is_simple(1, 0, 0);
+	std::cout << " voxel  1 0 0 is simple : " << simple << std::endl;
+
+	return;
+	for (GRuint i(0); i < skeleton->true_voxels().size()/2; i++) {
+		GRint x, y, z;
+		skeleton->voxel_id_to_coordinates(skeleton->true_voxels()[i], x, y, z);
+		std::cout << " voxel " << x << " " << y << " " << z << " is simple : " << skeleton->is_simple(x, y, z) << std::endl << std::endl;;
+	}
+
+	//std::cout << " voxel  122 is simple : " << skeleton->is_simple(1, 2, 2) << std::endl;
+	//not working yet
+
+	delete skeleton;
+}
 
 int main()
 {
 
-	TableLookupVSOnTheFlyCliqueCheck();
+	SimpleVoxelTests();
 
 	while (true);
     return 0;

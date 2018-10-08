@@ -69,9 +69,9 @@ namespace grapholon_tests
 			VoxelSkeleton skeleton(w, h, s);
 
 			for (GRuint i(0); i < w*h*s; i++) {
-				GRuint x, y, z;
+				GRint x, y, z;
 				skeleton.voxel_id_to_coordinates(i, x, y, z);
-				Assert::AreEqual(i, skeleton.voxel_coordinates_to_id(x,y,z));
+				Assert::AreEqual(i, (GRuint)skeleton.voxel_coordinates_to_id(x,y,z));
 			}
 		}
 
@@ -117,9 +117,15 @@ namespace grapholon_tests
 			Assert::IsTrue(skeleton.are_0adjacent(1, 1, 1, 2, 2, 2));
 			
 			//double check :
-			for (GRuint i(0); i < 26; i++) {
-				if (i != 13) {//id of voxel (1,1,1)
-					Assert::IsTrue(skeleton.are_0adjacent(13, i));
+			GRint center_id = skeleton.voxel_coordinates_to_id(1, 1, 1);
+			for (GRint i(0); i < 3; i++) {
+				for (GRint j(0); j < 3; j++) {
+					for (GRint k(0); k < 3; k++) {
+						if (i != 1 || j != 1 || k != 1) {
+							Assert::IsTrue(skeleton.are_0adjacent(center_id, 
+								skeleton.voxel_coordinates_to_id(i,j,k)));
+						}
+					}
 				}
 			}
 		}
@@ -134,7 +140,7 @@ namespace grapholon_tests
 			skeleton.set_voxel(0, 1, 4);
 			skeleton.set_voxel(0, 2, 5);
 
-			Assert::IsTrue(skeleton.is_0connected(skeleton.true_voxels_));
+			Assert::IsTrue(skeleton.is_k_connected(skeleton.true_voxels(), 0u));
 		}
 
 		TEST_METHOD(zeroNotConnectednessTest) {
@@ -146,7 +152,7 @@ namespace grapholon_tests
 			skeleton.set_voxel(0, 1, 4);
 			skeleton.set_voxel(0, 2, 5);
 
-			Assert::IsFalse(skeleton.is_0connected(skeleton.true_voxels_));
+			Assert::IsFalse(skeleton.is_k_connected(skeleton.true_voxels(), 0u));
 		}
 
 		TEST_METHOD(CriticalCliquesInBertrandStructure)

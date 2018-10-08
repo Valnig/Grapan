@@ -70,8 +70,8 @@ namespace grapholon {
 
 
 	class VoxelSkeleton {
-	public:
 
+	private:
 		const GRuint width_;
 		const GRuint height_;
 		const GRuint slice_;
@@ -80,9 +80,14 @@ namespace grapholon {
 
 		SkeletonVoxel* voxels_;
 
-		std::vector<GRuint> true_voxels_;
+		std::vector<GRint> true_voxels_;
 
-		VoxelSkeleton(GRuint width, GRuint height, GRuint slice) : width_(width), height_(height), slice_(slice), nb_voxels_(width*height*slice) {
+
+	public:
+
+		typedef bool(VoxelSkeleton::*AdjencyFunction)(GRint, GRint);
+
+		VoxelSkeleton(GRuint width, GRuint height, GRuint slice) : width_(width + 2), height_(height + 2), slice_(slice + 2), nb_voxels_(width_*height_*slice_) {
 			voxels_ = (SkeletonVoxel*)calloc(nb_voxels_, sizeof(SkeletonVoxel));
 			memset(voxels_, 0, nb_voxels_ *sizeof(SkeletonVoxel));
 		}
@@ -91,82 +96,47 @@ namespace grapholon {
 			free(voxels_);
 		}
 
-		SkeletonVoxel& voxel(GRuint id) {
-			if (id < nb_voxels_) {
-				return voxels_[id];
+		SkeletonVoxel voxel(GRint id) {
+			if (id < 0 || id >= (GRint)nb_voxels_) {
+				return { false, UNCLASSIFIED };
 			}
 			else {
-				std::cerr << "ERROR, cannot get voxel with id " << id << " in " << nb_voxels_ << " voxels structure. Exiting" << std::endl;
-				exit(EXIT_FAILURE);
+				return voxels_[id];
 			}
 		}
 
-		const SkeletonVoxel& voxel(GRuint id) const {
-			if (id < nb_voxels_) {
-				return voxels_[id];
-			}
-			else {
-				std::cerr << "ERROR, cannot get voxel with id " << id << " in " << nb_voxels_ << " voxels structure. Exiting" << std::endl;
-				exit(EXIT_FAILURE);
-			}
-		}
-
-		SkeletonVoxel& voxel(GRuint x, GRuint y, GRuint z) {
+		SkeletonVoxel voxel(GRint x, GRint y, GRint z) {
 			return voxel(voxel_coordinates_to_id(x, y, z));
 		}
 
-		const SkeletonVoxel& voxel(GRuint x, GRuint y, GRuint z) const{
-			return voxel(voxel_coordinates_to_id(x, y, z));
-		}
 
-		const std::vector<GRuint>& true_voxels()const {
+		const std::vector<GRint>& true_voxels()const {
 			return true_voxels_;
 		}
 
-		GRuint voxel_coordinates_to_id(GRuint x, GRuint y, GRuint z) const {
-			if (x >= width_ || y >= height_ || z >= slice_) {
-				return NON_EXISTENT_ID;
-			}
-			return x + (y + z * height_) * width_;
+		//id 0 is actually voxel (-1, -1, -1)
+		GRint voxel_coordinates_to_id(GRint x, GRint y, GRint z) const {
+			return x+1 + (y+1 + (z+1) * height_) * width_;
+		}
+
+		
+		//TODO : test this with negative coordinates
+		void voxel_id_to_coordinates(GRint id, GRint& x, GRint& y, GRint& z) const {
+				z = id / (width_ * height_) - 1;
+				GRint rem = id % (width_ * height_);
+				y = rem / width_ - 1;
+				x = rem % width_ - 1;
 		}
 
 		/**
-		current convention : if the relative coordinates are out-of-bounds they're clamped to within-bounds coordinates
-		e.g. (-1, 3, 4) -> (0, 3, 4);  (5, 2, slice + 3) -> (5, 2, slice - 1)*/
-		GRuint voxel_coordinates_and_relative_coordinates_to_id(GRuint x, GRuint y, GRuint z, GRint rel_x, GRint rel_y, GRint rel_z) const {
-			GRint final_x = x + rel_x;
-			GRint final_y = x + rel_y;
-			GRint final_z = x + rel_z;
-
-			if ((GRuint)final_x >= width_ || (GRuint)final_y >= height_ || (GRuint)final_z >= slice_) {
-				return NON_EXISTENT_ID;
-			}
-
-			return voxel_coordinates_to_id(final_x, final_y, final_z);
-		}
-		
-		void voxel_id_to_coordinates(GRuint id, GRuint& x, GRuint& y, GRuint& z) const {
-			if (id >= nb_voxels_) {
-				x = NON_EXISTENT_COORDINATE;
-				y = NON_EXISTENT_COORDINATE;
-				z = NON_EXISTENT_COORDINATE;
-				return;
-			}
-
-			z = id / (width_ * height_);
-			GRint rem = id % (width_ * height_);
-			y = rem / width_;
-			x = rem % width_;
-		}
-
 		GRuint voxel_id_and_relative_coordinates_to_id(GRuint id, GRint rel_x, GRint rel_y, GRint rel_z) {
 			GRuint x, y, z;
 			voxel_id_to_coordinates(id, x, y, z);
 			return voxel_coordinates_and_relative_coordinates_to_id(x, y, z, rel_x, rel_y, rel_z);
-		}
+		}*/
 
-		bool set_voxel(GRuint id, bool value = true) {
-			if (id >= nb_voxels_) {
+		bool set_voxel(GRint id, bool value = true) {
+			if (id < 0 || id >= (GRint)nb_voxels_) {
 				return false;
 			}
 
@@ -197,7 +167,7 @@ namespace grapholon {
 				GRuint voxel_id = true_voxels_[i];
 
 				if (voxels_[voxel_id].value_) {
-					GRuint x, y, z;
+					GRint x, y, z;
 					voxel_id_to_coordinates(voxel_id, x, y, z);
 
 					//first check if it's a border (incomplete, only checks for voxels on the boundary)
@@ -221,8 +191,10 @@ namespace grapholon {
 			}
 		}
 
-		bool are_0adjacent(GRuint id, GRuint id2) {
-			if (id >= nb_voxels_ || id2 >= nb_voxels_) {
+
+		/**This checks if the two ids correspond to 0-adjacent voxels*/
+		bool are_0adjacent(GRint id, GRint id2) {
+			if (id >= (GRint)nb_voxels_ || id2 >= (GRint)nb_voxels_) {
 				return false;
 			}
 			return id + 1 + width_ + width_ * height_ == id2
@@ -236,8 +208,8 @@ namespace grapholon {
 				|| are_1adjacent(id, id2);
 		}
 
-		bool are_1adjacent(GRuint id, GRuint id2) {
-			if (id >= nb_voxels_ || id2 >= nb_voxels_) {
+		bool are_1adjacent(GRint id, GRint id2) {
+			if (id >= (GRint)nb_voxels_ || id2 >= (GRint)nb_voxels_) {
 				return false;
 			}
 			return id + 1 + width_ == id2
@@ -256,8 +228,8 @@ namespace grapholon {
 		}
 
 
-		bool are_2adjacent(GRuint id, GRuint id2) {
-			if (id >= nb_voxels_ || id2 >= nb_voxels_) {
+		bool are_2adjacent(GRint id, GRint id2) {
+			if (id >= (GRint)nb_voxels_ || id2 >= (GRint)nb_voxels_) {
 				return false;
 			}
 			return id + 1 == id2
@@ -268,24 +240,26 @@ namespace grapholon {
 				|| id - width_ * height_ == id2;
 		}
 
-		bool are_0adjacent(GRuint x, GRuint y, GRuint z, GRuint x2, GRuint y2, GRuint z2) {
+		bool are_0adjacent(GRint x, GRint y, GRint z, GRint x2, GRint y2, GRint z2) {
 			return are_0adjacent(voxel_coordinates_to_id(x, y, z), voxel_coordinates_to_id(x2, y2, z2));
 		}
-		bool are_1adjacent(GRuint x, GRuint y, GRuint z, GRuint x2, GRuint y2, GRuint z2) {
+		bool are_1adjacent(GRint x, GRint y, GRint z, GRint x2, GRint y2, GRint z2) {
 			return are_1adjacent(voxel_coordinates_to_id(x, y, z), voxel_coordinates_to_id(x2, y2, z2));
 		}
-		bool are_2adjacent(GRuint x, GRuint y, GRuint z, GRuint x2, GRuint y2, GRuint z2) {
+		bool are_2adjacent(GRint x, GRint y, GRint z, GRint x2, GRint y2, GRint z2) {
 			return are_2adjacent(voxel_coordinates_to_id(x, y, z), voxel_coordinates_to_id(x2, y2, z2));
 		}
 
-		//NOTE : this is very greedy (O(n^2), n = voxels_ids.size()) but it is not used at runtime so it's fine 
-		bool is_0connected(std::vector<GRuint> voxel_ids) {
-			/*std::cout << "checking 0-connectdedness of voxels : ";
+
+		bool is_k_connected(std::vector<GRint> voxel_ids, AdjencyFunction adjency_function) {
+			std::cout << "checking connectdedness of voxels : " << std::endl;;
 			for (GRuint i(0); i < voxel_ids.size(); i++) {
-				std::cout << " " << voxel_ids[i];
+				GRint x, y, z;
+				voxel_id_to_coordinates(voxel_ids[i], x, y, z);
+				std::cout << voxel_ids[i] <<" : "<< x << " " << y << " " << z << std::endl;
 			}
 			std::cout << std::endl;
-			*/
+			
 
 			std::vector<bool> visited(voxel_ids.size(), false);
 			std::vector<bool> explored(voxel_ids.size(), false);
@@ -299,7 +273,7 @@ namespace grapholon {
 
 				//visit all neighbors of the last visited
 				for (GRuint i(0); i < voxel_ids.size(); i++) {
-					if (!visited[i] && are_0adjacent(voxel_ids[last_explored_index],
+					if (!visited[i] && (this->*adjency_function)(voxel_ids[last_explored_index],
 						voxel_ids[i])) {
 						visited[i] = true;
 						//std::cout << "visited voxel : " << i << std::endl;
@@ -317,7 +291,7 @@ namespace grapholon {
 					if (visited[next_explored_index] && !explored[next_explored_index]) {
 						found_unexplored = true;
 						last_explored_index = next_explored_index;
-					//	std::cout << "found unexplored : " << next_explored_index << std::endl;
+						//	std::cout << "found unexplored : " << next_explored_index << std::endl;
 					}
 					next_explored_index++;
 				}
@@ -342,12 +316,12 @@ namespace grapholon {
 				/*
 				std::cout << "visited : ";
 				for (GRuint i(0); i < visited.size(); i++) {
-					std::cout << " " << visited[i];
+				std::cout << " " << visited[i];
 				}
 				std::cout << std::endl;
 				std::cout << "explored : ";
 				for (GRuint i(0); i < explored.size(); i++) {
-					std::cout << " " << explored[i];
+				std::cout << " " << explored[i];
 				}
 				std::cout << std::endl;
 				*/
@@ -359,9 +333,150 @@ namespace grapholon {
 		}
 
 
+		//NOTE : this is very greedy (O(n^2), n = voxels_ids.size()) but it is not used at runtime so it's fine 
+		bool is_k_connected(std::vector<GRint> voxel_ids, GRuint k) {
+			switch (k) {
+			case 0: {
+				return is_k_connected(voxel_ids, &VoxelSkeleton::are_0adjacent);
+				break;
+			}
+			case 1: {
+				return is_k_connected(voxel_ids, &VoxelSkeleton::are_1adjacent);
+				break;
+			}
+			case 2: {
+				return is_k_connected(voxel_ids, &VoxelSkeleton::are_2adjacent);
+				break;
+			}
+			default: {
+				std::cerr << k << "-connectedness does not make sense with voxels. Returning false" << std::endl;
+				return false;
+			}
+			}
+		}
+
+
+		bool is_simple(GRint x, GRint y, GRint z) {
+
+			std::cout << "checking if voxel " << x << " " << y << " " << z << " is simple " << std::endl;
+
+			//first define the zero neighborhood*
+			std::vector<GRint> zero_neighborhood_star;
+			GRint neighbor_id;
+			for (GRint i(0); i < 3; i++) {
+				for (GRint j(0); j < 3; j++) {
+					for (GRint k(0); k < 3; k++) {
+						if (i != 1 || j!= 1 || k != 1) {
+							neighbor_id = voxel_coordinates_to_id(x - 1 + i, y - 1 + j, z - 1 + k);
+							//std::cout << "voxel : " << x - 1 + i << " " << y - 1 + j << " " << z - 1 + k;
+							//std::cout << "rel : " << i << " " << j << " " << k << std::endl;
+							if (voxel(neighbor_id).value_) {
+								zero_neighborhood_star.push_back(neighbor_id);
+								//std::cout << " is in the neighborhood" << std::endl;
+							}
+							else {
+
+								//std::cout << " is not in the neighborhood" << std::endl;
+							}
+						}
+					}
+				}
+			}
+
+
+			
+			//then check if it's empty and zero-connected
+			if (zero_neighborhood_star.size() == 0 || !is_k_connected(zero_neighborhood_star, 0u)) {
+				return false;
+			}
+
+			std::cout << "zero neigh is non-empty and 0 connected " << std::endl;
+
+			//then compute the two neighborhood that is not set
+			std::vector<GRint> two_neighborhood_bar;
+			for (GRint i(0); i < 3; i++) {
+				for (GRint j(0); j < 2; j++) {
+					GRint coords[3] = { x,y,z };
+					coords[i] += (1 - 2*(GRint)j);
+					neighbor_id = voxel_coordinates_to_id(coords[0], coords[1], coords[2]);
+					std::cout << "checking neighbor " << neighbor_id << " :  " << coords[0] << " " << coords[1] << " " << coords[2] << std::endl;
+					if (!voxel(neighbor_id).value_) {
+						two_neighborhood_bar.push_back(neighbor_id);
+					}
+				}
+			}
+
+			//and check that it is not empty
+			if (two_neighborhood_bar.size() == 0) {
+				return false;
+			}
+
+			std::cout << "2-neighborhood bar is non-empty : " <<two_neighborhood_bar.size()<< std::endl;
+
+			//then add the one-neighborhood
+			//todo : also improve code quality
+			neighbor_id = voxel_coordinates_to_id(x, y + 1, z + 1);
+			if (!voxel(neighbor_id).value_) {
+				two_neighborhood_bar.push_back(neighbor_id);
+			}
+			neighbor_id = voxel_coordinates_to_id(x, y + 1, z - 1);
+			if (!voxel(neighbor_id).value_) {
+				two_neighborhood_bar.push_back(neighbor_id);
+			}
+			neighbor_id = voxel_coordinates_to_id(x, y - 1, z + 1);
+			if (!voxel(neighbor_id).value_) {
+				two_neighborhood_bar.push_back(neighbor_id);
+			}
+			neighbor_id = voxel_coordinates_to_id(x, y - 1, z - 1 );
+			if (!voxel(neighbor_id).value_) {
+				two_neighborhood_bar.push_back(neighbor_id);
+			}
+
+			neighbor_id = voxel_coordinates_to_id(x+1, y + 1, z);
+			if (!voxel(neighbor_id).value_) {
+				two_neighborhood_bar.push_back(neighbor_id);
+			}
+			neighbor_id = voxel_coordinates_to_id(x-1, y + 1, z);
+			if (!voxel(neighbor_id).value_) {
+				two_neighborhood_bar.push_back(neighbor_id);
+			}
+			neighbor_id = voxel_coordinates_to_id(x+1, y - 1, z);
+			if (!voxel(neighbor_id).value_) {
+				two_neighborhood_bar.push_back(neighbor_id);
+			}
+			neighbor_id = voxel_coordinates_to_id(x-1, y - 1, z);
+			if (!voxel(neighbor_id).value_) {
+				two_neighborhood_bar.push_back(neighbor_id);
+			}
+
+			neighbor_id = voxel_coordinates_to_id(x+1, y + 1, z);
+			if (!voxel(neighbor_id).value_) {
+				two_neighborhood_bar.push_back(neighbor_id);
+			}
+			neighbor_id = voxel_coordinates_to_id(x-1, y + 1, z);
+			if (!voxel(neighbor_id).value_) {
+				two_neighborhood_bar.push_back(neighbor_id);
+			}
+			neighbor_id = voxel_coordinates_to_id(x+1, y - 1, z);
+			if (!voxel(neighbor_id).value_) {
+				two_neighborhood_bar.push_back(neighbor_id);
+			}
+			neighbor_id = voxel_coordinates_to_id(x-1, y - 1, z);
+			if (!voxel(neighbor_id).value_) {
+				two_neighborhood_bar.push_back(neighbor_id);
+			}
+
+
+
+			//the problem must be here
+			//and finally check if the 2-neighborhood is 2-connected in the 1-neighborhood bar
+			return is_k_connected(two_neighborhood_bar, 2);
+		}
+
+
+
 		/**K_2 mask matchings. 
-		\param axis 0:X-axis, 1:Y-axis, 2:Z-axis
-		TODO : check if symmetric (i.e. matches_k2x(x,y,z,x2,y2,z2) = matches_k2x(x2,y2,z2,x,y,z)*/
+		\param axis 0:X-axis, 1:Y-axis, 2:Z-axis */
 		bool clique_matches_K2_mask(GRuint x, GRuint y, GRuint z, GRuint axis) {
 
 			if (axis > 2) {
@@ -381,7 +496,7 @@ namespace grapholon {
 
 
 			//first create the list of voxels in {X0,...,X7, Y0,...,Y7}AND X (at most 16 voxels)
-			std::vector<GRuint> mask_neighborhood_intersection;
+			std::vector<GRint> mask_neighborhood_intersection;
 
 			//std::cout << "checking clique (" << x << ", " << y << ", " << z<<") - ("<<x2<<", "<<y2<<", "<<z2<<") on axis "<<axis<< std::endl;
 
@@ -389,8 +504,8 @@ namespace grapholon {
 				for (GRuint j(0); j < 3; j++) {
 					if (!(i == 1 && j == 1)) {
 
-						GRuint X_neighbor_id;
-						GRuint Y_neighbor_id;
+						GRint X_neighbor_id;
+						GRint Y_neighbor_id;
 
 						switch (axis) {
 						case 0: {
@@ -418,7 +533,7 @@ namespace grapholon {
 						//std::cout << "checking interesection at coordinates " << x - 1 + i << ", " << y << ", " << z - 1 + j << std::endl;
 						//std::cout << "X neighbor id : " << X_neighbor_id << std::endl;
 
-						if (X_neighbor_id != NON_EXISTENT_ID && voxels_[X_neighbor_id].value_) {
+						if (voxel(X_neighbor_id).value_) {
 							mask_neighborhood_intersection.push_back(X_neighbor_id);
 							//std::cout << "found X neighbor" << std::endl;
 						}
@@ -426,7 +541,7 @@ namespace grapholon {
 						//std::cout << "checking interesection at coordinates " << x2 - 1 + i << ", " << y2 << ", " << z2 - 1 + j << std::endl;
 						//std::cout << "Y neighbor id : " << Y_neighbor_id << std::endl;
 
-						if (Y_neighbor_id != NON_EXISTENT_ID && voxels_[Y_neighbor_id].value_) {
+						if (voxel(Y_neighbor_id).value_) {
 							mask_neighborhood_intersection.push_back(Y_neighbor_id);
 							//std::cout << "found Y neighbor" << std::endl;
 						}
@@ -444,7 +559,7 @@ namespace grapholon {
 
 			//then check if they are 0-connected 
 			//(i.e. if even one voxel of the mask has no 0-neighbor
-			if (!is_0connected(mask_neighborhood_intersection)) {
+			if (!is_k_connected(mask_neighborhood_intersection, 0u)) {
 				return true;
 			}
 			//	std::cout << "neighborhood is 0-connected" << std::endl;
@@ -530,9 +645,9 @@ namespace grapholon {
 						}
 
 						//convert relative coordinates to world coordinates
-						GRuint world_x = x + rotated_x;
-						GRuint world_y = y + rotated_y;
-						GRuint world_z = z + rotated_z;
+						GRint world_x = x + rotated_x;
+						GRint world_y = y + rotated_y;
+						GRint world_z = z + rotated_z;
 
 						//if the voxel at the coordinates is set then we update the mask bitset
 						//NOTE this takes the root voxels ({A,B}) into account
@@ -661,7 +776,7 @@ namespace grapholon {
 		Used to compare the result of the various computations (e.g. critical clique detection)
 		with those given in the aforementioned paper*/
 		static VoxelSkeleton* BertrandStructure() {
-			GRuint w(10), h(10), s(10);
+			GRuint w(8), h(8), s(8);
 
 			VoxelSkeleton* skeleton = new VoxelSkeleton(w, h, s);
 
@@ -692,7 +807,7 @@ namespace grapholon {
 
 			GRint current_voxel_id = rand() % nb_voxels_;
 
-			GRuint x, y, z;
+			GRint x, y, z;
 
 			for (GRuint i(0); i < nb_voxels; i++) {
 
