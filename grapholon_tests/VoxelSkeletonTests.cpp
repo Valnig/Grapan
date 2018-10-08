@@ -69,7 +69,7 @@ namespace grapholon_tests
 			VoxelSkeleton skeleton(w, h, s);
 
 			for (GRuint i(0); i < w*h*s; i++) {
-				GRint x, y, z;
+				GRuint x, y, z;
 				skeleton.voxel_id_to_coordinates(i, x, y, z);
 				Assert::AreEqual(i, (GRuint)skeleton.voxel_coordinates_to_id(x,y,z));
 			}
@@ -178,7 +178,7 @@ namespace grapholon_tests
 			VoxelSkeleton* skeleton = VoxelSkeleton::BertrandStructure();
 
 			for (GRuint i(0); i < skeleton->true_voxels().size(); i++) {
-				GRint x, y, z;
+				GRuint x, y, z;
 				skeleton->voxel_id_to_coordinates(skeleton->true_voxels()[i], x, y, z);
 
 				if (x == 1 && y == 2 && z == 2) {

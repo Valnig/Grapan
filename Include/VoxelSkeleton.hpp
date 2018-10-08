@@ -80,12 +80,12 @@ namespace grapholon {
 
 		SkeletonVoxel* voxels_;
 
-		std::vector<GRint> true_voxels_;
+		std::vector<GRuint> true_voxels_;
 
 
 	public:
 
-		typedef bool(VoxelSkeleton::*AdjencyFunction)(GRint, GRint);
+		typedef bool(VoxelSkeleton::*AdjencyFunction)(GRuint, GRuint);
 
 		VoxelSkeleton(GRuint width, GRuint height, GRuint slice) : width_(width + 2), height_(height + 2), slice_(slice + 2), nb_voxels_(width_*height_*slice_) {
 			voxels_ = (SkeletonVoxel*)calloc(nb_voxels_, sizeof(SkeletonVoxel));
@@ -110,20 +110,19 @@ namespace grapholon {
 		}
 
 
-		const std::vector<GRint>& true_voxels()const {
+		const std::vector<GRuint>& true_voxels()const {
 			return true_voxels_;
 		}
 
 		//id 0 is actually voxel (-1, -1, -1)
-		GRint voxel_coordinates_to_id(GRint x, GRint y, GRint z) const {
+		GRuint voxel_coordinates_to_id(GRuint x, GRuint y, GRuint z) const {
 			return x+1 + (y+1 + (z+1) * height_) * width_;
 		}
 
 		
-		//TODO : test this with negative coordinates
-		void voxel_id_to_coordinates(GRint id, GRint& x, GRint& y, GRint& z) const {
+		void voxel_id_to_coordinates(GRuint id, GRuint& x, GRuint& y, GRuint& z) const {
 				z = id / (width_ * height_) - 1;
-				GRint rem = id % (width_ * height_);
+				GRuint rem = id % (width_ * height_);
 				y = rem / width_ - 1;
 				x = rem % width_ - 1;
 		}
@@ -135,8 +134,9 @@ namespace grapholon {
 			return voxel_coordinates_and_relative_coordinates_to_id(x, y, z, rel_x, rel_y, rel_z);
 		}*/
 
-		bool set_voxel(GRint id, bool value = true) {
-			if (id < 0 || id >= (GRint)nb_voxels_) {
+		bool set_voxel(GRuint id, bool value = true) {
+			if (
+				id >= nb_voxels_) {
 				return false;
 			}
 
@@ -167,7 +167,7 @@ namespace grapholon {
 				GRuint voxel_id = true_voxels_[i];
 
 				if (voxels_[voxel_id].value_) {
-					GRint x, y, z;
+					GRuint x, y, z;
 					voxel_id_to_coordinates(voxel_id, x, y, z);
 
 					//first check if it's a border (incomplete, only checks for voxels on the boundary)
@@ -194,8 +194,8 @@ namespace grapholon {
 
 		/**This checks if the two ids correspond to 0-adjacent voxels
 		NOTE : if id == id2 it will return false so this is not really 0-adjency*/
-		bool are_0adjacent(GRint id, GRint id2) {
-			if (id >= (GRint)nb_voxels_ || id2 >= (GRint)nb_voxels_) {
+		bool are_0adjacent(GRuint id, GRuint id2) {
+			if (id >= nb_voxels_ || id2 >= nb_voxels_) {
 				return false;
 			}
 			return id + 1 + width_ + width_ * height_ == id2
@@ -209,8 +209,8 @@ namespace grapholon {
 				|| are_1adjacent(id, id2);
 		}
 
-		bool are_1adjacent(GRint id, GRint id2) {
-			if (id >= (GRint)nb_voxels_ || id2 >= (GRint)nb_voxels_) {
+		bool are_1adjacent(GRuint id, GRuint id2) {
+			if (id >= nb_voxels_ || id2 >= nb_voxels_) {
 				return false;
 			}
 			return id + 1 + width_ == id2
@@ -229,8 +229,8 @@ namespace grapholon {
 		}
 
 
-		bool are_2adjacent(GRint id, GRint id2) {
-			if (id >= (GRint)nb_voxels_ || id2 >= (GRint)nb_voxels_) {
+		bool are_2adjacent(GRuint id, GRuint id2) {
+			if (id >= nb_voxels_ || id2 >= nb_voxels_) {
 				return false;
 			}
 			return id + 1 == id2
@@ -241,18 +241,18 @@ namespace grapholon {
 				|| id - width_ * height_ == id2;
 		}
 
-		bool are_0adjacent(GRint x, GRint y, GRint z, GRint x2, GRint y2, GRint z2) {
+		bool are_0adjacent(GRuint x, GRuint y, GRuint z, GRuint x2, GRuint y2, GRuint z2) {
 			return are_0adjacent(voxel_coordinates_to_id(x, y, z), voxel_coordinates_to_id(x2, y2, z2));
 		}
-		bool are_1adjacent(GRint x, GRint y, GRint z, GRint x2, GRint y2, GRint z2) {
+		bool are_1adjacent(GRuint x, GRuint y, GRuint z, GRuint x2, GRuint y2, GRuint z2) {
 			return are_1adjacent(voxel_coordinates_to_id(x, y, z), voxel_coordinates_to_id(x2, y2, z2));
 		}
-		bool are_2adjacent(GRint x, GRint y, GRint z, GRint x2, GRint y2, GRint z2) {
+		bool are_2adjacent(GRuint x, GRuint y, GRuint z, GRuint x2, GRuint y2, GRuint z2) {
 			return are_2adjacent(voxel_coordinates_to_id(x, y, z), voxel_coordinates_to_id(x2, y2, z2));
 		}
 
 
-		bool is_k_connected(std::vector<GRint> voxel_ids, AdjencyFunction adjency_function) {
+		bool is_k_connected(std::vector<GRuint> voxel_ids, AdjencyFunction adjency_function) {
 			/*std::cout << "checking connectdedness of voxels : " << std::endl;;
 			for (GRuint i(0); i < voxel_ids.size(); i++) {
 				GRint x, y, z;
@@ -262,80 +262,80 @@ namespace grapholon {
 			std::cout << std::endl;
 			*/
 
-std::vector<bool> visited(voxel_ids.size(), false);
-std::vector<bool> explored(voxel_ids.size(), false);
+			std::vector<bool> visited(voxel_ids.size(), false);
+			std::vector<bool> explored(voxel_ids.size(), false);
 
-bool result(false);
-bool uncertain(true);
-GRuint last_explored_index(0);
-GRuint iteration_count(0);
-while (uncertain && iteration_count < visited.size()) {
-	iteration_count++;
+			bool result(false);
+			bool uncertain(true);
+			GRuint last_explored_index(0);
+			GRuint iteration_count(0);
+			while (uncertain && iteration_count < visited.size()) {
+				iteration_count++;
 
-	//visit all neighbors of the last visited
-	for (GRuint i(0); i < voxel_ids.size(); i++) {
-		if (!visited[i] && (this->*adjency_function)(voxel_ids[last_explored_index],
-			voxel_ids[i])) {
-			visited[i] = true;
-			//std::cout << "visited voxel : " << i << std::endl;
-		}
-	}
-	explored[last_explored_index] = true;
-	visited[last_explored_index] = true;
+				//visit all neighbors of the last visited
+				for (GRuint i(0); i < voxel_ids.size(); i++) {
+					if (!visited[i] && (this->*adjency_function)(voxel_ids[last_explored_index],
+						voxel_ids[i])) {
+						visited[i] = true;
+						//std::cout << "visited voxel : " << i << std::endl;
+					}
+				}
+				explored[last_explored_index] = true;
+				visited[last_explored_index] = true;
 
-	bool found_unexplored(false);
+				bool found_unexplored(false);
 
-	GRuint next_explored_index(0);
-	while (next_explored_index < explored.size()
-		&& !found_unexplored) {
+				GRuint next_explored_index(0);
+				while (next_explored_index < explored.size()
+					&& !found_unexplored) {
 
-		if (visited[next_explored_index] && !explored[next_explored_index]) {
-			found_unexplored = true;
-			last_explored_index = next_explored_index;
-			//	std::cout << "found unexplored : " << next_explored_index << std::endl;
-		}
-		next_explored_index++;
-	}
+					if (visited[next_explored_index] && !explored[next_explored_index]) {
+						found_unexplored = true;
+						last_explored_index = next_explored_index;
+						//	std::cout << "found unexplored : " << next_explored_index << std::endl;
+					}
+					next_explored_index++;
+				}
 
-	//std::cout << "last explored index is now : " << last_explored_index << std::endl;
+				//std::cout << "last explored index is now : " << last_explored_index << std::endl;
 
-	//if we reached the end of the array, we check if all voxels have been visited
-	if (!found_unexplored || last_explored_index == explored.size() - 1) {
-		bool visited_voxels_are_also_explored(true);
-		bool all_visited(true);
-		for (GRuint i(0); i < visited.size(); i++) {
-			if (visited[i]) {
-				visited_voxels_are_also_explored &= explored[i];
+				//if we reached the end of the array, we check if all voxels have been visited
+				if (!found_unexplored || last_explored_index == explored.size() - 1) {
+					bool visited_voxels_are_also_explored(true);
+					bool all_visited(true);
+					for (GRuint i(0); i < visited.size(); i++) {
+						if (visited[i]) {
+							visited_voxels_are_also_explored &= explored[i];
+						}
+						all_visited &= visited[i];
+					}
+					if (visited_voxels_are_also_explored) {
+						uncertain = false;
+						result = all_visited;
+					}
+				}
+				/*
+				std::cout << "visited : ";
+				for (GRuint i(0); i < visited.size(); i++) {
+				std::cout << " " << visited[i];
+				}
+				std::cout << std::endl;
+				std::cout << "explored : ";
+				for (GRuint i(0); i < explored.size(); i++) {
+				std::cout << " " << explored[i];
+				}
+				std::cout << std::endl;
+				*/
 			}
-			all_visited &= visited[i];
-		}
-		if (visited_voxels_are_also_explored) {
-			uncertain = false;
-			result = all_visited;
-		}
-	}
-	/*
-	std::cout << "visited : ";
-	for (GRuint i(0); i < visited.size(); i++) {
-	std::cout << " " << visited[i];
-	}
-	std::cout << std::endl;
-	std::cout << "explored : ";
-	for (GRuint i(0); i < explored.size(); i++) {
-	std::cout << " " << explored[i];
-	}
-	std::cout << std::endl;
-	*/
-}
 
-//std::cout << " nb voxels : " << voxel_ids.size() << ", iterations : " << iteration_count << std::endl;
+			//std::cout << " nb voxels : " << voxel_ids.size() << ", iterations : " << iteration_count << std::endl;
 
-return result;
+			return result;
 		}
 
 
 		//NOTE : this is very greedy (O(n^2), n = voxels_ids.size()) but it is not used at runtime so it's fine 
-		bool is_k_connected(std::vector<GRint> voxel_ids, GRuint k) {
+		bool is_k_connected(std::vector<GRuint> voxel_ids, GRuint k) {
 			switch (k) {
 			case 0: {
 				return is_k_connected(voxel_ids, &VoxelSkeleton::are_0adjacent);
@@ -357,7 +357,7 @@ return result;
 		}
 
 
-		bool is_reducible(std::vector<GRint> voxels_id) {
+		bool is_reducible(std::vector<GRuint> voxels_id) {
 			if (voxels_id.size() == 0) {
 				return false;
 			}else if (voxels_id.size() == 1){
@@ -369,7 +369,7 @@ return result;
 				for (GRuint i(0); i < voxels_id.size(); i++) {
 
 					//first computing N0(x)
-					std::vector<GRint> neighbors;
+					std::vector<GRuint> neighbors;
 					for (GRuint j(0); j < voxels_id.size(); j++) {
 						if (are_0adjacent(voxels_id[i], voxels_id[j])) {
 							neighbors.push_back(voxels_id[j]);
@@ -377,7 +377,7 @@ return result;
 					}
 
 					//then X without x
-					std::vector<GRint> voxel_set_without_i = voxels_id;
+					std::vector<GRuint> voxel_set_without_i = voxels_id;
 					voxel_set_without_i.erase(
 						std::remove(
 							voxel_set_without_i.begin(), voxel_set_without_i.end(), voxels_id[i]),
@@ -392,12 +392,12 @@ return result;
 			}
 		}
 
-		bool is_simple(GRint x, GRint y, GRint z) {
+		bool is_simple(GRuint x, GRuint y, GRuint z) {
 
 			//std::cout << "checking if voxel " << x << " " << y << " " << z << " is simple " << std::endl;
 
 			//first define the zero neighborhood*
-			std::vector<GRint> zero_neighborhood_star;
+			std::vector<GRuint> zero_neighborhood_star;
 			GRint neighbor_id;
 			for (GRint i(0); i < 3; i++) {
 				for (GRint j(0); j < 3; j++) {
@@ -449,7 +449,7 @@ return result;
 
 
 			//first create the list of voxels in {X0,...,X7, Y0,...,Y7}AND X (at most 16 voxels)
-			std::vector<GRint> mask_neighborhood_intersection;
+			std::vector<GRuint> mask_neighborhood_intersection;
 
 			//std::cout << "checking clique (" << x << ", " << y << ", " << z<<") - ("<<x2<<", "<<y2<<", "<<z2<<") on axis "<<axis<< std::endl;
 
@@ -457,8 +457,8 @@ return result;
 				for (GRuint j(0); j < 3; j++) {
 					if (!(i == 1 && j == 1)) {
 
-						GRint X_neighbor_id;
-						GRint Y_neighbor_id;
+						GRuint X_neighbor_id;
+						GRuint Y_neighbor_id;
 
 						switch (axis) {
 						case 0: {
@@ -758,9 +758,9 @@ return result;
 			//erasing voxel grid
 			memset(voxels_, 0, nb_voxels_ * sizeof(SkeletonVoxel));
 
-			GRint current_voxel_id = rand() % nb_voxels_;
+			GRuint current_voxel_id = rand() % nb_voxels_;
 
-			GRint x, y, z;
+			GRuint x, y, z;
 
 			for (GRuint i(0); i < nb_voxels; i++) {
 

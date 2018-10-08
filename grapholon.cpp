@@ -132,7 +132,7 @@ void SimpleVoxelTests() {
 
 
 	for (GRuint i(0); i < skeleton->true_voxels().size(); i++) {
-		GRint x, y, z;
+		GRuint x, y, z;
 		skeleton->voxel_id_to_coordinates(skeleton->true_voxels()[i], x, y, z);
 		std::cout << " voxel " << x << " " << y << " " << z << " is simple : " << skeleton->is_simple(x, y, z) << std::endl;
 	}
