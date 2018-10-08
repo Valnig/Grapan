@@ -85,7 +85,18 @@ namespace grapholon {
 
 	public:
 
+
+		/***********************************************************************************************/
+		/******************************************************************************* TYPEDEFS **/
+		/***********************************************************************************************/
+
 		typedef bool(VoxelSkeleton::*AdjencyFunction)(GRuint, GRuint);
+
+
+		/***********************************************************************************************/
+		/******************************************************************************* CONSTRUCTORS **/
+		/***********************************************************************************************/
+
 
 		VoxelSkeleton(GRuint width, GRuint height, GRuint slice) : width_(width + 2), height_(height + 2), slice_(slice + 2), nb_voxels_(width_*height_*slice_) {
 			voxels_ = (SkeletonVoxel*)calloc(nb_voxels_, sizeof(SkeletonVoxel));
@@ -95,6 +106,12 @@ namespace grapholon {
 		~VoxelSkeleton(){
 			free(voxels_);
 		}
+
+
+
+		/***********************************************************************************************/
+		/********************************************************************************** ACCESSORS **/
+		/***********************************************************************************************/
 
 		SkeletonVoxel voxel(GRint id) {
 			if (id < 0 || id >= (GRint)nb_voxels_) {
@@ -114,25 +131,6 @@ namespace grapholon {
 			return true_voxels_;
 		}
 
-		//id 0 is actually voxel (-1, -1, -1)
-		GRuint voxel_coordinates_to_id(GRuint x, GRuint y, GRuint z) const {
-			return x+1 + (y+1 + (z+1) * height_) * width_;
-		}
-
-		
-		void voxel_id_to_coordinates(GRuint id, GRuint& x, GRuint& y, GRuint& z) const {
-				z = id / (width_ * height_) - 1;
-				GRuint rem = id % (width_ * height_);
-				y = rem / width_ - 1;
-				x = rem % width_ - 1;
-		}
-
-		/**
-		GRuint voxel_id_and_relative_coordinates_to_id(GRuint id, GRint rel_x, GRint rel_y, GRint rel_z) {
-			GRuint x, y, z;
-			voxel_id_to_coordinates(id, x, y, z);
-			return voxel_coordinates_and_relative_coordinates_to_id(x, y, z, rel_x, rel_y, rel_z);
-		}*/
 
 		bool set_voxel(GRuint id, bool value = true) {
 			if (
@@ -160,36 +158,31 @@ namespace grapholon {
 
 
 
-		//only does interior and border points for now
-		void compute_voxel_attributes() {
+		/***********************************************************************************************/
+		/***************************************************************** COORDINATES-ID CONVERSIONS **/
+		/***********************************************************************************************/
 
-			for (GRuint i(0); i < true_voxels_.size(); i++) {
-				GRuint voxel_id = true_voxels_[i];
-
-				if (voxels_[voxel_id].value_) {
-					GRuint x, y, z;
-					voxel_id_to_coordinates(voxel_id, x, y, z);
-
-					//first check if it's a border (incomplete, only checks for voxels on the boundary)
-					if (x == 0 || y == 0 || z == 0 || x == width_ - 1 || y == height_ - 1 || z == slice_ - 1) {
-						voxels_[voxel_id].topological_class_ = BORDER_POINT;
-					}
-					else if (
-						voxels_[voxel_coordinates_to_id(x + 1, y, z)].value_
-						&& voxels_[voxel_coordinates_to_id(x - 1, y, z)].value_
-						&& voxels_[voxel_coordinates_to_id(x, y + 1, z)].value_
-						&& voxels_[voxel_coordinates_to_id(x, y - 1, z)].value_
-						&& voxels_[voxel_coordinates_to_id(x, y, z + 1)].value_
-						&& voxels_[voxel_coordinates_to_id(x, y, z - 1)].value_) {
-
-						voxels_[voxel_id].topological_class_ = INTERIOR_POINT;
-					}
-					else {
-						voxels_[voxel_id].topological_class_ = UNCLASSIFIED;
-					}
-				}
-			}
+		//id 0 is actually voxel (-1, -1, -1)
+		GRuint voxel_coordinates_to_id(GRuint x, GRuint y, GRuint z) const {
+			return x+1 + (y+1 + (z+1) * height_) * width_;
 		}
+
+		
+		void voxel_id_to_coordinates(GRuint id, GRuint& x, GRuint& y, GRuint& z) const {
+				z = id / (width_ * height_) - 1;
+				GRuint rem = id % (width_ * height_);
+				y = rem / width_ - 1;
+				x = rem % width_ - 1;
+		}
+
+
+
+		/***********************************************************************************************/
+		/*********************************************************************** VOXEL CLASSIFICATION **/
+		/***********************************************************************************************/
+
+
+		/************************************************************************************ ADJENCY **/
 
 
 		/**This checks if the two ids correspond to 0-adjacent voxels
@@ -250,6 +243,9 @@ namespace grapholon {
 		bool are_2adjacent(GRuint x, GRuint y, GRuint z, GRuint x2, GRuint y2, GRuint z2) {
 			return are_2adjacent(voxel_coordinates_to_id(x, y, z), voxel_coordinates_to_id(x2, y2, z2));
 		}
+
+
+		/****************************************************************************** CONNECTEDNESS **/
 
 
 		bool is_k_connected(std::vector<GRuint> voxel_ids, AdjencyFunction adjency_function) {
@@ -357,6 +353,9 @@ namespace grapholon {
 		}
 
 
+		/******************************************************************************* REDUCIBILITY **/
+
+
 		bool is_reducible(std::vector<GRuint> voxels_id) {
 			if (voxels_id.size() == 0) {
 				return false;
@@ -392,6 +391,10 @@ namespace grapholon {
 			}
 		}
 
+
+		/********************************************************************************* SIMPLICITY **/
+
+
 		bool is_simple(GRuint x, GRuint y, GRuint z) {
 
 			//std::cout << "checking if voxel " << x << " " << y << " " << z << " is simple " << std::endl;
@@ -423,9 +426,9 @@ namespace grapholon {
 		}
 
 
-		bool is_3_clique(GRuint x, GRuint y, GRuint z) {
-			return !is_simple(x, y, z);
-		}
+		/************************************************************************** CLIQUE DETECTION **/
+
+
 
 
 		/**K_2 mask matchings. 
@@ -542,16 +545,54 @@ namespace grapholon {
 
 
 		/*Eventually this will be replaced with a mask table lookup*/
+		bool is_critical_3_clique(GRuint x, GRuint y, GRuint z) {
+			return !is_simple(x, y, z);
+		}
+
+
+		/*Eventually this will be replaced with a mask table lookup*/
 		bool is_critical_2_clique(GRuint x, GRuint y, GRuint z, GRuint axis) {
 		
 			return clique_matches_K2_mask(x, y, z, axis);
 		}
 
-		
 
 
 
-		/*MASK PRECOMPUTATIONS */
+
+		//only does interior and border points for now
+		void compute_voxel_attributes() {
+
+			for (GRuint i(0); i < true_voxels_.size(); i++) {
+				GRuint voxel_id = true_voxels_[i];
+
+				if (voxels_[voxel_id].value_) {
+					GRuint x, y, z;
+					voxel_id_to_coordinates(voxel_id, x, y, z);
+
+					//first check if it's a border (incomplete, only checks for voxels on the boundary)
+					if (x == 0 || y == 0 || z == 0 || x == width_ - 1 || y == height_ - 1 || z == slice_ - 1) {
+						voxels_[voxel_id].topological_class_ = BORDER_POINT;
+					}
+					else if (
+						voxels_[voxel_coordinates_to_id(x + 1, y, z)].value_
+						&& voxels_[voxel_coordinates_to_id(x - 1, y, z)].value_
+						&& voxels_[voxel_coordinates_to_id(x, y + 1, z)].value_
+						&& voxels_[voxel_coordinates_to_id(x, y - 1, z)].value_
+						&& voxels_[voxel_coordinates_to_id(x, y, z + 1)].value_
+						&& voxels_[voxel_coordinates_to_id(x, y, z - 1)].value_) {
+
+						voxels_[voxel_id].topological_class_ = INTERIOR_POINT;
+					}
+					else {
+						voxels_[voxel_id].topological_class_ = UNCLASSIFIED;
+					}
+				}
+			}
+		}
+
+
+
 
 		/** This takes the coordinates of the voxel A and the axis on which voxel B is 
 		(always in the axis' direction so the two voxels are 
@@ -618,6 +659,10 @@ namespace grapholon {
 		
 
 
+
+		/*********************************************************************** MASKS PRECOMPUTATION **/
+
+
 		/** Precomputes the critical 2-cliques masks
 		Basically, each mask is an integer which represents one of the 266'144 possible configuration
 		for the neighborhood of a 2-clique. Each possible configuration is tested and then stored
@@ -658,28 +703,6 @@ namespace grapholon {
 						}
 					}
 
-					/**used to check the reciprocity of neighborhood->mask and mask->neighborhood*/
-					/*
-					GRuint computed_mask_value(skeleton.extract_neighborhood_mask_value_on_axis(1, 0, 1, 1));
-					if (computed_mask_value != mask_value) {
-						std::bitset<18> computed_bit_mask(computed_mask_value);
-						std::cerr << "error  ! Expected " << mask_value << " and got " << computed_mask_value << std::endl;
-						std::cerr << " bitwise comparison : " << std::endl;
-						for (GRuint i(0); i < 18; i++) {
-							std::cerr << bit_mask[i];
-						}
-						std::cerr << std::endl;
-						for (GRuint i(0); i < 18; i++) {
-							std::cerr << computed_bit_mask[i];
-						}
-						std::cerr << std::endl;
-						std::cerr << std::endl;
-					}
-					else {
-						//	std::cerr << " looking good for value " << mask_value << std::endl;
-					}
-					*/
-
 
 					//and check if mask is indeed a critical 2-clique :
 					if (skeleton.is_critical_2_clique(1, 0, 1, 1)) {
@@ -688,42 +711,22 @@ namespace grapholon {
 						critical_2_cliques_indices[mask_value] = true;
 
 						critical_masks_count++;
-						/*
-						std::cout << " __________________________" << std::endl;
-						std::cout << " found 2-clique mask : " << std::endl;
-						std::cout << "mask value : " << mask_value << std::endl;
-
-						std::cout << "bit mask : " << std::endl;
-						for (GRuint i(0); i < 18; i++) {
-						std::cout << bit_mask[i];
-						}
-						std::cout << std::endl;
-
-						std::cout << "voxel list : " << std::endl;
-						for (GRuint i(0); i < skeleton.true_voxels_.size(); i++) {
-						GRuint x, y, z;
-						skeleton.voxel_id_to_coordinates(skeleton.true_voxels_[i], x, y, z);
-						std::cout << " " << x << ", " << y << ", " << z << std::endl; ;
-						}
-
-						std::cout << std::endl;
-						*/
 					}
 				}
 			}
 
 			std::cout << " among " << K2Y_CONFIGURATIONS << " possible configurations, " << critical_masks_count << " were critical 2-cliques : " << std::endl;
-			
-			/*std::cout << "masks  : " << std::endl;
-			for (GRuint i(0); i < masks.size(); i++) {
-				std::cout << masks[i] << " ";
-				critical_2_cliques_indices[masks[i]] = true;
-			}
-			std::cout << std::endl;*/
 		}
 
 
-		/**SKELETON GENERATION METHODS (random, vessel-like, Bertrand, etc.)*/
+
+
+
+
+		/***********************************************************************************************/
+		/************************************************************************ SKELETON GENERATORS **/
+		/***********************************************************************************************/
+		/**(random, vessel-like, Bertrand, etc.)*/
 
 		/** Generates the voxel set described in [Bertrand 2016]. 
 		Used to compare the result of the various computations (e.g. critical clique detection)
