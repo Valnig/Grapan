@@ -192,7 +192,8 @@ namespace grapholon {
 		}
 
 
-		/**This checks if the two ids correspond to 0-adjacent voxels*/
+		/**This checks if the two ids correspond to 0-adjacent voxels
+		NOTE : if id == id2 it will return false so this is not really 0-adjency*/
 		bool are_0adjacent(GRint id, GRint id2) {
 			if (id >= (GRint)nb_voxels_ || id2 >= (GRint)nb_voxels_) {
 				return false;
@@ -252,84 +253,84 @@ namespace grapholon {
 
 
 		bool is_k_connected(std::vector<GRint> voxel_ids, AdjencyFunction adjency_function) {
-			std::cout << "checking connectdedness of voxels : " << std::endl;;
+			/*std::cout << "checking connectdedness of voxels : " << std::endl;;
 			for (GRuint i(0); i < voxel_ids.size(); i++) {
 				GRint x, y, z;
 				voxel_id_to_coordinates(voxel_ids[i], x, y, z);
 				std::cout << voxel_ids[i] <<" : "<< x << " " << y << " " << z << std::endl;
 			}
 			std::cout << std::endl;
-			
+			*/
 
-			std::vector<bool> visited(voxel_ids.size(), false);
-			std::vector<bool> explored(voxel_ids.size(), false);
+std::vector<bool> visited(voxel_ids.size(), false);
+std::vector<bool> explored(voxel_ids.size(), false);
 
-			bool result(false);
-			bool uncertain(true);
-			GRuint last_explored_index(0);
-			GRuint iteration_count(0);
-			while (uncertain && iteration_count < visited.size()) {
-				iteration_count++;
+bool result(false);
+bool uncertain(true);
+GRuint last_explored_index(0);
+GRuint iteration_count(0);
+while (uncertain && iteration_count < visited.size()) {
+	iteration_count++;
 
-				//visit all neighbors of the last visited
-				for (GRuint i(0); i < voxel_ids.size(); i++) {
-					if (!visited[i] && (this->*adjency_function)(voxel_ids[last_explored_index],
-						voxel_ids[i])) {
-						visited[i] = true;
-						//std::cout << "visited voxel : " << i << std::endl;
-					}
-				}
-				explored[last_explored_index] = true;
-				visited[last_explored_index] = true;
+	//visit all neighbors of the last visited
+	for (GRuint i(0); i < voxel_ids.size(); i++) {
+		if (!visited[i] && (this->*adjency_function)(voxel_ids[last_explored_index],
+			voxel_ids[i])) {
+			visited[i] = true;
+			//std::cout << "visited voxel : " << i << std::endl;
+		}
+	}
+	explored[last_explored_index] = true;
+	visited[last_explored_index] = true;
 
-				bool found_unexplored(false);
+	bool found_unexplored(false);
 
-				GRuint next_explored_index(0);
-				while (next_explored_index < explored.size()
-					&& !found_unexplored) {
+	GRuint next_explored_index(0);
+	while (next_explored_index < explored.size()
+		&& !found_unexplored) {
 
-					if (visited[next_explored_index] && !explored[next_explored_index]) {
-						found_unexplored = true;
-						last_explored_index = next_explored_index;
-						//	std::cout << "found unexplored : " << next_explored_index << std::endl;
-					}
-					next_explored_index++;
-				}
+		if (visited[next_explored_index] && !explored[next_explored_index]) {
+			found_unexplored = true;
+			last_explored_index = next_explored_index;
+			//	std::cout << "found unexplored : " << next_explored_index << std::endl;
+		}
+		next_explored_index++;
+	}
 
-				//std::cout << "last explored index is now : " << last_explored_index << std::endl;
+	//std::cout << "last explored index is now : " << last_explored_index << std::endl;
 
-				//if we reached the end of the array, we check if all voxels have been visited
-				if (!found_unexplored || last_explored_index == explored.size() - 1) {
-					bool visited_voxels_are_also_explored(true);
-					bool all_visited(true);
-					for (GRuint i(0); i < visited.size(); i++) {
-						if (visited[i]) {
-							visited_voxels_are_also_explored &= explored[i];
-						}
-						all_visited &= visited[i];
-					}
-					if (visited_voxels_are_also_explored) {
-						uncertain = false;
-						result = all_visited;
-					}
-				}
-				/*
-				std::cout << "visited : ";
-				for (GRuint i(0); i < visited.size(); i++) {
-				std::cout << " " << visited[i];
-				}
-				std::cout << std::endl;
-				std::cout << "explored : ";
-				for (GRuint i(0); i < explored.size(); i++) {
-				std::cout << " " << explored[i];
-				}
-				std::cout << std::endl;
-				*/
+	//if we reached the end of the array, we check if all voxels have been visited
+	if (!found_unexplored || last_explored_index == explored.size() - 1) {
+		bool visited_voxels_are_also_explored(true);
+		bool all_visited(true);
+		for (GRuint i(0); i < visited.size(); i++) {
+			if (visited[i]) {
+				visited_voxels_are_also_explored &= explored[i];
 			}
+			all_visited &= visited[i];
+		}
+		if (visited_voxels_are_also_explored) {
+			uncertain = false;
+			result = all_visited;
+		}
+	}
+	/*
+	std::cout << "visited : ";
+	for (GRuint i(0); i < visited.size(); i++) {
+	std::cout << " " << visited[i];
+	}
+	std::cout << std::endl;
+	std::cout << "explored : ";
+	for (GRuint i(0); i < explored.size(); i++) {
+	std::cout << " " << explored[i];
+	}
+	std::cout << std::endl;
+	*/
+}
 
-			//std::cout << " nb voxels : " << voxel_ids.size() << ", iterations : " << iteration_count << std::endl;
+//std::cout << " nb voxels : " << voxel_ids.size() << ", iterations : " << iteration_count << std::endl;
 
-			return result;
+return result;
 		}
 
 
@@ -356,9 +357,44 @@ namespace grapholon {
 		}
 
 
+		bool is_reducible(std::vector<GRint> voxels_id) {
+			if (voxels_id.size() == 0) {
+				return false;
+			}else if (voxels_id.size() == 1){
+				return true;
+			}
+			else {
+				bool x_exists_st_N0x_is_reducible_and_X_without_x_is_reducible = false;
+
+				for (GRuint i(0); i < voxels_id.size(); i++) {
+
+					//first computing N0(x)
+					std::vector<GRint> neighbors;
+					for (GRuint j(0); j < voxels_id.size(); j++) {
+						if (are_0adjacent(voxels_id[i], voxels_id[j])) {
+							neighbors.push_back(voxels_id[j]);
+						}
+					}
+
+					//then X without x
+					std::vector<GRint> voxel_set_without_i = voxels_id;
+					voxel_set_without_i.erase(
+						std::remove(
+							voxel_set_without_i.begin(), voxel_set_without_i.end(), voxels_id[i]),
+						voxel_set_without_i.end()
+					);
+
+					x_exists_st_N0x_is_reducible_and_X_without_x_is_reducible
+						|= (is_reducible(neighbors) && is_reducible(voxel_set_without_i));
+					
+				}
+				return x_exists_st_N0x_is_reducible_and_X_without_x_is_reducible;
+			}
+		}
+
 		bool is_simple(GRint x, GRint y, GRint z) {
 
-			std::cout << "checking if voxel " << x << " " << y << " " << z << " is simple " << std::endl;
+			//std::cout << "checking if voxel " << x << " " << y << " " << z << " is simple " << std::endl;
 
 			//first define the zero neighborhood*
 			std::vector<GRint> zero_neighborhood_star;
@@ -372,10 +408,10 @@ namespace grapholon {
 							//std::cout << "rel : " << i << " " << j << " " << k << std::endl;
 							if (voxel(neighbor_id).value_) {
 								zero_neighborhood_star.push_back(neighbor_id);
-								//std::cout << " is in the neighborhood" << std::endl;
+							//	std::cout << " is in the neighborhood" << std::endl;
 							}
 							else {
-
+								//std::cout << std::endl;
 								//std::cout << " is not in the neighborhood" << std::endl;
 							}
 						}
@@ -383,96 +419,13 @@ namespace grapholon {
 				}
 			}
 
-
-			
-			//then check if it's empty and zero-connected
-			if (zero_neighborhood_star.size() == 0 || !is_k_connected(zero_neighborhood_star, 0u)) {
-				return false;
-			}
-
-			std::cout << "zero neigh is non-empty and 0 connected " << std::endl;
-
-			//then compute the two neighborhood that is not set
-			std::vector<GRint> two_neighborhood_bar;
-			for (GRint i(0); i < 3; i++) {
-				for (GRint j(0); j < 2; j++) {
-					GRint coords[3] = { x,y,z };
-					coords[i] += (1 - 2*(GRint)j);
-					neighbor_id = voxel_coordinates_to_id(coords[0], coords[1], coords[2]);
-					std::cout << "checking neighbor " << neighbor_id << " :  " << coords[0] << " " << coords[1] << " " << coords[2] << std::endl;
-					if (!voxel(neighbor_id).value_) {
-						two_neighborhood_bar.push_back(neighbor_id);
-					}
-				}
-			}
-
-			//and check that it is not empty
-			if (two_neighborhood_bar.size() == 0) {
-				return false;
-			}
-
-			std::cout << "2-neighborhood bar is non-empty : " <<two_neighborhood_bar.size()<< std::endl;
-
-			//then add the one-neighborhood
-			//todo : also improve code quality
-			neighbor_id = voxel_coordinates_to_id(x, y + 1, z + 1);
-			if (!voxel(neighbor_id).value_) {
-				two_neighborhood_bar.push_back(neighbor_id);
-			}
-			neighbor_id = voxel_coordinates_to_id(x, y + 1, z - 1);
-			if (!voxel(neighbor_id).value_) {
-				two_neighborhood_bar.push_back(neighbor_id);
-			}
-			neighbor_id = voxel_coordinates_to_id(x, y - 1, z + 1);
-			if (!voxel(neighbor_id).value_) {
-				two_neighborhood_bar.push_back(neighbor_id);
-			}
-			neighbor_id = voxel_coordinates_to_id(x, y - 1, z - 1 );
-			if (!voxel(neighbor_id).value_) {
-				two_neighborhood_bar.push_back(neighbor_id);
-			}
-
-			neighbor_id = voxel_coordinates_to_id(x+1, y + 1, z);
-			if (!voxel(neighbor_id).value_) {
-				two_neighborhood_bar.push_back(neighbor_id);
-			}
-			neighbor_id = voxel_coordinates_to_id(x-1, y + 1, z);
-			if (!voxel(neighbor_id).value_) {
-				two_neighborhood_bar.push_back(neighbor_id);
-			}
-			neighbor_id = voxel_coordinates_to_id(x+1, y - 1, z);
-			if (!voxel(neighbor_id).value_) {
-				two_neighborhood_bar.push_back(neighbor_id);
-			}
-			neighbor_id = voxel_coordinates_to_id(x-1, y - 1, z);
-			if (!voxel(neighbor_id).value_) {
-				two_neighborhood_bar.push_back(neighbor_id);
-			}
-
-			neighbor_id = voxel_coordinates_to_id(x+1, y + 1, z);
-			if (!voxel(neighbor_id).value_) {
-				two_neighborhood_bar.push_back(neighbor_id);
-			}
-			neighbor_id = voxel_coordinates_to_id(x-1, y + 1, z);
-			if (!voxel(neighbor_id).value_) {
-				two_neighborhood_bar.push_back(neighbor_id);
-			}
-			neighbor_id = voxel_coordinates_to_id(x+1, y - 1, z);
-			if (!voxel(neighbor_id).value_) {
-				two_neighborhood_bar.push_back(neighbor_id);
-			}
-			neighbor_id = voxel_coordinates_to_id(x-1, y - 1, z);
-			if (!voxel(neighbor_id).value_) {
-				two_neighborhood_bar.push_back(neighbor_id);
-			}
-
-
-
-			//the problem must be here
-			//and finally check if the 2-neighborhood is 2-connected in the 1-neighborhood bar
-			return is_k_connected(two_neighborhood_bar, 2);
+			return is_reducible(zero_neighborhood_star);
 		}
 
+
+		bool is_3_clique(GRuint x, GRuint y, GRuint z) {
+			return !is_simple(x, y, z);
+		}
 
 
 		/**K_2 mask matchings. 
@@ -589,7 +542,7 @@ namespace grapholon {
 
 
 		/*Eventually this will be replaced with a mask table lookup*/
-		bool is_critical_2clique(GRuint x, GRuint y, GRuint z, GRuint axis) {
+		bool is_critical_2_clique(GRuint x, GRuint y, GRuint z, GRuint axis) {
 		
 			return clique_matches_K2_mask(x, y, z, axis);
 		}
@@ -729,7 +682,7 @@ namespace grapholon {
 
 
 					//and check if mask is indeed a critical 2-clique :
-					if (skeleton.is_critical_2clique(1, 0, 1, 1)) {
+					if (skeleton.is_critical_2_clique(1, 0, 1, 1)) {
 
 						//if yes, we set the corresponding bit to 1
 						critical_2_cliques_indices[mask_value] = true;

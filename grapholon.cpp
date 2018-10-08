@@ -67,32 +67,31 @@ void sand_box() {
 		inside_count += (skeleton.voxel(skeleton.true_voxels()[i]).topological_class_ == BORDER_POINT);
 	}
 	std::cout << "number of inside points : " << inside_count << std::endl;
-
 }
 
-void BertandStructureTests(){
 
+void BertandStructureTests(){
 
 	VoxelSkeleton* skeleton = VoxelSkeleton::BertrandStructure();
 	
 	std::cout << "Bertrand's structure has a critical 2-clique at 211-221: "
-		<< skeleton->is_critical_2clique(2, 1, 1, 1) << std::endl;
+		<< skeleton->is_critical_2_clique(2, 1, 1, 1) << std::endl;
 
 	
 	std::cout << "Bertrand's structure has a critical 2-clique at 311-321: "
-		<< skeleton->is_critical_2clique(3, 1, 1, 1) << std::endl;
+		<< skeleton->is_critical_2_clique(3, 1, 1, 1) << std::endl;
 
 	std::cout << "Bertrand's structure has a critical 2-clique at 321-322: "
-		<< skeleton->is_critical_2clique(3, 2, 1, 2) << std::endl;
+		<< skeleton->is_critical_2_clique(3, 2, 1, 2) << std::endl;
 
 	std::cout << "Bertrand's structure has a critical 2-clique at 100-110: "
-		<< skeleton->is_critical_2clique(1, 0, 0, 1)<<std::endl;
+		<< skeleton->is_critical_2_clique(1, 0, 0, 1)<<std::endl;
 	std::cout << "Bertrand's structure has a critical 2-clique at 012-022: "
-		<< skeleton->is_critical_2clique(0, 1, 2, 1) << std::endl;
+		<< skeleton->is_critical_2_clique(0, 1, 2, 1) << std::endl;
 	std::cout << "Bertrand's structure has a critical 2-clique at 022-122: "
-		<< skeleton->is_critical_2clique(0, 2, 2, 0) << std::endl;
+		<< skeleton->is_critical_2_clique(0, 2, 2, 0) << std::endl;
 	std::cout << "Bertrand's structure has a critical 2-clique at 211-311: "
-		<< skeleton->is_critical_2clique(2, 1, 1, 0) << std::endl;
+		<< skeleton->is_critical_2_clique(2, 1, 1, 0) << std::endl;
 
 
 	delete skeleton;
@@ -117,15 +116,25 @@ void TableLookupVSOnTheFlyCliqueCheck(){
 void SimpleVoxelTests() {
 	VoxelSkeleton* skeleton = VoxelSkeleton::BertrandStructure();
 
-	//std::cout << " voxel  1 2 2 is simple : " << skeleton->is_simple(1, 2, 2) << std::endl;
-	bool simple = skeleton->is_simple(1, 0, 0);
-	std::cout << " voxel  1 0 0 is simple : " << simple << std::endl;
-
-	return;
-	for (GRuint i(0); i < skeleton->true_voxels().size()/2; i++) {
+	/*std::cout << "voxels in the structure : " << std::endl;
+	for (GRuint i(0); i < skeleton->true_voxels().size(); i++) {
 		GRint x, y, z;
 		skeleton->voxel_id_to_coordinates(skeleton->true_voxels()[i], x, y, z);
-		std::cout << " voxel " << x << " " << y << " " << z << " is simple : " << skeleton->is_simple(x, y, z) << std::endl << std::endl;;
+			std::cout << " " << x << " " << y << " " << z << std::endl;
+		
+	}*/
+
+
+	//std::cout << " voxel  1 2 2 is simple : " << skeleton->is_simple(1, 2, 2) << std::endl;
+	//bool simple = skeleton->is_simple(1, 2, 2);
+//	std::cout << " voxel  1,3,2 simple : " << simple << std::endl;
+	
+
+
+	for (GRuint i(0); i < skeleton->true_voxels().size(); i++) {
+		GRint x, y, z;
+		skeleton->voxel_id_to_coordinates(skeleton->true_voxels()[i], x, y, z);
+		std::cout << " voxel " << x << " " << y << " " << z << " is simple : " << skeleton->is_simple(x, y, z) << std::endl;
 	}
 
 	//std::cout << " voxel  122 is simple : " << skeleton->is_simple(1, 2, 2) << std::endl;

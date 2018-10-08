@@ -160,17 +160,34 @@ namespace grapholon_tests
 			VoxelSkeleton* skeleton = VoxelSkeleton::BertrandStructure();
 
 			//critical 2-cliques
-			Assert::IsTrue(skeleton->is_critical_2clique(2, 1, 1, 1));
-			Assert::IsTrue(skeleton->is_critical_2clique(3, 1, 1, 1));
-			Assert::IsTrue(skeleton->is_critical_2clique(3, 2, 1, 2));
+			Assert::IsTrue(skeleton->is_critical_2_clique(2, 1, 1, 1));
+			Assert::IsTrue(skeleton->is_critical_2_clique(3, 1, 1, 1));
+			Assert::IsTrue(skeleton->is_critical_2_clique(3, 2, 1, 2));
 
 			//non-critical 2-cliques
-			Assert::IsFalse(skeleton->is_critical_2clique(1, 0, 0, 1));
-			Assert::IsFalse(skeleton->is_critical_2clique(0, 1, 2, 1));
-			Assert::IsFalse(skeleton->is_critical_2clique(0, 2, 2, 0));
-			Assert::IsFalse(skeleton->is_critical_2clique(2, 1, 1, 0));
+			Assert::IsFalse(skeleton->is_critical_2_clique(1, 0, 0, 1));
+			Assert::IsFalse(skeleton->is_critical_2_clique(0, 1, 2, 1));
+			Assert::IsFalse(skeleton->is_critical_2_clique(0, 2, 2, 0));
+			Assert::IsFalse(skeleton->is_critical_2_clique(2, 1, 1, 0));
 
 			delete skeleton;
+		}
+
+		TEST_METHOD(Critical_3_CliquesInBertrandStructureTest) {
+
+			VoxelSkeleton* skeleton = VoxelSkeleton::BertrandStructure();
+
+			for (GRuint i(0); i < skeleton->true_voxels().size(); i++) {
+				GRint x, y, z;
+				skeleton->voxel_id_to_coordinates(skeleton->true_voxels()[i], x, y, z);
+
+				if (x == 1 && y == 2 && z == 2) {
+					Assert::IsTrue(skeleton->is_3_clique(x, y, z));
+				}
+				else {
+					Assert::IsFalse(skeleton->is_3_clique(x, y, z));
+				}
+			}
 		}
 
 		//todo : test rotations of the K2 mask
