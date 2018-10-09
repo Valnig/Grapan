@@ -54,7 +54,8 @@ namespace grapholon {
 		VoxelState state;
 	};
 
-	enum Clique{ NO_CLIQUE, CLIQUE3, CLIQUE2, CLIQUE1, CLIQUE0 };
+	enum Axis{X_AXIS, Y_AXIS, Z_AXIS};
+	enum Clique{ NO_CLIQUE, CLIQUE3, CLIQUE2, CLIQUE1, CLIQUE0};
 	enum TopologicalClass{UNCLASSIFIED, INTERIOR_POINT, ISOLATED_POINT, BORDER_POINT, CURVES_POINT, CURVE_JUNCTION, SURFACE_CURVES_JUNCTION, SURFACE_JUNCTION, SURFACES_CURVE_JUNCTION};
 	
 	struct SkeletonVoxel {
@@ -433,17 +434,17 @@ namespace grapholon {
 
 		/**K_2 mask matchings. 
 		\param axis 0:X-axis, 1:Y-axis, 2:Z-axis */
-		bool clique_matches_K2_mask(GRuint x, GRuint y, GRuint z, GRuint axis) {
+		bool clique_matches_K2_mask(GRuint x, GRuint y, GRuint z, Axis axis) {
 
-			if (axis > 2) {
+			if (axis > Z_AXIS) {
 				std::cerr << "wrong axis to apply K2 mask. Returning false" << std::endl;
 				return false;
 			}
 
 			//compute voxel B's coordinates
-			GRuint x2(x + (axis == 0));
-			GRuint y2(y + (axis == 1));
-			GRuint z2(z + (axis == 2));
+			GRuint x2(x + (axis == X_AXIS));
+			GRuint y2(y + (axis == Y_AXIS));
+			GRuint z2(z + (axis == Z_AXIS));
 
 			//first checking if the voxel and its neighbor in the axis' direction are set
 			if (!voxel(x, y, z).value_ || !voxel(x2, y2, z2).value_) {
@@ -464,18 +465,18 @@ namespace grapholon {
 						GRuint Y_neighbor_id;
 
 						switch (axis) {
-						case 0: {
+						case X_AXIS: {
 							X_neighbor_id = voxel_coordinates_to_id(x,  y  - 1 + i, z  - 1 + j);
 							Y_neighbor_id = voxel_coordinates_to_id(x2, y2 - 1 + i, z2 - 1 + j);
 							break;
 						}
-						case 1: {
+						case Y_AXIS: {
 							X_neighbor_id = voxel_coordinates_to_id(x  - 1 + i, y,  z  - 1 + j);
 							Y_neighbor_id = voxel_coordinates_to_id(x2 - 1 + i, y2, z2 - 1 + j);
 
 							break;
 						}
-						case 2: {
+						case Z_AXIS: {
 							X_neighbor_id = voxel_coordinates_to_id(x  - 1 + i, y  - 1 + j, z);
 							Y_neighbor_id = voxel_coordinates_to_id(x2 - 1 + i, y2 - 1 + j, z2);
 							break;
@@ -543,6 +544,48 @@ namespace grapholon {
 			return is_in_subset;
 		}
 
+		/** here the axis is the direction of the "normal" of the ABCD plane. 
+		So the K1 mask is on the X axis in the reference literature
+		
+		IMPORTANT NOTE : this method assumes that all coordinates correspond tovoxels correctly located. 
+		e.g. if axis = X_AXIS, and A = (0,0,0), then 
+		B = (0,1,0), C = (0,0,1) and D = (0,1,1)
+
+		i.e. if there is not verification that those are all neighbors or that the axis is right. 
+		This is done in order to speed-up the process*/
+		bool clique_matches_K1_mask(GRuint x, GRuint y, GRuint z,
+			GRuint x_B, GRuint y_B, GRuint z_B,
+			GRuint x_C, GRuint y_C, GRuint z_C,
+			GRuint x_D, GRuint y_D, GRuint z_D,
+			Axis axis) {
+			
+			GRint axis_vector[3] = { axis == X_AXIS, axis == Y_AXIS, axis == Z_AXIS };
+
+			if (voxel(x, y, z).value_ && voxel(x_C, y_C, z_C).value_
+				|| voxel(x_B, y_B, z_B).value_ && voxel(x_D, y_D, z_D).value_) {
+
+				//first check whether the set {X0, X1, X2, X3} is empty or not
+				bool X_set_non_empty
+					= voxel(x - axis_vector[0], y - axis_vector[1], z - axis_vector[2]).value_
+					|| voxel(x_B - axis_vector[0], y_B - axis_vector[1], z_B - axis_vector[2]).value_
+					|| voxel(x_C - axis_vector[0], y_C - axis_vector[1], z_C - axis_vector[2]).value_
+					|| voxel(x_D - axis_vector[0], y_D - axis_vector[1], z_D - axis_vector[2]).value_;
+
+				//then check whether the set {Y0, Y1, Y2, Y3} is empty or not
+				bool Y_set_non_empty
+					= voxel(x + axis_vector[0], y + axis_vector[1], z + axis_vector[2]).value_
+					|| voxel(x_B + axis_vector[0], y_B + axis_vector[1], z_B + axis_vector[2]).value_
+					|| voxel(x_C + axis_vector[0], y_C + axis_vector[1], z_C + axis_vector[2]).value_
+					|| voxel(x_D + axis_vector[0], y_D + axis_vector[1], z_D + axis_vector[2]).value_;
+
+				//and return whether both are the same or not
+				return X_set_non_empty == Y_set_non_empty;
+			}
+			else {
+				return false;
+			}
+		}
+
 
 		/*Eventually this will be replaced with a mask table lookup*/
 		bool is_critical_3_clique(GRuint x, GRuint y, GRuint z) {
@@ -551,8 +594,7 @@ namespace grapholon {
 
 
 		/*Eventually this will be replaced with a mask table lookup*/
-		bool is_critical_2_clique(GRuint x, GRuint y, GRuint z, GRuint axis) {
-		
+		bool is_critical_2_clique(GRuint x, GRuint y, GRuint z, Axis axis) {
 			return clique_matches_K2_mask(x, y, z, axis);
 		}
 
@@ -705,7 +747,7 @@ namespace grapholon {
 
 
 					//and check if mask is indeed a critical 2-clique :
-					if (skeleton.is_critical_2_clique(1, 0, 1, 1)) {
+					if (skeleton.is_critical_2_clique(1, 0, 1, Y_AXIS)) {
 
 						//if yes, we set the corresponding bit to 1
 						critical_2_cliques_indices[mask_value] = true;

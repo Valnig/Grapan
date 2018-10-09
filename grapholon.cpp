@@ -75,23 +75,23 @@ void BertandStructureTests(){
 	VoxelSkeleton* skeleton = VoxelSkeleton::BertrandStructure();
 	
 	std::cout << "Bertrand's structure has a critical 2-clique at 211-221: "
-		<< skeleton->is_critical_2_clique(2, 1, 1, 1) << std::endl;
+		<< skeleton->is_critical_2_clique(2, 1, 1, Y_AXIS) << std::endl;
 
 	
 	std::cout << "Bertrand's structure has a critical 2-clique at 311-321: "
-		<< skeleton->is_critical_2_clique(3, 1, 1, 1) << std::endl;
+		<< skeleton->is_critical_2_clique(3, 1, 1, Y_AXIS) << std::endl;
 
 	std::cout << "Bertrand's structure has a critical 2-clique at 321-322: "
-		<< skeleton->is_critical_2_clique(3, 2, 1, 2) << std::endl;
+		<< skeleton->is_critical_2_clique(3, 2, 1, Z_AXIS) << std::endl;
 
 	std::cout << "Bertrand's structure has a critical 2-clique at 100-110: "
-		<< skeleton->is_critical_2_clique(1, 0, 0, 1)<<std::endl;
+		<< skeleton->is_critical_2_clique(1, 0, 0, Y_AXIS)<<std::endl;
 	std::cout << "Bertrand's structure has a critical 2-clique at 012-022: "
-		<< skeleton->is_critical_2_clique(0, 1, 2, 1) << std::endl;
+		<< skeleton->is_critical_2_clique(0, 1, 2, Y_AXIS) << std::endl;
 	std::cout << "Bertrand's structure has a critical 2-clique at 022-122: "
-		<< skeleton->is_critical_2_clique(0, 2, 2, 0) << std::endl;
+		<< skeleton->is_critical_2_clique(0, 2, 2, X_AXIS) << std::endl;
 	std::cout << "Bertrand's structure has a critical 2-clique at 211-311: "
-		<< skeleton->is_critical_2_clique(2, 1, 1, 0) << std::endl;
+		<< skeleton->is_critical_2_clique(2, 1, 1, X_AXIS) << std::endl;
 
 
 	delete skeleton;
@@ -116,21 +116,6 @@ void TableLookupVSOnTheFlyCliqueCheck(){
 void SimpleVoxelTests() {
 	VoxelSkeleton* skeleton = VoxelSkeleton::BertrandStructure();
 
-	/*std::cout << "voxels in the structure : " << std::endl;
-	for (GRuint i(0); i < skeleton->true_voxels().size(); i++) {
-		GRint x, y, z;
-		skeleton->voxel_id_to_coordinates(skeleton->true_voxels()[i], x, y, z);
-			std::cout << " " << x << " " << y << " " << z << std::endl;
-		
-	}*/
-
-
-	//std::cout << " voxel  1 2 2 is simple : " << skeleton->is_simple(1, 2, 2) << std::endl;
-	//bool simple = skeleton->is_simple(1, 2, 2);
-//	std::cout << " voxel  1,3,2 simple : " << simple << std::endl;
-	
-
-
 	for (GRuint i(0); i < skeleton->true_voxels().size(); i++) {
 		GRuint x, y, z;
 		skeleton->voxel_id_to_coordinates(skeleton->true_voxels()[i], x, y, z);
@@ -143,10 +128,53 @@ void SimpleVoxelTests() {
 	delete skeleton;
 }
 
+
+void K1Tests() {
+	VoxelSkeleton* skeleton = VoxelSkeleton::BertrandStructure();
+
+
+
+
+	bool matches = skeleton->clique_matches_K1_mask(
+		0, 0, 0, 
+		0, 1, 0,
+		0, 0, 1,
+		0, 1, 1,
+		 X_AXIS);
+	std::cout << " nodes starting at 0 0 0 match the K1 mask : " << matches << std::endl;
+
+	matches = skeleton->clique_matches_K1_mask(
+		2, 1, 1,
+		3, 1, 1,
+		2, 1, 2,
+		3, 1, 2,
+		Y_AXIS);
+	std::cout << " nodes starting at 2 1 1 match the K1 mask : " << matches << std::endl;
+
+	matches = skeleton->clique_matches_K1_mask(
+		2, 1, 1,
+		3, 1, 1,
+		2, 2, 1,
+		3, 2, 1,
+		Z_AXIS);
+	std::cout << " nodes starting at 2 1 1 match the K1 mask : " << matches << std::endl;
+
+	matches = skeleton->clique_matches_K1_mask(
+		0, 1, 2,
+		1, 1, 2,
+		0, 2, 2,
+		1, 2, 2,
+		Z_AXIS);
+	std::cout << " nodes starting at 0 1 2 match the K1 mask : " << matches << std::endl;
+
+
+	delete skeleton;
+}
+
 int main()
 {
 
-	SimpleVoxelTests();
+	K1Tests();
 
 	while (true);
     return 0;
