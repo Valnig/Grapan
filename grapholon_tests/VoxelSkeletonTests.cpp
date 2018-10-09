@@ -155,23 +155,7 @@ namespace grapholon_tests
 			Assert::IsFalse(skeleton.is_k_connected(skeleton.true_voxels(), 0u));
 		}
 
-		TEST_METHOD(Critical_2_CliquesInBertrandStructure)
-		{
-			VoxelSkeleton* skeleton = VoxelSkeleton::BertrandStructure();
 
-			//critical 2-cliques
-			Assert::IsTrue(skeleton->is_critical_2_clique(2, 1, 1, Y_AXIS));
-			Assert::IsTrue(skeleton->is_critical_2_clique(3, 1, 1, Y_AXIS));
-			Assert::IsTrue(skeleton->is_critical_2_clique(3, 2, 1, Z_AXIS));
-
-			//non-critical 2-cliques
-			Assert::IsFalse(skeleton->is_critical_2_clique(1, 0, 0, Y_AXIS));
-			Assert::IsFalse(skeleton->is_critical_2_clique(0, 1, 2, Y_AXIS));
-			Assert::IsFalse(skeleton->is_critical_2_clique(0, 2, 2, X_AXIS));
-			Assert::IsFalse(skeleton->is_critical_2_clique(2, 1, 1, X_AXIS));
-
-			delete skeleton;
-		}
 
 		TEST_METHOD(Critical_3_CliquesInBertrandStructureTest) {
 
@@ -190,6 +174,24 @@ namespace grapholon_tests
 			}
 		}
 
+		TEST_METHOD(Critical_2_CliquesInBertrandStructure)
+		{
+			VoxelSkeleton* skeleton = VoxelSkeleton::BertrandStructure();
+
+			//critical 2-cliques
+			Assert::IsTrue(skeleton->is_critical_2_clique(2, 1, 1, Y_AXIS));
+			Assert::IsTrue(skeleton->is_critical_2_clique(3, 1, 1, Y_AXIS));
+			Assert::IsTrue(skeleton->is_critical_2_clique(3, 2, 1, Z_AXIS));
+
+			//non-critical 2-cliques
+			Assert::IsFalse(skeleton->is_critical_2_clique(1, 0, 0, Y_AXIS));
+			Assert::IsFalse(skeleton->is_critical_2_clique(0, 1, 2, Y_AXIS));
+			Assert::IsFalse(skeleton->is_critical_2_clique(0, 2, 2, X_AXIS));
+			Assert::IsFalse(skeleton->is_critical_2_clique(2, 1, 1, X_AXIS));
+
+			delete skeleton;
+		}
+
 		TEST_METHOD(Critical_1_CliquesBertrandStructureTest) {
 			VoxelSkeleton* skeleton = VoxelSkeleton::BertrandStructure();
 			
@@ -200,6 +202,12 @@ namespace grapholon_tests
 				0, 2, 2,
 				1, 2, 2,
 				Z_AXIS));
+			Assert::IsTrue(skeleton->is_critical_1_clique(
+				1, 1, 0,
+				2, 1, 0,
+				1, 1, 1,
+				2, 1, 1,
+				Y_AXIS));
 
 
 			//non-critical 1-cliques
@@ -213,12 +221,6 @@ namespace grapholon_tests
 				X_AXIS));
 
 			//Y-axis
-			Assert::IsFalse(skeleton->is_critical_1_clique(
-				1, 1, 0,
-				2, 1, 0,
-				1, 1, 1,
-				2, 1, 1,
-				Y_AXIS));
 			Assert::IsFalse(skeleton->is_critical_1_clique(
 				3, 1, 0,
 				4, 1, 0,

@@ -55,11 +55,13 @@ namespace grapholon {
 	};
 
 	enum Axis{X_AXIS, Y_AXIS, Z_AXIS};
-	enum Clique{ NO_CLIQUE, CLIQUE3, CLIQUE2, CLIQUE1, CLIQUE0};
+
+	enum CriticalClique{ NON_CRITICAL, CLIQUE3, CLIQUE2, CLIQUE1, CLIQUE0};
 	enum TopologicalClass{UNCLASSIFIED, INTERIOR_POINT, ISOLATED_POINT, BORDER_POINT, CURVES_POINT, CURVE_JUNCTION, SURFACE_CURVES_JUNCTION, SURFACE_JUNCTION, SURFACES_CURVE_JUNCTION};
 	
 	struct SkeletonVoxel {
 		bool value_ = false;
+		bool selected_ = false;
 		TopologicalClass topological_class_ = UNCLASSIFIED;
 	};
 
@@ -559,10 +561,16 @@ namespace grapholon {
 			GRuint x_D, GRuint y_D, GRuint z_D,
 			Axis axis) {
 			
+			
 			GRint axis_vector[3] = { axis == X_AXIS, axis == Y_AXIS, axis == Z_AXIS };
 
-			if (voxel(x, y, z).value_ && voxel(x_C, y_C, z_C).value_
-				|| voxel(x_B, y_B, z_B).value_ && voxel(x_D, y_D, z_D).value_) {
+			/*std::cout << "A : " <<x<<" "<<y<<" "<<z<<" :: "<< voxel(x, y, z).value_ << std::endl;
+			std::cout << "B : " << x_B << " " << y_B << " " << z_B << " :: " << voxel(x_B, y_B, z_B).value_ << std::endl;
+			std::cout << "C : " << x_C << " " << y_C << " " << z_C << " :: " << voxel(x_C, y_C, z_C).value_ << std::endl;
+			std::cout << "D : " << x_D << " " << y_D << " " << z_D << " :: " << voxel(x_D, y_D, z_D).value_ << std::endl;
+			*/
+			if (voxel(x, y, z).value_ && voxel(x_D, y_D, z_D).value_
+				|| voxel(x_B, y_B, z_B).value_ && voxel(x_C, y_C, z_C).value_) {
 
 				//first check whether the set {X0, X1, X2, X3} is empty or not
 				bool X_set_non_empty
@@ -577,6 +585,9 @@ namespace grapholon {
 					|| voxel(x_B + axis_vector[0], y_B + axis_vector[1], z_B + axis_vector[2]).value_
 					|| voxel(x_C + axis_vector[0], y_C + axis_vector[1], z_C + axis_vector[2]).value_
 					|| voxel(x_D + axis_vector[0], y_D + axis_vector[1], z_D + axis_vector[2]).value_;
+
+				//std::cout << " X set non empty : " << X_set_non_empty << std::endl;
+				//std::cout << " Y set non empty : " << Y_set_non_empty << std::endl;
 
 				//and return whether both are the same or not
 				return X_set_non_empty == Y_set_non_empty;
