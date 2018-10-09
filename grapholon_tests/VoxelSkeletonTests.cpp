@@ -194,7 +194,7 @@ namespace grapholon_tests
 			VoxelSkeleton* skeleton = VoxelSkeleton::BertrandStructure();
 			
 			//critical 1-cliques
-			Assert::IsTrue(skeleton->clique_matches_K1_mask(
+			Assert::IsTrue(skeleton->is_critical_1_clique(
 				0, 1, 2,
 				1, 1, 2,
 				0, 2, 2,
@@ -205,7 +205,7 @@ namespace grapholon_tests
 			//non-critical 1-cliques
 
 			//X-axis
-			Assert::IsFalse(skeleton->clique_matches_K1_mask(
+			Assert::IsFalse(skeleton->is_critical_1_clique(
 				3, 1, 1,
 				3, 2, 1,
 				3, 1, 2,
@@ -213,48 +213,124 @@ namespace grapholon_tests
 				X_AXIS));
 
 			//Y-axis
-			Assert::IsFalse(skeleton->clique_matches_K1_mask(
+			Assert::IsFalse(skeleton->is_critical_1_clique(
 				1, 1, 0,
 				2, 1, 0,
 				1, 1, 1,
 				2, 1, 1,
 				Y_AXIS));
-			Assert::IsFalse(skeleton->clique_matches_K1_mask(
+			Assert::IsFalse(skeleton->is_critical_1_clique(
 				3, 1, 0,
 				4, 1, 0,
 				3, 1, 1,
 				4, 1, 1,
 				Y_AXIS));
-			Assert::IsFalse(skeleton->clique_matches_K1_mask(
+			Assert::IsFalse(skeleton->is_critical_1_clique(
 				1, 2, 1,
 				2, 2, 1,
 				2, 2, 1,
 				2, 2, 2,
 				Y_AXIS));
-			Assert::IsFalse(skeleton->clique_matches_K1_mask(
+			Assert::IsFalse(skeleton->is_critical_1_clique(
 				2, 2, 1,
 				3, 2, 1,
 				2, 2, 2,
 				3, 2, 2,
 				Y_AXIS));
 
-			Assert::IsFalse(skeleton->clique_matches_K1_mask(
+			Assert::IsFalse(skeleton->is_critical_1_clique(
 				2, 1, 1,
 				3, 1, 1,
 				2, 2, 1,
 				3, 2, 1,
 				Z_AXIS));
-			Assert::IsFalse(skeleton->clique_matches_K1_mask(
+			Assert::IsFalse(skeleton->is_critical_1_clique(
 				3, 2, 2,
 				4, 2, 2,
 				3, 3, 2,
 				4, 3, 2,
 				Z_AXIS));
 
-
-
 			delete skeleton;
 		}
+
+		TEST_METHOD(Critical_0_CliquesBertrandStructureTest) {
+			VoxelSkeleton* skeleton = VoxelSkeleton::BertrandStructure();
+
+			//critical 0-cliques
+			Assert::IsTrue(skeleton->is_critical_0_clique(
+				1, 0, 0,
+				1, 1, 0,
+				1, 0, 1,
+				1, 1, 1,
+				2, 0, 0,
+				2, 1, 0,
+				2, 0, 1,
+				2, 1, 1));
+			Assert::IsTrue(skeleton->is_critical_0_clique(
+				1, 1, 0,
+				1, 2, 0,
+				1, 1, 1,
+				1, 2, 1,
+				2, 1, 0,
+				2, 2, 0,
+				2, 1, 1,
+				2, 2, 1));
+			Assert::IsTrue(skeleton->is_critical_0_clique(
+				1, 1, 1,
+				1, 2, 1,
+				1, 1, 2,
+				1, 2, 2,
+				2, 1, 1,
+				2, 2, 1,
+				2, 1, 2,
+				2, 2, 2));
+			Assert::IsTrue(skeleton->is_critical_0_clique(
+				2, 1, 1,
+				2, 2, 1,
+				2, 1, 2,
+				2, 2, 2,
+				3, 1, 1,
+				3, 2, 1,
+				3, 1, 2,
+				3, 2, 2));
+			Assert::IsTrue(skeleton->is_critical_0_clique(
+				3, 1, 0,
+				3, 2, 0,
+				3, 1, 1,
+				3, 2, 1,
+				4, 1, 0,
+				4, 2, 0,
+				4, 1, 1,
+				4, 2, 1));
+			Assert::IsTrue(skeleton->is_critical_0_clique(
+				3, 2, 1,
+				3, 3, 1,
+				3, 2, 2,
+				3, 3, 2,
+				4, 2, 1,
+				4, 3, 1,
+				4, 2, 2,
+				4, 3, 2));
+
+
+			//non-critical 0-cliques
+			Assert::IsFalse(skeleton->is_critical_0_clique(
+				0, 1, 1,
+				0, 2, 1,
+				0, 1, 2,
+				0, 2, 2,
+				1, 1, 1,
+				1, 2, 1,
+				1, 1, 2,
+				1, 2, 2));
+
+			delete skeleton;
+
+		}
+
+
+
 		//todo : test rotations of the K2 mask
 
 	};

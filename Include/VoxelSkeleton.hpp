@@ -586,6 +586,21 @@ namespace grapholon {
 			}
 		}
 
+		/** a bit ugly but it's to have some uniformity among mask matching methods*/
+		bool clique_matches_0_mask(GRuint x_A, GRuint y_A, GRuint z_A,
+			GRuint x_B, GRuint y_B, GRuint z_B,
+			GRuint x_C, GRuint y_C, GRuint z_C,
+			GRuint x_D, GRuint y_D, GRuint z_D,
+			GRuint x_E, GRuint y_E, GRuint z_E,
+			GRuint x_F, GRuint y_F, GRuint z_F,
+			GRuint x_G, GRuint y_G, GRuint z_G,
+			GRuint x_H, GRuint y_H, GRuint z_H) {
+			return voxel(x_A, y_A, z_A).value_ && voxel(x_H, y_H, z_H).value_
+				|| voxel(x_B, y_B, z_B).value_ && voxel(x_G, y_G, z_G).value_
+				|| voxel(x_C, y_C, z_C).value_ && voxel(x_F, y_F, z_F).value_
+				|| voxel(x_D, y_D, z_D).value_ && voxel(x_E, y_E, z_E).value_;
+		}
+
 
 		/*Eventually this will be replaced with a mask table lookup*/
 		bool is_critical_3_clique(GRuint x, GRuint y, GRuint z) {
@@ -599,7 +614,25 @@ namespace grapholon {
 		}
 
 
+		bool is_critical_1_clique(GRuint x, GRuint y, GRuint z,
+			GRuint x_B, GRuint y_B, GRuint z_B,
+			GRuint x_C, GRuint y_C, GRuint z_C,
+			GRuint x_D, GRuint y_D, GRuint z_D,
+			Axis axis) {
+			return clique_matches_K1_mask(x, y, z, x_B, y_B, z_B, x_C, y_C, z_C, x_D, y_D, z_D, axis);
+		}
 
+		bool is_critical_0_clique(GRuint x_A, GRuint y_A, GRuint z_A,
+			GRuint x_B, GRuint y_B, GRuint z_B,
+			GRuint x_C, GRuint y_C, GRuint z_C,
+			GRuint x_D, GRuint y_D, GRuint z_D,
+			GRuint x_E, GRuint y_E, GRuint z_E,
+			GRuint x_F, GRuint y_F, GRuint z_F,
+			GRuint x_G, GRuint y_G, GRuint z_G,
+			GRuint x_H, GRuint y_H, GRuint z_H) {
+			return clique_matches_0_mask(x_A, y_A, z_A, x_B, y_B, z_B, x_C, y_C, z_C, x_D, y_D, z_D,
+				x_E, y_E, z_E, x_F, y_F, z_F, x_G, y_G, z_G, x_H, y_H, z_H);
+		}
 
 
 		//only does interior and border points for now
