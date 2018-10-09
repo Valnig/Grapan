@@ -174,6 +174,26 @@ namespace grapholon_tests
 			}
 		}
 
+		TEST_METHOD(Critical_3_CliqueInUshapedSurfaceAndThenSquareSurface) {
+			VoxelSkeleton* skeleton = new VoxelSkeleton(3, 3, 1);
+
+			skeleton->set_voxel(0, 0, 0);
+			skeleton->set_voxel(0, 1, 0);
+			skeleton->set_voxel(0, 2, 0);
+			skeleton->set_voxel(1, 0, 0);
+			skeleton->set_voxel(1, 1, 0);
+			skeleton->set_voxel(2, 0, 0);
+			skeleton->set_voxel(2, 1, 0);
+			skeleton->set_voxel(2, 2, 0);
+
+			Assert::IsFalse(skeleton->is_critical_3_clique(1, 1, 0));
+
+			skeleton->set_voxel(1, 2, 0);
+			Assert::IsTrue(skeleton->is_critical_3_clique(1, 1, 0));
+
+			delete skeleton;
+		}
+
 		TEST_METHOD(Critical_2_CliquesInBertrandStructure)
 		{
 			VoxelSkeleton* skeleton = VoxelSkeleton::BertrandStructure();
