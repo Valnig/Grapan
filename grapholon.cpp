@@ -99,6 +99,7 @@ void BertandStructureTests(){
 }
 
 
+
 void TableLookupVSOnTheFlyCliqueCheck(){
 	std::bitset<K2Y_CONFIGURATIONS> bitset_masks(0);
 
@@ -112,6 +113,8 @@ void TableLookupVSOnTheFlyCliqueCheck(){
 	std::cout << "lookup table size : " << sizeof(bitset_masks) << std::endl;
 
 }
+
+
 
 void SimpleVoxelTests() {
 	VoxelSkeleton* skeleton = VoxelSkeleton::BertrandStructure();
@@ -129,9 +132,9 @@ void SimpleVoxelTests() {
 }
 
 
+
 void K1Tests() {
 	VoxelSkeleton* skeleton = VoxelSkeleton::BertrandStructure();
-
 
 	bool matches = skeleton->clique_matches_K1_mask(
 		0, 0, 0, 
@@ -165,7 +168,6 @@ void K1Tests() {
 		Z_AXIS);
 	std::cout << " nodes starting at 0 1 2 match the K1 mask : " << matches << std::endl;
 
-
 	delete skeleton;
 }
 
@@ -174,53 +176,48 @@ void K1Tests() {
 void CliquesInBertrandStructureTest() {
 	VoxelSkeleton* skeleton = VoxelSkeleton::BertrandStructure();
 
-	std::vector<GRuint> critical_3_cliques;
-	std::vector<std::vector<GRuint>> critical_2_cliques;
-	std::vector<std::vector<GRuint>> critical_1_cliques;
-	std::vector<std::vector<GRuint>> critical_0_cliques;
-
-
-	skeleton->extract_all_cliques(critical_3_cliques, critical_2_cliques, critical_1_cliques, critical_0_cliques);
+	std::vector<std::vector<std::vector<GRuint>>> critical_cliques;
+	skeleton->extract_all_cliques(critical_cliques);
 
 
 	GRuint x, y, z;
 
 	std::cout << "critical cliques found in Bertrand structure : " << std::endl << endl;
 
-	std::cout << " critical 3-cliques : " << critical_3_cliques.size() << std::endl;
-	for (GRuint i(0); i < critical_3_cliques.size(); i++) {
-		skeleton->voxel_id_to_coordinates(critical_3_cliques[i], x, y, z);
+	std::cout << " critical 3-cliques : " << critical_cliques[3].size() << std::endl;
+	for (GRuint i(0); i < critical_cliques[3].size(); i++) {
+		skeleton->voxel_id_to_coordinates(critical_cliques[3][i][0], x, y, z);
 		std::cout << " clique " << i << " : ( " << x << " " << y << " " << z << " )" << endl;
 	}
 	cout << endl;
 
-	std::cout << " critical 2-cliques : " << critical_2_cliques.size() << std::endl;
-	for (GRuint i(0); i < critical_2_cliques.size(); i++) {
+	std::cout << " critical 2-cliques : " << critical_cliques[2].size() << std::endl;
+	for (GRuint i(0); i < critical_cliques[2].size(); i++) {
 		cout << "clique " << i << " : " << endl;
-		for (GRuint j(0); j < critical_2_cliques[i].size(); j++) {
-			skeleton->voxel_id_to_coordinates(critical_2_cliques[i][j], x, y, z);
+		for (GRuint j(0); j < critical_cliques[2][i].size(); j++) {
+			skeleton->voxel_id_to_coordinates(critical_cliques[2][i][j], x, y, z);
 			std::cout << "( " << x << " " << y << " " << z << " )" << endl;
 		}
 		cout << endl;
 	}
 	cout << endl;
 
-	std::cout << " critical 1-cliques : " << critical_1_cliques.size() << std::endl;
-	for (GRuint i(0); i < critical_1_cliques.size(); i++) {
+	std::cout << " critical 1-cliques : " << critical_cliques[1].size() << std::endl;
+	for (GRuint i(0); i < critical_cliques[1].size(); i++) {
 		cout << "clique " << i << " : " << endl;
-		for (GRuint j(0); j < critical_1_cliques[i].size(); j++) {
-			skeleton->voxel_id_to_coordinates(critical_1_cliques[i][j], x, y, z);
+		for (GRuint j(0); j < critical_cliques[1][i].size(); j++) {
+			skeleton->voxel_id_to_coordinates(critical_cliques[1][i][j], x, y, z);
 			std::cout << "( " << x << " " << y << " " << z << " )" << endl;
 		}
 		cout << endl;
 	}
 	cout << endl;
 
-	std::cout << " critical 0-cliques : " << critical_0_cliques.size() << std::endl;
-	for (GRuint i(0); i < critical_0_cliques.size(); i++) {
+	std::cout << " critical 0-cliques : " << critical_cliques[0].size() << std::endl;
+	for (GRuint i(0); i < critical_cliques[0].size(); i++) {
 		cout << "clique " << i << " : " << endl;
-		for (GRuint j(0); j < critical_0_cliques[i].size(); j++) {
-			skeleton->voxel_id_to_coordinates(critical_0_cliques[i][j], x, y, z);
+		for (GRuint j(0); j < critical_cliques[0][i].size(); j++) {
+			skeleton->voxel_id_to_coordinates(critical_cliques[0][i][j], x, y, z);
 			std::cout << "( " << x << " " << y << " " << z << " )" << endl;
 		}
 		cout << endl;
@@ -231,6 +228,7 @@ void CliquesInBertrandStructureTest() {
 
 	delete skeleton;
 }
+
 
 
 void interiorBlockTest() {
@@ -244,53 +242,48 @@ void interiorBlockTest() {
 		}
 	}
 
-	std::vector<GRuint> critical_3_cliques;
-	std::vector<std::vector<GRuint>> critical_2_cliques;
-	std::vector<std::vector<GRuint>> critical_1_cliques;
-	std::vector<std::vector<GRuint>> critical_0_cliques;
-
-	
-	skeleton->extract_all_cliques(critical_3_cliques, critical_2_cliques, critical_1_cliques, critical_0_cliques);
+	std::vector<std::vector<std::vector<GRuint>>> critical_cliques;
+	skeleton->extract_all_cliques(critical_cliques);
 
 
 	GRuint x, y, z;
 
 	std::cout << "critical cliques found in block structure : " << std::endl << endl;
 
-	std::cout << " critical 3-cliques : " << critical_3_cliques.size() << std::endl;
-	for (GRuint i(0); i < critical_3_cliques.size(); i++) {
-		skeleton->voxel_id_to_coordinates(critical_3_cliques[i], x, y, z);
+	std::cout << " critical 3-cliques : " << critical_cliques[3].size() << std::endl;
+	for (GRuint i(0); i < critical_cliques[3].size(); i++) {
+		skeleton->voxel_id_to_coordinates(critical_cliques[3][i][0], x, y, z);
 		std::cout << " clique " << i << " : ( " << x << " " << y << " " << z << " )" << endl;
 	}
 	cout << endl;
 
-	std::cout << " critical 2-cliques : " << critical_2_cliques.size() << std::endl;
-	for (GRuint i(0); i < critical_2_cliques.size(); i++) {
+	std::cout << " critical 2-cliques : " << critical_cliques[2].size() << std::endl;
+	for (GRuint i(0); i < critical_cliques[2].size(); i++) {
 		cout << "clique " << i << " : " << endl;
-		for (GRuint j(0); j < critical_2_cliques[i].size(); j++) {
-			skeleton->voxel_id_to_coordinates(critical_2_cliques[i][j], x, y, z);
+		for (GRuint j(0); j < critical_cliques[2][i].size(); j++) {
+			skeleton->voxel_id_to_coordinates(critical_cliques[2][i][j], x, y, z);
 			std::cout << "( " << x << " " << y << " " << z << " )" << endl;
 		}
 		cout << endl;
 	}
 	cout << endl;
 
-	std::cout << " critical 1-cliques : " << critical_1_cliques.size() << std::endl;
-	for (GRuint i(0); i < critical_1_cliques.size(); i++) {
+	std::cout << " critical 1-cliques : " << critical_cliques[1].size() << std::endl;
+	for (GRuint i(0); i < critical_cliques[1].size(); i++) {
 		cout << "clique " << i << " : " << endl;
-		for (GRuint j(0); j < critical_1_cliques[i].size(); j++) {
-			skeleton->voxel_id_to_coordinates(critical_1_cliques[i][j], x, y, z);
+		for (GRuint j(0); j < critical_cliques[1][i].size(); j++) {
+			skeleton->voxel_id_to_coordinates(critical_cliques[1][i][j], x, y, z);
 			std::cout << "( " << x << " " << y << " " << z << " )" << endl;
 		}
 		cout << endl;
 	}
 	cout << endl;
 
-	std::cout << " critical 0-cliques : " << critical_0_cliques.size() << std::endl;
-	for (GRuint i(0); i < critical_0_cliques.size(); i++) {
+	std::cout << " critical 0-cliques : " << critical_cliques[0].size() << std::endl;
+	for (GRuint i(0); i < critical_cliques[0].size(); i++) {
 		cout << "clique " << i << " : " << endl;
-		for (GRuint j(0); j < critical_0_cliques[i].size(); j++) {
-			skeleton->voxel_id_to_coordinates(critical_0_cliques[i][j], x, y, z);
+		for (GRuint j(0); j < critical_cliques[0][i].size(); j++) {
+			skeleton->voxel_id_to_coordinates(critical_cliques[0][i][j], x, y, z);
 			std::cout << "( " << x << " " << y << " " << z << " )" << endl;
 		}
 		cout << endl;
@@ -301,6 +294,8 @@ void interiorBlockTest() {
 
 	delete skeleton;
 }
+
+
 
 void blockCritical2Clique() {
 		VoxelSkeleton* skeleton = new VoxelSkeleton(8, 8, 8);
@@ -313,23 +308,18 @@ void blockCritical2Clique() {
 			}
 		}
 
+		std::vector<std::vector<std::vector<GRuint>>> critical_cliques;
 
-		std::vector<GRuint> critical_3_cliques;
-		std::vector<std::vector<GRuint>> critical_2_cliques;
-		std::vector<std::vector<GRuint>> critical_1_cliques;
-		std::vector<std::vector<GRuint>> critical_0_cliques;
-
-
-		skeleton->extract_all_cliques(critical_3_cliques, critical_2_cliques, critical_1_cliques, critical_0_cliques);
+		skeleton->extract_all_cliques(critical_cliques);
 
 
 		GRuint x, y, z;
 
-		std::cout << " critical 2-cliques : " << critical_2_cliques.size() << std::endl;
-		for (GRuint i(0); i < critical_2_cliques.size(); i++) {
+		std::cout << " critical 2-cliques : " << critical_cliques[2].size() << std::endl;
+		for (GRuint i(0); i < critical_cliques[2].size(); i++) {
 			cout << "clique " << i << " : " << endl;
-			for (GRuint j(0); j < critical_2_cliques[i].size(); j++) {
-				skeleton->voxel_id_to_coordinates(critical_2_cliques[i][j], x, y, z);
+			for (GRuint j(0); j < critical_cliques[2][i].size(); j++) {
+				skeleton->voxel_id_to_coordinates(critical_cliques[2][i][j], x, y, z);
 				std::cout << "( " << x << " " << y << " " << z << " )" << endl;
 			}
 			cout << endl;
@@ -339,15 +329,44 @@ void blockCritical2Clique() {
 	delete skeleton;
 }
 
+void BertrandStructureThinningTest() {
+	VoxelSkeleton* skeleton = VoxelSkeleton::BertrandStructure();
+
+	cout << "voxels before thinning : " <<skeleton->true_voxels().size()<< std::endl;
+
+	for (auto voxel_id : skeleton->true_voxels()) {
+		GRuint x, y, z;
+		skeleton->voxel_id_to_coordinates(voxel_id, x, y, z);
+		std::cout << "	( " << x << " " << y << " " << z << " )" << std::endl;
+	}
+
+
+	skeleton->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::AlwaysFalseSkel);
+
+	cout << "voxels after thinning : " << skeleton->true_voxels().size() << std::endl;
+
+	for (auto voxel_id : skeleton->true_voxels()) {
+		GRuint x, y, z;
+		skeleton->voxel_id_to_coordinates(voxel_id, x, y, z);
+		std::cout << "	( " << x << " " << y << " " << z << " )" << std::endl;
+	}
+
+	delete skeleton;
+}
+
+GRuint x, y, z;
 
 int main()
 {
+	CliquesInBertrandStructureTest();
+
+	BertrandStructureThinningTest();
+
 	//blockCritical2Clique();
 
 	//interiorBlockTest();
-	//CliquesInBertrandStructureTest();
 
-	TableLookupVSOnTheFlyCliqueCheck();
+	//TableLookupVSOnTheFlyCliqueCheck();
 
 	while (true);
     return 0;

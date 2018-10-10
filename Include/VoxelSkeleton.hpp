@@ -94,6 +94,9 @@ namespace grapholon {
 		/***********************************************************************************************/
 
 		typedef bool(VoxelSkeleton::*AdjencyFunction)(GRuint, GRuint);
+		typedef GRuint(VoxelSkeleton::*SelectionFunction)(const std::vector<GRuint>&);
+		typedef bool(VoxelSkeleton::*SkelFunction)(GRuint);
+
 
 
 		/***********************************************************************************************/
@@ -154,12 +157,16 @@ namespace grapholon {
 			return true;
 		}
 
-
+		/** set the whole memory to zero and empty the list of true voxels*/
 		bool set_voxel(GRuint x, GRuint y, GRuint z, bool value = true) {
 			return set_voxel(voxel_coordinates_to_id(x, y, z), value);
+			true_voxels_ = std::vector<GRuint>();
 		}
 
-
+		void remove_all_voxels() {
+			memset(voxels_, 0, nb_voxels_ * sizeof(SkeletonVoxel));
+			true_voxels_ = std::vector<GRuint>();
+		}
 
 		/***********************************************************************************************/
 		/***************************************************************** COORDINATES-ID CONVERSIONS **/
@@ -900,12 +907,10 @@ namespace grapholon {
 
 
 
-		void extract_all_cliques(
-			std::vector<GRuint>& critical_3_cliques,
-			std::vector<std::vector<GRuint>>& critical_2_cliques,
-			std::vector<std::vector<GRuint>>& critical_1_cliques,
-			std::vector<std::vector<GRuint>>& critical_0_cliques
-			) {
+		void extract_all_cliques(std::vector<std::vector<std::vector<GRuint>>>& critical_cliques) {
+
+			//set the clique set of size 4 (one for each k-cliques sets)
+			critical_cliques = std::vector<std::vector<std::vector<GRuint>>>(4);
 
 			//std::cout << "true voxels count : " << true_voxels_.size() << std::endl;
 
@@ -920,7 +925,7 @@ namespace grapholon {
 
 				//first detect 3-cliques
 				if (this->is_critical_3_clique(x, y, z)) {
-					critical_3_cliques.push_back(voxel_id);
+					critical_cliques[3].push_back({ voxel_id });
 					//std::cout << "	it is a 3-clique " << std::endl;
 				}
 				else {
@@ -933,7 +938,7 @@ namespace grapholon {
 					//	std::cout << "checkin 1-clique on axis " << axis << std::endl;
 					if (this->is_critical_2_clique(x, y, z, (Axis)axis)) {
 						GRuint voxel_B_id(this->voxel_coordinates_to_id(x + (axis == X_AXIS), y + (axis == Y_AXIS), z + (axis == Z_AXIS)));
-						critical_2_cliques.push_back({ voxel_id, voxel_B_id });
+						critical_cliques[2].push_back({ voxel_id, voxel_B_id });
 					//	std::cout << "		there is a 2-clique on axis " << axis << std::endl;
 					}
 				}
@@ -974,19 +979,19 @@ namespace grapholon {
 						GRuint voxel_B_id(this->voxel_coordinates_to_id(x_B, y_B, z_B));
 						GRuint voxel_C_id(this->voxel_coordinates_to_id(x_C, y_C, z_C));
 						GRuint voxel_D_id(this->voxel_coordinates_to_id(x_D, y_D, z_D));
-						critical_1_cliques.push_back(std::vector<GRuint>());
+						critical_cliques[1].push_back(std::vector<GRuint>());
 
 						if (this->voxel(voxel_id).value_) {
-							critical_1_cliques.back().push_back(voxel_id);
+							critical_cliques[1].back().push_back(voxel_id);
 						}
 						if (this->voxel(voxel_B_id).value_) {
-							critical_1_cliques.back().push_back(voxel_B_id);
+							critical_cliques[1].back().push_back(voxel_B_id);
 						}
 						if (this->voxel(voxel_C_id).value_) {
-							critical_1_cliques.back().push_back(voxel_C_id);
+							critical_cliques[1].back().push_back(voxel_C_id);
 						}
 						if (this->voxel(voxel_D_id).value_) {
-							critical_1_cliques.back().push_back(voxel_D_id);
+							critical_cliques[1].back().push_back(voxel_D_id);
 						}
 					}
 				}
@@ -1059,31 +1064,31 @@ namespace grapholon {
 							GRuint voxel_F_id(this->voxel_coordinates_to_id(x_F, y_F, z_F));
 							GRuint voxel_G_id(this->voxel_coordinates_to_id(x_G, y_G, z_G));
 							GRuint voxel_H_id(this->voxel_coordinates_to_id(x_H, y_H, z_H));
-							critical_0_cliques.push_back(std::vector<GRuint>());
+							critical_cliques[0].push_back(std::vector<GRuint>());
 
 							if (this->voxel(voxel_A_id).value_) {
-								critical_0_cliques.back().push_back(voxel_A_id);
+								critical_cliques[0].back().push_back(voxel_A_id);
 							}
 							if (this->voxel(voxel_B_id).value_) {
-								critical_0_cliques.back().push_back(voxel_B_id);
+								critical_cliques[0].back().push_back(voxel_B_id);
 							}
 							if (this->voxel(voxel_C_id).value_) {
-								critical_0_cliques.back().push_back(voxel_C_id);
+								critical_cliques[0].back().push_back(voxel_C_id);
 							}
 							if (this->voxel(voxel_D_id).value_) {
-								critical_0_cliques.back().push_back(voxel_D_id);
+								critical_cliques[0].back().push_back(voxel_D_id);
 							}
 							if (this->voxel(voxel_E_id).value_) {
-								critical_0_cliques.back().push_back(voxel_E_id);
+								critical_cliques[0].back().push_back(voxel_E_id);
 							}
 							if (this->voxel(voxel_F_id).value_) {
-								critical_0_cliques.back().push_back(voxel_F_id);
+								critical_cliques[0].back().push_back(voxel_F_id);
 							}
 							if (this->voxel(voxel_G_id).value_) {
-								critical_0_cliques.back().push_back(voxel_G_id);
+								critical_cliques[0].back().push_back(voxel_G_id);
 							}
 							if (this->voxel(voxel_H_id).value_) {
-								critical_0_cliques.back().push_back(voxel_H_id);
+								critical_cliques[0].back().push_back(voxel_H_id);
 							}
 						}
 
@@ -1100,7 +1105,7 @@ namespace grapholon {
 		/** Precomputes the critical 2-cliques masks
 		Basically, each mask is an integer which represents one of the 266'144 possible configuration
 		for the neighborhood of a 2-clique. Each possible configuration is tested and then stored
-		as a single bit in a 2^18-bits bitset. This allows to convert any neighborhood into 
+		as a single bit in a 2^18-bits bitset. This allows to convert any neighborhood into
 		and integer 'mask' and then check if bitset[mask] is true in O(1).
 		NOTE : around 35k configurations are critical 2-cliques among the 2^18 possible configs*/
 		static void precompute_K2_masks(std::bitset<K2Y_CONFIGURATIONS>& critical_2_cliques_indices) {
@@ -1121,7 +1126,7 @@ namespace grapholon {
 				std::bitset<18> bit_mask(mask_value);
 
 				/*if the bits corresponding to both the center voxels ((1,0,1) and (1,1,1))
-				 are not set we can skip testing this configuration*/
+				are not set we can skip testing this configuration*/
 				if (bit_mask[7] && bit_mask[10]) {
 					//set neighborhood according to mask value
 					for (GRuint i(0); i < 3; i++) {
@@ -1155,6 +1160,150 @@ namespace grapholon {
 
 
 
+
+
+
+		/***********************************************************************************************/
+		/*********************************************************************************** THINNING **/
+		/***********************************************************************************************/
+
+		//typedef GRuint(VoxelSkeleton::*SelectionFunction)(std::vector<GRuint>);
+		//typedef bool(VoxelSkeleton::*SkelFunction)(GRuint);
+
+		/************************************************************************ SELECTION FUNCTIONS **/
+
+		/** Returns the index of the first selected voxel encountered or the first voxel
+		if no voxel is selected yet. */
+		GRuint SimpleSelection(const std::vector<GRuint>& voxel_ids) {
+			GRuint i(0);
+			while (i < voxel_ids.size() && !voxel(voxel_ids[i]).selected_) {
+				i++;
+			}
+			if (i >= voxel_ids.size()) {
+				return voxel_ids[0];
+			}
+			else {
+				return voxel_ids[i];
+			}
+		}
+
+
+		/***************************************************************************** SKEL FUNCTIONS **/
+
+
+		bool AlwaysFalseSkel(GRuint voxel_id) {
+			return false;
+		}
+
+		bool ManualTipSkel(GRuint voxel_id) {
+			return voxel_id == voxel_coordinates_to_id(4,1,0) || voxel_id == voxel_coordinates_to_id(0, 1, 2);
+		}
+
+		/***************************************************************************** THINNING ALGOS **/
+
+
+
+
+		void AsymmetricThinning(SelectionFunction Select, SkelFunction Skel) {
+			
+			/** description of the voxel sets :
+			 - K : the set of voxels that must be kept no matter what (defined by the Skel function)
+			 - Y : the set of voxels to keep. At the end of each iteration it will become the new true_voxels set
+			 - Z : the set of voxels to keep from a particular level of cliques*/
+			std::vector<GRuint> voxel_set_K;
+			bool stability(false);
+			GRuint iteration_count(0);
+
+			GRuint x, y, z;
+
+			std::cout << " nb voxels : " << nb_voxels_ << std::endl;
+
+			while (!stability) {
+				iteration_count++;
+
+				std::cout << "	running iteration " << iteration_count << std::endl;
+
+				//this stores how many voxels were removed during this iteration.
+				//used as stopping condition. If no voxels were removed we can stop
+				GRuint removed_count(0);
+
+				//critical cliques holder
+				std::vector<std::vector<std::vector<GRuint>>> critical_cliques;
+
+				//the set of voxels to keep starts with the voxels in K
+				std::vector<GRuint> voxel_set_Y = voxel_set_K;
+
+				extract_all_cliques(critical_cliques);
+				
+				for (GRint d(3); d >= 0; d--) {
+					std::cout << "		checking " << d << "-cliques" << std::endl;
+					GRuint voxels_in_d_cliques_count(0);
+
+					std::vector<GRuint> voxel_set_Z;
+					for (GRuint i(0); i < critical_cliques[d].size(); i++) {
+						voxels_in_d_cliques_count += critical_cliques[d][i].size();
+
+						std::cout << "			checking clique " << i << std::endl;
+						GRuint voxel_id_from_critical_clique = (this->*Select)(critical_cliques[d][i]);
+
+						//select a voxel from the current clique
+						voxel_id_to_coordinates(voxel_id_from_critical_clique, x, y, z);
+						std::cout << "			selected voxel from clique " << i << " : " << voxel_id_from_critical_clique << " ; " << x << " " << y << " " << z << std::endl;
+						
+						//if it hasn't already been selected we add it to Z
+						if (!voxel(voxel_id_from_critical_clique).selected_) {
+							std::cout << "				newly selected, added to Z" << std::endl;
+							
+							voxels_[voxel_id_from_critical_clique].selected_ = true;
+							voxel_set_Z.push_back(voxel_id_from_critical_clique);
+						}
+					}
+
+					std::cout << " voxels in " << d << "-cliques : " << voxels_in_d_cliques_count << std::endl;
+					
+					//we count how many voxels we removed 
+					removed_count += voxels_in_d_cliques_count - voxel_set_Z.size();
+
+					std::cout << "		current removed count : " << removed_count << std::endl;
+
+					//and add the voxels in Z to Y
+					for (GRuint i(0); i < voxel_set_Z.size(); i++) {
+						voxel_set_Y.push_back(voxel_set_Z[i]);
+						std::cout << "			added voxel " << voxel_set_Z[i] << " to Y" << std::endl;
+					}
+
+					std::cout << std::endl;
+				}
+				std::cout << "	Y now contains " << voxel_set_Y.size() << " voxels " << std::endl;
+
+				//replace the previous voxel_set
+				remove_all_voxels();
+				std::cout << "	removed all voxels, size : "<<true_voxels_.size() << std::endl;
+				for (GRuint i(0); i < voxel_set_Y.size(); i++) {
+					set_voxel(voxel_set_Y[i]);
+				}
+				std::cout << "	and replaced them with Y" << std::endl;
+				
+				//and re-select the voxels in K (useful for the last step)
+				for (GRuint i(0); i < voxel_set_K.size(); i++) {
+					voxels_[voxel_set_K[i]].selected_ = true;
+				}
+				std::cout << "	voxels in K are selected again " << std::endl;
+				
+				for (GRuint i(0); i < true_voxels_.size(); i++) {
+					//if a voxel is selected it is because it's in K (from the previous loop)
+					if (!voxel(true_voxels_[i]).selected_ && (this->*Skel)(true_voxels_[i])) {
+						voxel_set_K.push_back(true_voxels_[i]);
+					}
+				}
+				std::cout << "	K now contains " << voxel_set_K.size() << " voxels " << std::endl;
+
+				std::cout << "	removed " << removed_count << " voxels at iteration " << iteration_count << std::endl << std::endl;;
+
+				//stability check based on added count
+				stability = (removed_count == 0);
+			}
+		}
 
 
 		/***********************************************************************************************/
