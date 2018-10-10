@@ -85,6 +85,8 @@ namespace grapholon {
 
 		std::vector<GRuint> true_voxels_;
 
+		std::vector<GRuint> anchor_voxels_;///< Voxels that cannot be removed during thinning
+
 
 	public:
 
@@ -1196,7 +1198,7 @@ namespace grapholon {
 		}
 
 		bool ManualTipSkel(GRuint voxel_id) {
-			return voxel_id == voxel_coordinates_to_id(4,1,0) || voxel_id == voxel_coordinates_to_id(0, 1, 2);
+			return voxel_id == voxel_coordinates_to_id(1,0,0) || voxel_id == voxel_coordinates_to_id(4, 3, 2);
 		}
 
 		/***************************************************************************** THINNING ALGOS **/
@@ -1216,16 +1218,19 @@ namespace grapholon {
 
 			GRuint x, y, z;
 
-			std::cout << " nb voxels : " << nb_voxels_ << std::endl;
+			//initialize K (optional)
+			for (GRuint i(0); i < true_voxels_.size(); i++) {
+				if ((this->*Skel)(true_voxels_[i])) {
+					voxel_set_K.push_back(true_voxels_[i]);
+					voxels_[true_voxels_[i]].selected_ = true;
+				}
+			}
+			std::cout << "initialized K : " << voxel_set_K.size() << std::endl;
 
 			while (!stability) {
 				iteration_count++;
 
 				std::cout << "	running iteration " << iteration_count << std::endl;
-
-				//this stores how many voxels were removed during this iteration.
-				//used as stopping condition. If no voxels were removed we can stop
-				GRuint removed_count(0);
 
 				//critical cliques holder
 				std::vector<std::vector<std::vector<GRuint>>> critical_cliques;
@@ -1248,7 +1253,7 @@ namespace grapholon {
 
 						//select a voxel from the current clique
 						voxel_id_to_coordinates(voxel_id_from_critical_clique, x, y, z);
-						std::cout << "			selected voxel from clique " << i << " : " << voxel_id_from_critical_clique << " ; " << x << " " << y << " " << z << std::endl;
+						std::cout << "			selected voxel from "<<d<<"-clique " << i << " : " << voxel_id_from_critical_clique << " ; " << x << " " << y << " " << z << std::endl;
 						
 						//if it hasn't already been selected we add it to Z
 						if (!voxel(voxel_id_from_critical_clique).selected_) {
@@ -1258,14 +1263,7 @@ namespace grapholon {
 							voxel_set_Z.push_back(voxel_id_from_critical_clique);
 						}
 					}
-
-					std::cout << " voxels in " << d << "-cliques : " << voxels_in_d_cliques_count << std::endl;
 					
-					//we count how many voxels we removed 
-					removed_count += voxels_in_d_cliques_count - voxel_set_Z.size();
-
-					std::cout << "		current removed count : " << removed_count << std::endl;
-
 					//and add the voxels in Z to Y
 					for (GRuint i(0); i < voxel_set_Z.size(); i++) {
 						voxel_set_Y.push_back(voxel_set_Z[i]);
@@ -1275,6 +1273,8 @@ namespace grapholon {
 					std::cout << std::endl;
 				}
 				std::cout << "	Y now contains " << voxel_set_Y.size() << " voxels " << std::endl;
+
+				GRuint removed_count = true_voxels_.size() - voxel_set_Y.size();
 
 				//replace the previous voxel_set
 				remove_all_voxels();

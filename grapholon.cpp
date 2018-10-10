@@ -341,6 +341,40 @@ void BertrandStructureThinningTest() {
 	}
 
 
+	skeleton->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::ManualTipSkel);
+
+	cout << "voxels after thinning : " << skeleton->true_voxels().size() << std::endl;
+
+	for (auto voxel_id : skeleton->true_voxels()) {
+		GRuint x, y, z;
+		skeleton->voxel_id_to_coordinates(voxel_id, x, y, z);
+		std::cout << "	( " << x << " " << y << " " << z << " )" << std::endl;
+	}
+
+	delete skeleton;
+}
+
+
+void InteriorBlockThinningTest() {
+	VoxelSkeleton* skeleton = new VoxelSkeleton(8, 8, 8);
+
+	for (GRuint i(0); i < 4; i++) {
+		for (GRuint j(0); j < 3; j++) {
+			for (GRuint k(0); k < 3; k++) {
+				skeleton->set_voxel(i, j, k);
+			}
+		}
+	}
+
+	cout << "voxels before thinning : " << skeleton->true_voxels().size() << std::endl;
+
+	for (auto voxel_id : skeleton->true_voxels()) {
+		GRuint x, y, z;
+		skeleton->voxel_id_to_coordinates(voxel_id, x, y, z);
+		std::cout << "	( " << x << " " << y << " " << z << " )" << std::endl;
+	}
+
+
 	skeleton->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::AlwaysFalseSkel);
 
 	cout << "voxels after thinning : " << skeleton->true_voxels().size() << std::endl;
@@ -358,13 +392,15 @@ GRuint x, y, z;
 
 int main()
 {
-	CliquesInBertrandStructureTest();
 
-	BertrandStructureThinningTest();
+	interiorBlockTest();
+	InteriorBlockThinningTest();
+
+	/*CliquesInBertrandStructureTest();
+	BertrandStructureThinningTest();*/
 
 	//blockCritical2Clique();
 
-	//interiorBlockTest();
 
 	//TableLookupVSOnTheFlyCliqueCheck();
 
