@@ -42,6 +42,8 @@ namespace grapholon {
 #define K2_MASK_SLICE 3
 
 
+#define THINNING_ITERATION_LIMIT 10000 ///< Hard limit to avoid infinite loop in the thinning algo
+
 	enum VoxelState {
 		visible = 0,
 		fixed = 1,
@@ -63,6 +65,9 @@ namespace grapholon {
 		bool value_ = false;
 		bool selected_ = false;
 		TopologicalClass topological_class_ = UNCLASSIFIED;
+
+		SkeletonVoxel(bool value, bool selected, TopologicalClass top_class) 
+			: value_(value), selected_(selected), topological_class_(top_class) {}
 	};
 
 
@@ -121,9 +126,17 @@ namespace grapholon {
 		/********************************************************************************** ACCESSORS **/
 		/***********************************************************************************************/
 
+		GRuint voxel_count() const {
+			return nb_voxels_;
+		}
+
+		GRuint set_voxel_count() const {
+			return true_voxels_.size();
+		}
+
 		SkeletonVoxel voxel(GRint id) {
 			if (id < 0 || id >= (GRint)nb_voxels_) {
-				return { false, UNCLASSIFIED };
+				return SkeletonVoxel(false, false, UNCLASSIFIED);
 			}
 			else {
 				return voxels_[id];
@@ -162,12 +175,32 @@ namespace grapholon {
 		/** set the whole memory to zero and empty the list of true voxels*/
 		bool set_voxel(GRuint x, GRuint y, GRuint z, bool value = true) {
 			return set_voxel(voxel_coordinates_to_id(x, y, z), value);
-			true_voxels_ = std::vector<GRuint>();
 		}
+
+
+
+		bool set_anchor_voxel(GRuint id, bool value = true) {
+			set_voxel(id, value);
+
+			if (value) {
+				anchor_voxels_.push_back(id);
+			}
+			else {
+				anchor_voxels_.erase(std::remove(anchor_voxels_.begin(), anchor_voxels_.end(), id), anchor_voxels_.end());
+			}
+
+			return true;
+		}
+
+		bool set_anchor_voxel(GRuint x, GRuint y, GRuint z, bool value = true) {
+			return set_anchor_voxel(voxel_coordinates_to_id(x,y,z), value);
+		}
+
 
 		void remove_all_voxels() {
 			memset(voxels_, 0, nb_voxels_ * sizeof(SkeletonVoxel));
 			true_voxels_ = std::vector<GRuint>();
+			anchor_voxels_ = std::vector<GRuint>();
 		}
 
 		/***********************************************************************************************/
@@ -270,9 +303,10 @@ namespace grapholon {
 			std::cout << std::endl;
 			*/
 
-			if (n == 0) {
+			if (n == 0 || n >= voxel_ids.size()) {
 				n = voxel_ids.size()-1;
 			}
+
 
 			std::vector<bool> visited(voxel_ids.size(), false);
 			std::vector<bool> explored(voxel_ids.size(), false);
@@ -315,7 +349,7 @@ namespace grapholon {
 				if (!found_unexplored || last_explored_index == explored.size() - 1) {
 					bool visited_voxels_are_also_explored(true);
 					bool all_visited(true);
-					for (GRuint i(0); i <= n /* visited.size()*/; i++) {
+					for (GRuint i(0); i <= n; i++) {
 						if (visited[i]) {
 							visited_voxels_are_also_explored &= explored[i];
 						}
@@ -1201,6 +1235,10 @@ namespace grapholon {
 			return voxel_id == voxel_coordinates_to_id(1,0,0) || voxel_id == voxel_coordinates_to_id(4, 3, 2);
 		}
 
+		bool AnchoredSkel(GRuint voxel_id) {
+			return std::find(anchor_voxels_.begin(), anchor_voxels_.end(), voxel_id) != anchor_voxels_.end();
+		}
+
 		/***************************************************************************** THINNING ALGOS **/
 
 
@@ -1219,18 +1257,18 @@ namespace grapholon {
 			GRuint x, y, z;
 
 			//initialize K (optional)
-			for (GRuint i(0); i < true_voxels_.size(); i++) {
+			/*for (GRuint i(0); i < true_voxels_.size(); i++) {
 				if ((this->*Skel)(true_voxels_[i])) {
 					voxel_set_K.push_back(true_voxels_[i]);
 					voxels_[true_voxels_[i]].selected_ = true;
 				}
-			}
-			std::cout << "initialized K : " << voxel_set_K.size() << std::endl;
+			}*/
+			//std::cout << "initialized K : " << voxel_set_K.size() << std::endl;
 
-			while (!stability) {
+			while (!stability && iteration_count < THINNING_ITERATION_LIMIT) {
 				iteration_count++;
 
-				std::cout << "	running iteration " << iteration_count << std::endl;
+				//std::cout << "	running iteration " << iteration_count << std::endl;
 
 				//critical cliques holder
 				std::vector<std::vector<std::vector<GRuint>>> critical_cliques;
@@ -1241,23 +1279,23 @@ namespace grapholon {
 				extract_all_cliques(critical_cliques);
 				
 				for (GRint d(3); d >= 0; d--) {
-					std::cout << "		checking " << d << "-cliques" << std::endl;
+					//std::cout << "		checking " << d << "-cliques" << std::endl;
 					GRuint voxels_in_d_cliques_count(0);
 
 					std::vector<GRuint> voxel_set_Z;
 					for (GRuint i(0); i < critical_cliques[d].size(); i++) {
 						voxels_in_d_cliques_count += critical_cliques[d][i].size();
 
-						std::cout << "			checking clique " << i << std::endl;
+						//std::cout << "			checking clique " << i << std::endl;
 						GRuint voxel_id_from_critical_clique = (this->*Select)(critical_cliques[d][i]);
 
 						//select a voxel from the current clique
 						voxel_id_to_coordinates(voxel_id_from_critical_clique, x, y, z);
-						std::cout << "			selected voxel from "<<d<<"-clique " << i << " : " << voxel_id_from_critical_clique << " ; " << x << " " << y << " " << z << std::endl;
+						//std::cout << "			selected voxel from "<<d<<"-clique " << i << " : " << voxel_id_from_critical_clique << " ; " << x << " " << y << " " << z << std::endl;
 						
 						//if it hasn't already been selected we add it to Z
 						if (!voxel(voxel_id_from_critical_clique).selected_) {
-							std::cout << "				newly selected, added to Z" << std::endl;
+						//	std::cout << "				newly selected, added to Z" << std::endl;
 							
 							voxels_[voxel_id_from_critical_clique].selected_ = true;
 							voxel_set_Z.push_back(voxel_id_from_critical_clique);
@@ -1267,28 +1305,28 @@ namespace grapholon {
 					//and add the voxels in Z to Y
 					for (GRuint i(0); i < voxel_set_Z.size(); i++) {
 						voxel_set_Y.push_back(voxel_set_Z[i]);
-						std::cout << "			added voxel " << voxel_set_Z[i] << " to Y" << std::endl;
+						//std::cout << "			added voxel " << voxel_set_Z[i] << " to Y" << std::endl;
 					}
 
-					std::cout << std::endl;
+					//std::cout << std::endl;
 				}
-				std::cout << "	Y now contains " << voxel_set_Y.size() << " voxels " << std::endl;
+				//std::cout << "	Y now contains " << voxel_set_Y.size() << " voxels " << std::endl;
 
 				GRuint removed_count = true_voxels_.size() - voxel_set_Y.size();
 
 				//replace the previous voxel_set
 				remove_all_voxels();
-				std::cout << "	removed all voxels, size : "<<true_voxels_.size() << std::endl;
+				//std::cout << "	removed all voxels, size : "<<true_voxels_.size() << std::endl;
 				for (GRuint i(0); i < voxel_set_Y.size(); i++) {
 					set_voxel(voxel_set_Y[i]);
 				}
-				std::cout << "	and replaced them with Y" << std::endl;
+				//std::cout << "	and replaced them with Y" << std::endl;
 				
 				//and re-select the voxels in K (useful for the last step)
 				for (GRuint i(0); i < voxel_set_K.size(); i++) {
 					voxels_[voxel_set_K[i]].selected_ = true;
 				}
-				std::cout << "	voxels in K are selected again " << std::endl;
+				//std::cout << "	voxels in K are selected again " << std::endl;
 				
 				for (GRuint i(0); i < true_voxels_.size(); i++) {
 					//if a voxel is selected it is because it's in K (from the previous loop)
@@ -1296,9 +1334,9 @@ namespace grapholon {
 						voxel_set_K.push_back(true_voxels_[i]);
 					}
 				}
-				std::cout << "	K now contains " << voxel_set_K.size() << " voxels " << std::endl;
+				//std::cout << "	K now contains " << voxel_set_K.size() << " voxels " << std::endl;
 
-				std::cout << "	removed " << removed_count << " voxels at iteration " << iteration_count << std::endl << std::endl;;
+				//std::cout << "	removed " << removed_count << " voxels at iteration " << iteration_count << std::endl << std::endl;;
 
 				//stability check based on added count
 				stability = (removed_count == 0);
@@ -1442,6 +1480,8 @@ namespace grapholon {
 				set_voxel(current_voxel_id);
 
 				if ((i % branch_length) == 0) {
+					set_anchor_voxel(current_voxel_id);
+
 					current_voxel_id = true_voxels_[rand() % true_voxels_.size()];
 					//std::cout << "branching at iteration " << i << std::endl;
 					//std::cout << "voxel id : " << current_voxel_id << std::endl;

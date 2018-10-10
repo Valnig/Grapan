@@ -388,13 +388,33 @@ void InteriorBlockThinningTest() {
 	delete skeleton;
 }
 
-GRuint x, y, z;
+
+void SkeletonLikThinningTest() {
+	VoxelSkeleton* skeleton = new VoxelSkeleton(100, 100, 100);
+
+	skeleton->generate_random_skeleton_like(1000);
+
+	skeleton->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::AlwaysFalseSkel);
+
+	cout << "voxels after thinning : " << skeleton->true_voxels().size() << std::endl;
+
+	for (auto voxel_id : skeleton->true_voxels()) {
+		GRuint x, y, z;
+		skeleton->voxel_id_to_coordinates(voxel_id, x, y, z);
+		std::cout << "	( " << x << " " << y << " " << z << " )" << std::endl;
+	}
+
+	delete skeleton;
+}
 
 int main()
 {
 
-	interiorBlockTest();
-	InteriorBlockThinningTest();
+
+	SkeletonLikThinningTest();
+
+	//interiorBlockTest();
+	//InteriorBlockThinningTest();
 
 	/*CliquesInBertrandStructureTest();
 	BertrandStructureThinningTest();*/
