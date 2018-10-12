@@ -126,6 +126,18 @@ namespace grapholon {
 		/********************************************************************************** ACCESSORS **/
 		/***********************************************************************************************/
 
+		GRuint width() const {
+			return width_;
+		}
+
+		GRuint height() const {
+			return height_;
+		}
+
+		GRuint slice() const {
+			return slice_;
+		}
+
 		GRuint voxel_count() const {
 			return nb_voxels_;
 		}
@@ -1420,6 +1432,65 @@ namespace grapholon {
 				
 			}
 
+		}
+
+
+		void generate_predefined_thicken_skeleton(GRuint nb_voxels, GRuint seed = 1234) {
+			srand(seed);
+
+			//erasing voxel grid
+			memset(voxels_, 0, nb_voxels_ * sizeof(SkeletonVoxel));
+
+			//phase 1 : generate skeleton
+			GRuint x(width_/2), y(height_/2), z(0);
+
+			for (GRuint i(0); i < 10; i++) {
+				set_voxel(x, y, z+i);
+			}
+			for (GRuint i(0); i < 10; i++) {
+				set_voxel(x - i, y, z + i);
+				set_voxel(x + i, y, z + i);
+			}
+
+
+
+			//phase 2: thicken skeleton
+			for (GRuint i(true_voxels_.size()); i < nb_voxels; i++) {
+				//std::cout << "true voxel count : " << true_voxels_.size() << std::endl;
+
+				GRint next_voxel_id = -1;
+				GRuint random_voxel_index = rand() % true_voxels_.size();
+				GRuint random_voxel_id = true_voxels_[random_voxel_index];
+				/*std::cout << "random index : " << random_voxel_index << std::endl;
+				std::cout << "true voxels size : " << true_voxels_.size() << std::endl;
+				std::cout << "random voxels id : " << random_voxel_id << std::endl;*/
+
+				GRuint tried_face_count(0);
+
+				while (next_voxel_id < 0 || next_voxel_id >= (GRint)nb_voxels_ || voxels_[next_voxel_id].value_) {
+					random_voxel_index = rand() % true_voxels_.size();
+					random_voxel_id = true_voxels_[random_voxel_index];
+
+					GRuint face_index = rand() % 6;
+
+					switch (face_index) {
+					case 0: next_voxel_id = random_voxel_id + 1; break;//right
+					case 1: next_voxel_id = random_voxel_id - 1; break;//left
+					case 2: next_voxel_id = random_voxel_id + width_; break;//back
+					case 3: next_voxel_id = random_voxel_id - width_; break;//front
+					case 4: next_voxel_id = random_voxel_id + height_*width_; break;//top
+					case 5: next_voxel_id = random_voxel_id - height_*width_; break;//bottom
+					}
+
+					if (tried_face_count++ >= 6) {
+						random_voxel_id = true_voxels_[rand() % true_voxels_.size()];
+					}
+				}
+
+				//std::cout << "set voxel : " << random_voxel_id << std::endl;
+				set_voxel(next_voxel_id);
+
+			}
 		}
 
 		/** Generates a random skeleton-like voxel set.
