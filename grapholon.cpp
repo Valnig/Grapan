@@ -461,7 +461,6 @@ void predefSkeletonTest() {
 		std::cout << "	( " << x << " " << y << " " << z << " )" << std::endl;
 	}
 
-
 	skeleton->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::AlwaysFalseSkel);
 
 	cout << "voxels after thinning : " << skeleton->true_voxels().size() << std::endl;
@@ -501,10 +500,13 @@ void nonCliqueConfigTest() {
 		GRuint x, y, z;
 		skeleton->voxel_id_to_coordinates(voxel_id, x, y, z);
 		std::cout << "	( " << x << " " << y << " " << z << " )" << std::endl;
+		if (skeleton->is_1_isthmus(x, y, z)) {
+			std::cout << "	is a 1-isthmus " << std::endl;
+		}
 	}
 
 
-	skeleton->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::AlwaysFalseSkel);
+	skeleton->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::OneIsthmusSkel);
 
 	cout << "voxels after thinning : " << skeleton->true_voxels().size() << std::endl;
 
@@ -520,19 +522,7 @@ void nonCliqueConfigTest() {
 int main()
 {
 
-	VoxelSkeleton skeleton(10, 10, 10);
-
-	skeleton.set_voxel(5, 5, 5);
-
-	std::vector<GRuint> neigh;
-	skeleton.extract_1_neighborhood_star(5, 5, 5, neigh, true);
-
-	std::cout << "neighborhood : " << std::endl;
-	for (auto voxel_id : neigh) {
-		GRuint x, y, z;
-		skeleton.voxel_id_to_coordinates(voxel_id, x, y, z);
-		std::cout << "	( " << x << " " << y << " " << z << " )" << std::endl;
-	}
+	nonCliqueConfigTest();
 
 	//BertrandStructureThinningTest();
 	

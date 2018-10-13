@@ -1182,9 +1182,36 @@ namespace grapholon {
 
 
 		/************************************************************************** ISTHMUS DETECTION **/
-
+		/** NOTE : check if simply checking connectedness of zero-neighborhoo also works*/
 		bool is_1_isthmus(GRuint x, GRuint y, GRuint z) {
-			std::vector<GRuint> neighborhood;
+			
+			//first create a
+			VoxelSkeleton neighborhood(3, 3, 3);
+			GRuint neighbor_id;
+			for (GRuint i(0); i < 3; i++) {
+				for (GRuint j(0); j < 3; j++) {
+					for (GRuint k(0); k < 3; k++) {
+						neighbor_id = voxel_coordinates_to_id(x - 1 + i, y - 1 + j, z - 1 + k);
+						if (voxel(neighbor_id).value_) {
+							neighborhood.set_voxel(i, j, k);
+						}
+					}
+				}
+			}
+			neighborhood.set_voxel(1, 1, 1, false);
+
+			//then thin it
+			neighborhood.AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::AlwaysFalseSkel);
+			
+			//and return whether the thinning has two component or not
+			return neighborhood.true_voxels().size() == 2;
+		}
+
+
+		bool is_1_isthmus(GRuint voxel_id) {
+			GRuint x, y, z;
+			voxel_id_to_coordinates(voxel_id, x, y, z);
+			return is_1_isthmus(x, y, z);
 		}
 
 
@@ -1229,9 +1256,11 @@ namespace grapholon {
 			return std::find(anchor_voxels_.begin(), anchor_voxels_.end(), voxel_id) != anchor_voxels_.end();
 		}
 
+		bool OneIsthmusSkel(GRuint voxel_id) {
+			return is_1_isthmus(voxel_id);
+		}
+
 		/***************************************************************************** THINNING ALGOS **/
-
-
 
 
 		void AsymmetricThinning(SelectionFunction Select, SkelFunction Skel) {
