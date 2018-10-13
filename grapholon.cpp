@@ -410,7 +410,7 @@ void SkeletonLikThinningTest() {
 
 void find_wrong_skeletonization() {
 	GRuint wrong_count(0);
-	GRuint nb_trials(10000);
+	GRuint nb_trials(1000);
 
 	for (GRuint i(0); i < nb_trials; i++) {
 			VoxelSkeleton* skeleton = new VoxelSkeleton(98, 98, 98);
@@ -422,7 +422,7 @@ void find_wrong_skeletonization() {
 
 			skeleton->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::AlwaysFalseSkel);
 
-
+			//std::cout <<  " size : " << skeleton->true_voxels().size() << std::endl;
 			if (skeleton->true_voxels().size() == 0
 				|| skeleton->true_voxels().size() == 2) {
 				cout << endl;
@@ -519,11 +519,26 @@ void nonCliqueConfigTest() {
 
 int main()
 {
+
+	VoxelSkeleton skeleton(10, 10, 10);
+
+	skeleton.set_voxel(5, 5, 5);
+
+	std::vector<GRuint> neigh;
+	skeleton.extract_1_neighborhood_star(5, 5, 5, neigh, true);
+
+	std::cout << "neighborhood : " << std::endl;
+	for (auto voxel_id : neigh) {
+		GRuint x, y, z;
+		skeleton.voxel_id_to_coordinates(voxel_id, x, y, z);
+		std::cout << "	( " << x << " " << y << " " << z << " )" << std::endl;
+	}
+
 	//BertrandStructureThinningTest();
 	
 	//nonCliqueConfigTest();
 
-	find_wrong_skeletonization();
+	//find_wrong_skeletonization();
 
 	while (true);
     return 0;
