@@ -44,6 +44,9 @@ namespace grapholon {
 
 #define THINNING_ITERATION_LIMIT 10000 ///< Hard limit to avoid infinite loop in the thinning algo
 
+
+#define IF_DEBUG_DO(command) {if(debug_log)command; }
+
 	enum VoxelState {
 		visible = 0,
 		fixed = 1,
@@ -168,6 +171,10 @@ namespace grapholon {
 		bool set_voxel(GRuint id, bool value = true) {
 			if (
 				id >= nb_voxels_) {
+				return false;
+			}
+
+			if (voxels_[id].value_ == value) {
 				return false;
 			}
 
@@ -305,20 +312,33 @@ namespace grapholon {
 		/****************************************************************************** CONNECTEDNESS **/
 
 
+		/** The idea is that the first voxel in the list is "explored" by "visiting"
+		all its neighbors. We then "explore" all the "visited" voxels until every visited voxel
+		is also explored. If and only if all voxels have been visited then it's 0 connected.*/
 		bool is_k_connected(std::vector<GRuint> voxel_ids, AdjencyFunction adjency_function, GRuint n = 0) {
-			/*std::cout << "checking connectdedness of voxels : " << std::endl;;
+			bool debug_log = false;
+			
+			IF_DEBUG_DO(std::cout << "checking connectdedness of first "<<n<<" voxels : " << std::endl;)
 			for (GRuint i(0); i < voxel_ids.size(); i++) {
-				GRint x, y, z;
+				GRuint x, y, z;
 				voxel_id_to_coordinates(voxel_ids[i], x, y, z);
-				std::cout << voxel_ids[i] <<" : "<< x << " " << y << " " << z << std::endl;
+				IF_DEBUG_DO(std::cout << voxel_ids[i] <<" : "<< x << " " << y << " " << z << std::endl;)
 			}
-			std::cout << std::endl;
-			*/
+			IF_DEBUG_DO(std::cout << std::endl;)
+			
+			
 
 			if (n == 0 || n >= voxel_ids.size()) {
-				n = voxel_ids.size()-1;
+				n = voxel_ids.size();
+			}
+			
+			if (voxel_ids.size() == 1) {
+				return true;
 			}
 
+			if (voxel_ids.size() == 2) {
+				return (this->*adjency_function)(voxel_ids[0], voxel_ids[1]);
+			}
 
 			std::vector<bool> visited(voxel_ids.size(), false);
 			std::vector<bool> explored(voxel_ids.size(), false);
@@ -335,7 +355,7 @@ namespace grapholon {
 					if (!visited[i] && (this->*adjency_function)(voxel_ids[last_explored_index],
 						voxel_ids[i])) {
 						visited[i] = true;
-						//std::cout << "visited voxel : " << i << std::endl;
+						IF_DEBUG_DO(std::cout << "visited voxel : " << i << std::endl;)
 					}
 				}
 				explored[last_explored_index] = true;
@@ -350,30 +370,32 @@ namespace grapholon {
 					if (visited[next_explored_index] && !explored[next_explored_index]) {
 						found_unexplored = true;
 						last_explored_index = next_explored_index;
-						//	std::cout << "found unexplored : " << next_explored_index << std::endl;
+						IF_DEBUG_DO(std::cout << "found unexplored : " << next_explored_index << std::endl;)
 					}
 					next_explored_index++;
 				}
 
-				//std::cout << "last explored index is now : " << last_explored_index << std::endl;
+				IF_DEBUG_DO(std::cout << "last explored index is now : " << last_explored_index << std::endl;)
 
 				//if we reached the end of the array, we check if all voxels have been visited
 				if (!found_unexplored || last_explored_index == explored.size() - 1) {
 					bool visited_voxels_are_also_explored(true);
 					bool all_visited(true);
-					for (GRuint i(0); i <= n; i++) {
+					for (GRuint i(0); i < n; i++) {
 						if (visited[i]) {
 							visited_voxels_are_also_explored &= explored[i];
 						}
 						all_visited &= visited[i];
+						IF_DEBUG_DO(std::cout << "all visited : " << all_visited << std::endl;);
 					}
 					if (visited_voxels_are_also_explored) {
+						IF_DEBUG_DO(std::cout << " visited are also explored " << std::endl;)
 						uncertain = false;
 						result = all_visited;
 					}
 				}
-				/*
-				std::cout << "visited : ";
+				
+				/*std::cout << "visited : ";
 				for (GRuint i(0); i < visited.size(); i++) {
 				std::cout << " " << visited[i];
 				}
@@ -478,8 +500,9 @@ namespace grapholon {
 
 		bool is_simple(GRuint x, GRuint y, GRuint z) {
 
+			bool debug_log = false;
 
-			//std::cout << "checking if voxel " << x << " " << y << " " << z << " is simple " << std::endl;
+			IF_DEBUG_DO(std::cout << "checking if voxel " << x << " " << y << " " << z << " is simple " << std::endl;)
 			//first define the zero neighborhood*
 			std::vector<GRuint> zero_neighborhood_star;
 			GRuint neighbor_id;
@@ -488,14 +511,13 @@ namespace grapholon {
 					for (GRuint k(0); k < 3; k++) {
 						if (i != 1 || j != 1 || k != 1) {
 							neighbor_id = voxel_coordinates_to_id(x - 1 + i, y - 1 + j, z - 1 + k);
-							//std::cout << "voxel : " << x - 1 + i << " " << y - 1 + j << " " << z - 1 + k;
-							//std::cout << "rel : " << i << " " << j << " " << k << std::endl;
+							IF_DEBUG_DO(std::cout << "voxel : " << x - 1 + i << " " << y - 1 + j << " " << z - 1 + k;)
 							if (voxel(neighbor_id).value_) {
 								zero_neighborhood_star.push_back(neighbor_id);
-								//std::cout << " is in the neighborhood" << std::endl;
+								IF_DEBUG_DO(std::cout << " is in the neighborhood" << std::endl;)
 							}
 							else {
-								//std::cout << " is not in the neighborhood" << std::endl;
+								IF_DEBUG_DO(std::cout << " is not in the neighborhood" << std::endl;)
 							}
 						}
 					}
@@ -506,7 +528,8 @@ namespace grapholon {
 			if (zero_neighborhood_star.size() == 0 || !is_k_connected(zero_neighborhood_star, 0u)) {
 				return false;
 			}
-			//std::cout << "zero neigh is non-empty and 0 connected " << std::endl;
+			IF_DEBUG_DO(std::cout << "zero neigh is non-empty and 0 connected " << std::endl;)
+
 			//then compute the two neighborhood that is not set
 			std::vector<GRuint> two_neighborhood_bar;
 			for (GRuint i(0); i < 3; i++) {
@@ -514,9 +537,10 @@ namespace grapholon {
 					GRuint coords[3] = { x,y,z };
 					coords[i] += (1 - 2 * j);
 					neighbor_id = voxel_coordinates_to_id(coords[0], coords[1], coords[2]);
-					//std::cout << "checking neighbor " << neighbor_id << " :  " << coords[0] << " " << coords[1] << " " << coords[2] << std::endl;
-					if (!voxel(neighbor_id).value_) {
+					IF_DEBUG_DO(std::cout << "checking neighbor " << neighbor_id << " :  " << coords[0] << " " << coords[1] << " " << coords[2] << std::endl;)
+					if (neighbor_id < nb_voxels_ && !voxel(neighbor_id).value_) {
 						two_neighborhood_bar.push_back(neighbor_id);
+						IF_DEBUG_DO(std::cout << "added to neighborhood" << std::endl;)
 					}
 				}
 			}
@@ -525,9 +549,13 @@ namespace grapholon {
 			if (two_neighborhood_bar_size == 0) {
 				return false;
 			}
-			//std::cout << "2-neighborhood bar is non-empty : " << two_neighborhood_bar.size() << std::endl;
+			IF_DEBUG_DO(std::cout << "2-neighborhood bar is non-empty : " << two_neighborhood_bar_size << std::endl;)
 			//then add the one-neighborhood
 			//todo : also improve code quality
+
+			for (GRuint i(0); i < 3; i++) {
+
+			}
 			neighbor_id = voxel_coordinates_to_id(x, y + 1, z + 1);
 			if (!voxel(neighbor_id).value_) {
 				two_neighborhood_bar.push_back(neighbor_id);
@@ -544,6 +572,7 @@ namespace grapholon {
 			if (!voxel(neighbor_id).value_) {
 				two_neighborhood_bar.push_back(neighbor_id);
 			}
+
 			neighbor_id = voxel_coordinates_to_id(x + 1, y + 1, z);
 			if (!voxel(neighbor_id).value_) {
 				two_neighborhood_bar.push_back(neighbor_id);
@@ -560,19 +589,20 @@ namespace grapholon {
 			if (!voxel(neighbor_id).value_) {
 				two_neighborhood_bar.push_back(neighbor_id);
 			}
-			neighbor_id = voxel_coordinates_to_id(x + 1, y + 1, z);
+
+			neighbor_id = voxel_coordinates_to_id(x + 1, y, z + 1);
 			if (!voxel(neighbor_id).value_) {
 				two_neighborhood_bar.push_back(neighbor_id);
 			}
-			neighbor_id = voxel_coordinates_to_id(x - 1, y + 1, z);
+			neighbor_id = voxel_coordinates_to_id(x - 1, y, z + 1);
 			if (!voxel(neighbor_id).value_) {
 				two_neighborhood_bar.push_back(neighbor_id);
 			}
-			neighbor_id = voxel_coordinates_to_id(x + 1, y - 1, z);
+			neighbor_id = voxel_coordinates_to_id(x + 1, y, z - 1);
 			if (!voxel(neighbor_id).value_) {
 				two_neighborhood_bar.push_back(neighbor_id);
 			}
-			neighbor_id = voxel_coordinates_to_id(x - 1, y - 1, z);
+			neighbor_id = voxel_coordinates_to_id(x - 1, y, z - 1);
 			if (!voxel(neighbor_id).value_) {
 				two_neighborhood_bar.push_back(neighbor_id);
 			}
@@ -960,7 +990,9 @@ namespace grapholon {
 			//set the clique set of size 4 (one for each k-cliques sets)
 			critical_cliques = std::vector<std::vector<std::vector<GRuint>>>(4);
 
-			//std::cout << "true voxels count : " << true_voxels_.size() << std::endl;
+			bool debug_log = false;
+			IF_DEBUG_DO(std::cout << std::endl << "extracting all cliques from skeleton" << std::endl;)
+				IF_DEBUG_DO(std::cout << "true voxels count : " << true_voxels_.size() << std::endl;)
 
 			for (GRuint i(0); i < this->true_voxels().size(); i++) {
 
@@ -969,25 +1001,25 @@ namespace grapholon {
 				GRuint x, y, z;
 				this->voxel_id_to_coordinates(voxel_id, x, y, z);
 
-				//std::cout << "classifying voxel : ( " << x << ", " << y << ", " << z << " )" << std::endl;
+				IF_DEBUG_DO(std::cout << "classifying voxel : ( " << x << ", " << y << ", " << z << " )" << std::endl;)
 
 				//first detect 3-cliques
 				if (this->is_critical_3_clique(x, y, z)) {
 					critical_cliques[3].push_back({ voxel_id });
-					//std::cout << "	it is a 3-clique " << std::endl;
+					//IF_DEBUG_DO(std::cout << "	it is a 3-clique " << std::endl;)
 				}
 				else {
-				//	std::cout << "	it is not a 3-clique" << std::endl;
+					//IF_DEBUG_DO(std::cout << "	it is not a 3-clique" << std::endl;)
 				}
 
 
 				//then detect 2-cliques
 				for (GRuint axis(X_AXIS); axis <= Z_AXIS; axis++) {
-					//	std::cout << "checkin 1-clique on axis " << axis << std::endl;
+					//IF_DEBUG_DO(std::cout << "checkin 1-clique on axis " << axis << std::endl;)
 					if (this->is_critical_2_clique(x, y, z, (Axis)axis)) {
 						GRuint voxel_B_id(this->voxel_coordinates_to_id(x + (axis == X_AXIS), y + (axis == Y_AXIS), z + (axis == Z_AXIS)));
 						critical_cliques[2].push_back({ voxel_id, voxel_B_id });
-					//	std::cout << "		there is a 2-clique on axis " << axis << std::endl;
+					//	IF_DEBUG_DO(std::cout << "		there is a 2-clique on axis " << axis << std::endl;)
 					}
 				}
 
@@ -995,51 +1027,60 @@ namespace grapholon {
 
 
 				//then detect 1-cliques
-				for (GRuint axis(X_AXIS); axis <= Z_AXIS; axis++) {
-					//std::cout << "		checking 1-clique on axis " << axis << std::endl;
-					GRuint x_B(x + (axis == Y_AXIS));
-					GRuint y_B(y + (axis != Y_AXIS));
-					GRuint z_B(z);
+				for (GRuint j(0); j <= 1; j++) {
+					for (GRuint axis(X_AXIS); axis <= Z_AXIS; axis++) {
 
-					GRuint x_C(x + (axis == Z_AXIS));
-					GRuint y_C(y);
-					GRuint z_C(z + (axis != Z_AXIS));
+						IF_DEBUG_DO(std::cout << "		checking 1-clique on axis " << axis << std::endl;)
+						GRuint x_A(x - j*(axis == Z_AXIS));
+						GRuint y_A(y);
+						GRuint z_A(z - j*(axis != Z_AXIS));
 
-					GRuint x_D(x_B + x_C - x);
-					GRuint y_D(y_B + y_C - y);
-					GRuint z_D(z_B + z_C - z);
-					/*std::cout << "		voxels are " << std::endl;
-					std::cout << "		( " << x << " " << y << " " << z << " )" << std::endl;
-					std::cout << "		( " << x_B << " " << y_B << " " << z_B << " )" << std::endl;
-					std::cout << "		( " << x_C << " " << y_C << " " << z_C << " )" << std::endl;
-					std::cout << "		( " << x_D << " " << y_D << " " << z_D << " )" << std::endl;
-					*/
+						GRuint x_B(x_A + (axis == Y_AXIS));
+						GRuint y_B(y_A + (axis != Y_AXIS));
+						GRuint z_B(z_A);
 
-					if (this->is_critical_1_clique(
-						x, y, z,
-						x_B, y_B, z_B,
-						x_C, y_C, z_C,
-						x_D, y_D, z_D,
-						(Axis)axis)) {
+						GRuint x_C(x_A + (axis == Z_AXIS));
+						GRuint y_C(y_A);
+						GRuint z_C(z_A + (axis != Z_AXIS));
 
-						//std::cout << "		there is a 1-clique on axis " << axis << std::endl;
+						GRuint x_D(x_B + x_C - x_A);
+						GRuint y_D(y_B + y_C - y_A);
+						GRuint z_D(z_B + z_C - z_A);
+						
+						/*std::cout << "		voxels are " << std::endl;
+						std::cout << "		( " << x_A << " " << y_A << " " << z_A << " )" << std::endl;
+						std::cout << "		( " << x_B << " " << y_B << " " << z_B << " )" << std::endl;
+						std::cout << "		( " << x_C << " " << y_C << " " << z_C << " )" << std::endl;
+						std::cout << "		( " << x_D << " " << y_D << " " << z_D << " )" << std::endl;
+						*/
 
-						GRuint voxel_B_id(this->voxel_coordinates_to_id(x_B, y_B, z_B));
-						GRuint voxel_C_id(this->voxel_coordinates_to_id(x_C, y_C, z_C));
-						GRuint voxel_D_id(this->voxel_coordinates_to_id(x_D, y_D, z_D));
-						critical_cliques[1].push_back(std::vector<GRuint>());
+						if (this->is_critical_1_clique(
+							x_A, y_A, z_A,
+							x_B, y_B, z_B,
+							x_C, y_C, z_C,
+							x_D, y_D, z_D,
+							(Axis)axis)) {
 
-						if (this->voxel(voxel_id).value_) {
-							critical_cliques[1].back().push_back(voxel_id);
-						}
-						if (this->voxel(voxel_B_id).value_) {
-							critical_cliques[1].back().push_back(voxel_B_id);
-						}
-						if (this->voxel(voxel_C_id).value_) {
-							critical_cliques[1].back().push_back(voxel_C_id);
-						}
-						if (this->voxel(voxel_D_id).value_) {
-							critical_cliques[1].back().push_back(voxel_D_id);
+							//std::cout << "		there is a 1-clique on axis " << axis << std::endl;
+
+							GRuint voxel_A_id(this->voxel_coordinates_to_id(x_A, y_A, z_A));
+							GRuint voxel_B_id(this->voxel_coordinates_to_id(x_B, y_B, z_B));
+							GRuint voxel_C_id(this->voxel_coordinates_to_id(x_C, y_C, z_C));
+							GRuint voxel_D_id(this->voxel_coordinates_to_id(x_D, y_D, z_D));
+							critical_cliques[1].push_back(std::vector<GRuint>());
+
+							if (this->voxel(voxel_A_id).value_) {
+								critical_cliques[1].back().push_back(voxel_A_id);
+							}
+							if (this->voxel(voxel_B_id).value_) {
+								critical_cliques[1].back().push_back(voxel_B_id);
+							}
+							if (this->voxel(voxel_C_id).value_) {
+								critical_cliques[1].back().push_back(voxel_C_id);
+							}
+							if (this->voxel(voxel_D_id).value_) {
+								critical_cliques[1].back().push_back(voxel_D_id);
+							}
 						}
 					}
 				}
@@ -1268,6 +1309,8 @@ namespace grapholon {
 
 			GRuint x, y, z;
 
+			bool debug_log(false);
+
 			//initialize K (optional)
 			/*for (GRuint i(0); i < true_voxels_.size(); i++) {
 				if ((this->*Skel)(true_voxels_[i])) {
@@ -1280,7 +1323,7 @@ namespace grapholon {
 			while (!stability && iteration_count < THINNING_ITERATION_LIMIT) {
 				iteration_count++;
 
-				//std::cout << "	running iteration " << iteration_count << std::endl;
+				IF_DEBUG_DO(std::cout << "	running iteration " << iteration_count << std::endl;)
 
 				//critical cliques holder
 				std::vector<std::vector<std::vector<GRuint>>> critical_cliques;
@@ -1290,24 +1333,32 @@ namespace grapholon {
 
 				extract_all_cliques(critical_cliques);
 				
+
 				for (GRint d(3); d >= 0; d--) {
-					//std::cout << "		checking " << d << "-cliques" << std::endl;
+					IF_DEBUG_DO(std::cout << "		checking " << d << "-cliques" << std::endl;)
 					GRuint voxels_in_d_cliques_count(0);
 
 					std::vector<GRuint> voxel_set_Z;
 					for (GRuint i(0); i < critical_cliques[d].size(); i++) {
 						voxels_in_d_cliques_count += critical_cliques[d][i].size();
 
-						//std::cout << "			checking clique " << i << std::endl;
+						IF_DEBUG_DO(std::cout << "			checking clique " << i << std::endl;)
+						for (GRuint j(0); j < critical_cliques[d][i].size(); j++) {
+							GRuint x2, y2, z2;
+							voxel_id_to_coordinates(critical_cliques[d][i][j], x2, y2, z2);
+							IF_DEBUG_DO(std::cout << "			" << x2 << " " << y2 << " "<<z2 << std::endl;)
+						}
+						IF_DEBUG_DO(std::cout << std::endl;)
+
 						GRuint voxel_id_from_critical_clique = (this->*Select)(critical_cliques[d][i]);
 
 						//select a voxel from the current clique
 						voxel_id_to_coordinates(voxel_id_from_critical_clique, x, y, z);
-						//std::cout << "			selected voxel from "<<d<<"-clique " << i << " : " << voxel_id_from_critical_clique << " ; " << x << " " << y << " " << z << std::endl;
+						IF_DEBUG_DO(std::cout << "			selected voxel from "<<d<<"-clique " << i << " : " << voxel_id_from_critical_clique << " ; " << x << " " << y << " " << z << std::endl;)
 						
 						//if it hasn't already been selected we add it to Z
 						if (!voxel(voxel_id_from_critical_clique).selected_) {
-						//	std::cout << "				newly selected, added to Z" << std::endl;
+							IF_DEBUG_DO(std::cout << "				newly selected, added to Z" << std::endl;)
 							
 							voxels_[voxel_id_from_critical_clique].selected_ = true;
 							voxel_set_Z.push_back(voxel_id_from_critical_clique);
@@ -1317,41 +1368,50 @@ namespace grapholon {
 					//and add the voxels in Z to Y
 					for (GRuint i(0); i < voxel_set_Z.size(); i++) {
 						voxel_set_Y.push_back(voxel_set_Z[i]);
-						//std::cout << "			added voxel " << voxel_set_Z[i] << " to Y" << std::endl;
+						IF_DEBUG_DO(std::cout << "			added voxel " << voxel_set_Z[i] << " to Y" << std::endl;)
 					}
 
-					//std::cout << std::endl;
+					IF_DEBUG_DO(std::cout << std::endl;)
 				}
-				//std::cout << "	Y now contains " << voxel_set_Y.size() << " voxels " << std::endl;
+				IF_DEBUG_DO(std::cout << "	Y now contains " << voxel_set_Y.size() << " voxels : " << std::endl;)
 
-				GRuint removed_count = true_voxels_.size() - voxel_set_Y.size();
 
-				//replace the previous voxel_set
-				remove_all_voxels();
-				//std::cout << "	removed all voxels, size : "<<true_voxels_.size() << std::endl;
-				for (GRuint i(0); i < voxel_set_Y.size(); i++) {
-					set_voxel(voxel_set_Y[i]);
+				//If no critical clique could be found we probably encountered a special case
+				//e.g. "dunce hat". In that case we do not replace the voxel set and leave
+					//it like it is
+				if (voxel_set_Y.size() == 0) {
+					stability = true;
 				}
-				//std::cout << "	and replaced them with Y" << std::endl;
-				
-				//and re-select the voxels in K (useful for the last step)
-				for (GRuint i(0); i < voxel_set_K.size(); i++) {
-					voxels_[voxel_set_K[i]].selected_ = true;
-				}
-				//std::cout << "	voxels in K are selected again " << std::endl;
-				
-				for (GRuint i(0); i < true_voxels_.size(); i++) {
-					//if a voxel is selected it is because it's in K (from the previous loop)
-					if (!voxel(true_voxels_[i]).selected_ && (this->*Skel)(true_voxels_[i])) {
-						voxel_set_K.push_back(true_voxels_[i]);
+				else {
+					GRuint removed_count = true_voxels_.size() - voxel_set_Y.size();
+
+					//replace the previous voxel_set
+					remove_all_voxels();
+					//std::cout << "	removed all voxels, size : "<<true_voxels_.size() << std::endl;
+					for (GRuint i(0); i < voxel_set_Y.size(); i++) {
+						set_voxel(voxel_set_Y[i]);
 					}
+					//std::cout << "	and replaced them with Y" << std::endl;
+
+					//and re-select the voxels in K (useful for the last step)
+					for (GRuint i(0); i < voxel_set_K.size(); i++) {
+						voxels_[voxel_set_K[i]].selected_ = true;
+					}
+					//std::cout << "	voxels in K are selected again " << std::endl;
+
+					for (GRuint i(0); i < true_voxels_.size(); i++) {
+						//if a voxel is selected it is because it's in K (from the previous loop)
+						if (!voxel(true_voxels_[i]).selected_ && (this->*Skel)(true_voxels_[i])) {
+							voxel_set_K.push_back(true_voxels_[i]);
+						}
+					}
+					IF_DEBUG_DO(std::cout << "	K now contains " << voxel_set_K.size() << " voxels " << std::endl;)
+
+						IF_DEBUG_DO(std::cout << "	removed " << removed_count << " voxels at iteration " << iteration_count << std::endl << std::endl;;)
+
+						//stability check based on added count
+						stability = (removed_count == 0);
 				}
-				//std::cout << "	K now contains " << voxel_set_K.size() << " voxels " << std::endl;
-
-				//std::cout << "	removed " << removed_count << " voxels at iteration " << iteration_count << std::endl << std::endl;;
-
-				//stability check based on added count
-				stability = (removed_count == 0);
 			}
 		}
 
@@ -1394,7 +1454,8 @@ namespace grapholon {
 			//erasing voxel grid
 			memset(voxels_, 0, nb_voxels_ * sizeof(SkeletonVoxel));
 
-			GRuint current_voxel_id = rand() % nb_voxels_;
+			GRuint current_voxel_id = voxel_coordinates_to_id(width_/2, height_/2, slice_/2);
+
 
 			GRuint x, y, z;
 
@@ -1442,16 +1503,17 @@ namespace grapholon {
 			memset(voxels_, 0, nb_voxels_ * sizeof(SkeletonVoxel));
 
 			//phase 1 : generate skeleton
-			GRuint x(width_/2), y(height_/2), z(0);
+			GRuint x(width_/2), y(height_/2), z(slice_/2);
 
-			for (GRuint i(0); i < 10; i++) {
+			for (GRuint i(0); i < 5; i++) {
 				set_voxel(x, y, z+i);
 			}
-			for (GRuint i(0); i < 10; i++) {
+			set_voxel(x + 2, y + 2, z);
+
+			for (GRuint i(1); i < 5; i++) {
 				set_voxel(x - i, y, z + i);
 				set_voxel(x + i, y, z + i);
 			}
-
 
 
 			//phase 2: thicken skeleton
@@ -1470,6 +1532,7 @@ namespace grapholon {
 				while (next_voxel_id < 0 || next_voxel_id >= (GRint)nb_voxels_ || voxels_[next_voxel_id].value_) {
 					random_voxel_index = rand() % true_voxels_.size();
 					random_voxel_id = true_voxels_[random_voxel_index];
+					//std::cout << "random voxel id : " << random_voxel_id << std::endl;
 
 					GRuint face_index = rand() % 6;
 
@@ -1487,7 +1550,7 @@ namespace grapholon {
 					}
 				}
 
-				//std::cout << "set voxel : " << random_voxel_id << std::endl;
+				//std::cout << "set voxel : " << next_voxel_id << std::endl;
 				set_voxel(next_voxel_id);
 
 			}

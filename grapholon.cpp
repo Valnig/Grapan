@@ -407,22 +407,123 @@ void SkeletonLikThinningTest() {
 	delete skeleton;
 }
 
+
+void find_wrong_skeletonization() {
+	GRuint wrong_count(0);
+	GRuint nb_trials(10000);
+
+	for (GRuint i(0); i < nb_trials; i++) {
+			VoxelSkeleton* skeleton = new VoxelSkeleton(98, 98, 98);
+
+			GRuint seed(i);
+			skeleton->generate_random(10, seed);
+
+			if(!(i%100))std::cout << "checking seed : " << seed << std::endl;
+
+			skeleton->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::AlwaysFalseSkel);
+
+
+			if (skeleton->true_voxels().size() == 0
+				|| skeleton->true_voxels().size() == 2) {
+				cout << endl;
+				cout << "voxels after thinning : " << skeleton->true_voxels().size() << std::endl;
+				for (GRuint j(0); j < skeleton->true_voxels().size(); j++) {
+					GRuint x, y, z;
+					skeleton->voxel_id_to_coordinates(skeleton->true_voxels()[j], x, y, z);
+					cout << "( " << x << " " << y << " " << z << ")" << endl;
+				}
+				std::cout << " seed : " << seed << std::endl << std::endl;;
+				wrong_count++;
+			}
+
+			/*for (auto voxel_id : skeleton->true_voxels()) {
+				GRuint x, y, z;
+				skeleton->voxel_id_to_coordinates(voxel_id, x, y, z);
+				std::cout << "	( " << x << " " << y << " " << z << " )" << std::endl;
+			}*/
+
+			delete skeleton;
+	}
+	std::cout << "done. found "<<wrong_count<<" wrong skeletons among "<<nb_trials << std::endl;
+
+}
+
+void predefSkeletonTest() {
+	VoxelSkeleton* skeleton = new VoxelSkeleton(98, 98, 98);
+
+	skeleton->generate_random(10, 102);
+
+	cout << "voxels before thinning : " << skeleton->true_voxels().size() << std::endl;
+
+	for (auto voxel_id : skeleton->true_voxels()) {
+		GRuint x, y, z;
+		skeleton->voxel_id_to_coordinates(voxel_id, x, y, z);
+		std::cout << "	( " << x << " " << y << " " << z << " )" << std::endl;
+	}
+
+
+	skeleton->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::AlwaysFalseSkel);
+
+	cout << "voxels after thinning : " << skeleton->true_voxels().size() << std::endl;
+
+	for (auto voxel_id : skeleton->true_voxels()) {
+		GRuint x, y, z;
+		skeleton->voxel_id_to_coordinates(voxel_id, x, y, z);
+		std::cout << "	( " << x << " " << y << " " << z << " )" << std::endl;
+	}
+
+	delete skeleton;
+}
+
+
+
+void nonCliqueConfigTest() {
+	VoxelSkeleton* skeleton = new VoxelSkeleton(98, 98, 98);
+
+	skeleton->set_voxel(5, 5, 5);
+
+	skeleton->set_voxel(6, 5, 5);
+	skeleton->set_voxel(7, 5, 5);
+	skeleton->set_voxel(8, 5, 5);
+
+
+	skeleton->set_voxel(5, 6, 5);
+	skeleton->set_voxel(5, 7, 5);
+	skeleton->set_voxel(5, 8, 5);
+
+	skeleton->set_voxel(5, 5, 6);
+	skeleton->set_voxel(5, 5, 7);
+	skeleton->set_voxel(5, 5, 8);
+
+	cout << "voxels before thinning : " << skeleton->true_voxels().size() << std::endl;
+
+	for (auto voxel_id : skeleton->true_voxels()) {
+		GRuint x, y, z;
+		skeleton->voxel_id_to_coordinates(voxel_id, x, y, z);
+		std::cout << "	( " << x << " " << y << " " << z << " )" << std::endl;
+	}
+
+
+	skeleton->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::AlwaysFalseSkel);
+
+	cout << "voxels after thinning : " << skeleton->true_voxels().size() << std::endl;
+
+	for (auto voxel_id : skeleton->true_voxels()) {
+		GRuint x, y, z;
+		skeleton->voxel_id_to_coordinates(voxel_id, x, y, z);
+		std::cout << "	( " << x << " " << y << " " << z << " )" << std::endl;
+	}
+
+	delete skeleton;
+}
+
 int main()
 {
+	//BertrandStructureThinningTest();
+	
+	//nonCliqueConfigTest();
 
-
-	SkeletonLikThinningTest();
-
-	//interiorBlockTest();
-	//InteriorBlockThinningTest();
-
-	/*CliquesInBertrandStructureTest();
-	BertrandStructureThinningTest();*/
-
-	//blockCritical2Clique();
-
-
-	//TableLookupVSOnTheFlyCliqueCheck();
+	find_wrong_skeletonization();
 
 	while (true);
     return 0;
