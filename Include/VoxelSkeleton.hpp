@@ -1392,6 +1392,44 @@ namespace grapholon {
 			}
 		}
 
+		
+		
+		
+		/***********************************************************************************************/
+		/******************************************************************************** SUBDIVISION **/
+		/***********************************************************************************************/
+
+		VoxelSkeleton* subdivide(GRuint subdivision_level) {
+			if (subdivision_level > 3) {
+				std::cerr << " subdividing in more that 3 is too risky performance-wise. returning nullptr" << std::endl;
+				return nullptr;
+			}
+
+			VoxelSkeleton* subdivided_skeleton = new VoxelSkeleton(
+				width_*subdivision_level,
+				height_*subdivision_level,
+				slice_*subdivision_level);
+
+			GRuint x, y, z;
+			for (auto voxel_id : true_voxels_) {
+				voxel_id_to_coordinates(voxel_id, x, y, z);
+
+				for (GRuint i(0); i < subdivision_level; i++) {
+					for (GRuint j(0); j < subdivision_level; j++) {
+						for (GRuint k(0); k < subdivision_level; k++) {
+							subdivided_skeleton->set_voxel(
+								subdivision_level * x + i,
+								subdivision_level * y + j,
+								subdivision_level * z + k);
+						}
+					}
+				}
+			}
+
+			return subdivided_skeleton;
+		}
+
+
 
 		/***********************************************************************************************/
 		/************************************************************************ SKELETON GENERATORS **/

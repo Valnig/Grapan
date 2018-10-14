@@ -44,22 +44,6 @@ void sand_box() {
 
 	std::cout << "total number of voxels : " << skeleton.true_voxels().size() << std::endl;
 
-	//voxel list
-	/*for (GRuint i(0); i< skeleton.true_voxels_.size(); i++){
-	GRuint voxel_id = skeleton.true_voxels_[i];
-	GRuint x, y, z;
-	skeleton.voxel_id_to_coordinates(voxel_id,x,y,z);
-	if (true || skeleton.voxels_[voxel_id].topological_class_ == INTERIOR_POINT) {
-	std::cout << " voxel " << voxel_id << " at : " << x << ", " << y << ", " << z << " : " << skeleton.voxels_[voxel_id].topological_class_ << std::endl;
-	}
-	}*/
-
-	//ids list
-	/*for (GRuint i(0); i < skeleton.true_voxels_.size(); i++) {
-	std::cout << " " << skeleton.true_voxels_[i];
-	}
-	std::cout << endl;
-	*/
 
 	//inside count
 	GRuint inside_count(0);
@@ -100,19 +84,7 @@ void BertandStructureTests(){
 
 
 
-void TableLookupVSOnTheFlyCliqueCheck(){
-	std::bitset<K2Y_CONFIGURATIONS> bitset_masks(0);
 
-	VoxelSkeleton::precompute_K2_masks(bitset_masks);
-
-	std::cout << std::endl << std::endl << " lookup table : " << std::endl;
-	for (GRuint i(0); i < 100; i++) {
-		std::cout << " " << bitset_masks[i + 1024 + 128];
-	}
-
-	std::cout << "lookup table size : " << sizeof(bitset_masks) << std::endl;
-
-}
 
 
 
@@ -389,7 +361,7 @@ void InteriorBlockThinningTest() {
 }
 
 
-void SkeletonLikThinningTest() {
+void SkeletonLikeThinningTest() {
 	VoxelSkeleton* skeleton = new VoxelSkeleton(100, 100, 100);
 
 	skeleton->generate_random_skeleton_like(1000);
@@ -520,64 +492,6 @@ void find_wrong_skeletonization() {
 
 }
 
-void WrongSKeletonTest() {
-	VoxelSkeleton* skeleton = new VoxelSkeleton(98, 98, 98);
-
-	skeleton->set_voxel(50, 47, 48);
-	skeleton->set_voxel(51, 48, 45);
-	skeleton->set_voxel(49, 47, 47);
-	skeleton->set_voxel(49, 53, 53);
-	skeleton->set_voxel(50, 51, 54);
-	skeleton->set_voxel(48, 51, 53);
-	skeleton->set_voxel(50, 52, 54);
-	skeleton->set_voxel(50, 49, 44);
-	skeleton->set_voxel(48, 52, 54);
-	skeleton->set_voxel(51, 46, 49);
-	skeleton->set_voxel(51, 50, 45);
-	skeleton->set_voxel(48, 49, 53);
-	skeleton->set_voxel(50, 46, 50);
-	skeleton->set_voxel(50, 49, 52);
-	skeleton->set_voxel(49, 47, 50);
-	skeleton->set_voxel(52, 47, 49);
-	skeleton->set_voxel(49, 50, 52);
-	skeleton->set_voxel(50, 50, 53);
-	skeleton->set_voxel(52, 48, 49);
-	skeleton->set_voxel(48, 48, 50);
-	skeleton->set_voxel(50, 48, 48);
-	skeleton->set_voxel(48, 52, 52);
-	skeleton->set_voxel(49, 49, 49);
-	skeleton->set_voxel(49, 50, 51);
-	skeleton->set_voxel(48, 51, 51);
-	skeleton->set_voxel(52, 48, 47);
-	skeleton->set_voxel(48, 50, 50);
-	skeleton->set_voxel(51, 50, 46);
-	skeleton->set_voxel(51, 49, 47);
-	skeleton->set_voxel(48, 51, 50);
-	skeleton->set_voxel(48, 51, 52);
-	skeleton->set_voxel(53, 49, 47);
-	skeleton->set_voxel(52, 49, 46);
-	skeleton->set_voxel(46, 51, 50);
-	skeleton->set_voxel(52, 50, 47);
-	skeleton->set_voxel(47, 52, 50);
-	skeleton->set_voxel(47, 51, 49);
-	skeleton->set_voxel(47, 51, 51);
-	skeleton->set_voxel(48, 49, 49);
-	skeleton->set_voxel(52, 49, 48);
-	skeleton->set_voxel(47, 50, 49);
-	skeleton->set_voxel(47, 49, 50);
-	skeleton->set_voxel(47, 50, 51);
-	skeleton->set_voxel(51, 50, 48);
-	skeleton->set_voxel(46, 50, 50);
-	skeleton->set_voxel(50, 49, 48);
-
-	skeleton->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::OneIsthmusSkel, true);
-
-	std::cout << " size after second thinning : " << skeleton->true_voxels().size() << std::endl;
-	std::cout << "	connectedness : " << skeleton->is_k_connected(skeleton->true_voxels(), 0u) << std::endl;;
-
-	delete skeleton;
-
-}
 
 void DoubleThinningTest() {
 	VoxelSkeleton* skeleton = new VoxelSkeleton(98, 98, 98);
@@ -605,20 +519,57 @@ void DoubleThinningTest() {
 }
 
 
+void SubdivisionTest() {
+	VoxelSkeleton* skeleton = new VoxelSkeleton(100, 100, 100);
+
+	//skeleton->generate_random(4);
+
+	skeleton->set_voxel(1, 1, 1);
+	
+
+
+
+	VoxelSkeleton* subdivided_skeleton1 = skeleton->subdivide(1);
+	VoxelSkeleton* subdivided_skeleton2 = skeleton->subdivide(2);
+	VoxelSkeleton* subdivided_skeleton3 = skeleton->subdivide(3);
+
+	std::cout << " skeleton 1 : " << std::endl;
+	for (GRuint j(0); j < subdivided_skeleton1->true_voxels().size(); j++) {
+		GRuint x, y, z;
+		subdivided_skeleton1->voxel_id_to_coordinates(subdivided_skeleton1->true_voxels()[j], x, y, z);
+		
+		cout << "	( " << x << "," << y << "," << z << ");" << endl;
+	}
+
+	std::cout << " skeleton 2 : " << std::endl;
+	for (GRuint j(0); j < subdivided_skeleton2->true_voxels().size(); j++) {
+		GRuint x, y, z;
+		subdivided_skeleton2->voxel_id_to_coordinates(subdivided_skeleton2->true_voxels()[j], x, y, z);
+
+		cout << "	( " << x << "," << y << "," << z << ");" << endl;
+	}
+
+	std::cout << " skeleton 1 : " << std::endl;
+	for (GRuint j(0); j < subdivided_skeleton3->true_voxels().size(); j++) {
+		GRuint x, y, z;
+		subdivided_skeleton3->voxel_id_to_coordinates(subdivided_skeleton3->true_voxels()[j], x, y, z);
+
+		cout << "	( " << x << "," << y << "," << z << ");" << endl;
+	}
+
+
+	delete skeleton;
+	delete subdivided_skeleton1;
+	delete subdivided_skeleton2;
+	delete subdivided_skeleton3;
+
+}
+
+
 int main()
 {
 	
-	//WrongSKeletonTest();
-
-	DoubleThinningTest();
-
-	
-	//nonCliqueConfigTest();
-
-	//BertrandStructureThinningTest();
-	
-
-	//find_wrong_skeletonization();
+	SubdivisionTest();
 
 	while (true);
     return 0;
