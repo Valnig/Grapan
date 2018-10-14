@@ -408,45 +408,6 @@ void SkeletonLikThinningTest() {
 }
 
 
-void find_wrong_skeletonization() {
-	GRuint wrong_count(0);
-	GRuint nb_trials(1000);
-
-	for (GRuint i(0); i < nb_trials; i++) {
-			VoxelSkeleton* skeleton = new VoxelSkeleton(98, 98, 98);
-
-			GRuint seed(i);
-			skeleton->generate_random(10, seed);
-
-			if(!(i%100))std::cout << "checking seed : " << seed << std::endl;
-
-			skeleton->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::AlwaysFalseSkel);
-
-			//std::cout <<  " size : " << skeleton->true_voxels().size() << std::endl;
-			if (skeleton->true_voxels().size() == 0
-				|| skeleton->true_voxels().size() == 2) {
-				cout << endl;
-				cout << "voxels after thinning : " << skeleton->true_voxels().size() << std::endl;
-				for (GRuint j(0); j < skeleton->true_voxels().size(); j++) {
-					GRuint x, y, z;
-					skeleton->voxel_id_to_coordinates(skeleton->true_voxels()[j], x, y, z);
-					cout << "( " << x << " " << y << " " << z << ")" << endl;
-				}
-				std::cout << " seed : " << seed << std::endl << std::endl;;
-				wrong_count++;
-			}
-
-			/*for (auto voxel_id : skeleton->true_voxels()) {
-				GRuint x, y, z;
-				skeleton->voxel_id_to_coordinates(voxel_id, x, y, z);
-				std::cout << "	( " << x << " " << y << " " << z << " )" << std::endl;
-			}*/
-
-			delete skeleton;
-	}
-	std::cout << "done. found "<<wrong_count<<" wrong skeletons among "<<nb_trials << std::endl;
-
-}
 
 void predefSkeletonTest() {
 	VoxelSkeleton* skeleton = new VoxelSkeleton(98, 98, 98);
@@ -519,14 +480,143 @@ void nonCliqueConfigTest() {
 	delete skeleton;
 }
 
+
+void find_wrong_skeletonization() {
+	GRuint wrong_count(0);
+	GRuint nb_trials(100);
+
+	for (GRuint i(0); i < nb_trials; i++) {
+		VoxelSkeleton* skeleton = new VoxelSkeleton(98, 98, 98);
+
+		GRuint seed(i);
+		skeleton->generate_random(1000, seed);
+
+		std::cout << "checking seed : " << seed << std::endl;
+
+		skeleton->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::OneIsthmusSkel);
+
+		std::cout <<  " size : " << skeleton->true_voxels().size() << std::endl;
+		if (! skeleton->is_k_connected(skeleton->true_voxels(),0u)) {
+			cout << endl;
+			cout << "voxels after thinning : " << skeleton->true_voxels().size() << std::endl;
+			for (GRuint j(0); j < skeleton->true_voxels().size(); j++) {
+				GRuint x, y, z;
+				skeleton->voxel_id_to_coordinates(skeleton->true_voxels()[j], x, y, z);
+				cout << "( " << x << " " << y << " " << z << ")" << endl;
+			}
+			std::cout << " seed : " << seed << std::endl << std::endl;;
+			wrong_count++;
+		}
+
+		/*for (auto voxel_id : skeleton->true_voxels()) {
+		GRuint x, y, z;
+		skeleton->voxel_id_to_coordinates(voxel_id, x, y, z);
+		std::cout << "	( " << x << " " << y << " " << z << " )" << std::endl;
+		}*/
+
+		delete skeleton;
+	}
+	std::cout << "done. found " << wrong_count << " wrong skeletons among " << nb_trials << std::endl;
+
+}
+
+void WrongSKeletonTest() {
+	VoxelSkeleton* skeleton = new VoxelSkeleton(98, 98, 98);
+
+	skeleton->set_voxel(50, 47, 48);
+	skeleton->set_voxel(51, 48, 45);
+	skeleton->set_voxel(49, 47, 47);
+	skeleton->set_voxel(49, 53, 53);
+	skeleton->set_voxel(50, 51, 54);
+	skeleton->set_voxel(48, 51, 53);
+	skeleton->set_voxel(50, 52, 54);
+	skeleton->set_voxel(50, 49, 44);
+	skeleton->set_voxel(48, 52, 54);
+	skeleton->set_voxel(51, 46, 49);
+	skeleton->set_voxel(51, 50, 45);
+	skeleton->set_voxel(48, 49, 53);
+	skeleton->set_voxel(50, 46, 50);
+	skeleton->set_voxel(50, 49, 52);
+	skeleton->set_voxel(49, 47, 50);
+	skeleton->set_voxel(52, 47, 49);
+	skeleton->set_voxel(49, 50, 52);
+	skeleton->set_voxel(50, 50, 53);
+	skeleton->set_voxel(52, 48, 49);
+	skeleton->set_voxel(48, 48, 50);
+	skeleton->set_voxel(50, 48, 48);
+	skeleton->set_voxel(48, 52, 52);
+	skeleton->set_voxel(49, 49, 49);
+	skeleton->set_voxel(49, 50, 51);
+	skeleton->set_voxel(48, 51, 51);
+	skeleton->set_voxel(52, 48, 47);
+	skeleton->set_voxel(48, 50, 50);
+	skeleton->set_voxel(51, 50, 46);
+	skeleton->set_voxel(51, 49, 47);
+	skeleton->set_voxel(48, 51, 50);
+	skeleton->set_voxel(48, 51, 52);
+	skeleton->set_voxel(53, 49, 47);
+	skeleton->set_voxel(52, 49, 46);
+	skeleton->set_voxel(46, 51, 50);
+	skeleton->set_voxel(52, 50, 47);
+	skeleton->set_voxel(47, 52, 50);
+	skeleton->set_voxel(47, 51, 49);
+	skeleton->set_voxel(47, 51, 51);
+	skeleton->set_voxel(48, 49, 49);
+	skeleton->set_voxel(52, 49, 48);
+	skeleton->set_voxel(47, 50, 49);
+	skeleton->set_voxel(47, 49, 50);
+	skeleton->set_voxel(47, 50, 51);
+	skeleton->set_voxel(51, 50, 48);
+	skeleton->set_voxel(46, 50, 50);
+	skeleton->set_voxel(50, 49, 48);
+
+	skeleton->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::OneIsthmusSkel, true);
+
+	std::cout << " size after second thinning : " << skeleton->true_voxels().size() << std::endl;
+	std::cout << "	connectedness : " << skeleton->is_k_connected(skeleton->true_voxels(), 0u) << std::endl;;
+
+	delete skeleton;
+
+}
+
+void DoubleThinningTest() {
+	VoxelSkeleton* skeleton = new VoxelSkeleton(98, 98, 98);
+
+	skeleton->generate_random(400, 1234);
+	skeleton->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::OneIsthmusSkel, true);
+
+	std::cout << " size after first thinning : " << skeleton->true_voxels().size() << std::endl;
+	std::cout << "	connectedness : " << skeleton->is_k_connected(skeleton->true_voxels(), 0u) << std::endl;;
+
+	for (GRuint j(0); j < skeleton->true_voxels().size(); j++) {
+		GRuint x, y, z;
+		skeleton->voxel_id_to_coordinates(skeleton->true_voxels()[j], x, y, z);
+		//cout << "skeleton->set_voxel( " << x << "," << y << "," << z << ");" << endl;
+	}
+
+	skeleton->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::OneIsthmusSkel, true);
+
+
+
+	std::cout << " size after second thinning : " << skeleton->true_voxels().size() << std::endl;
+	std::cout << "	connectedness : " << skeleton->is_k_connected(skeleton->true_voxels(), 0u) << std::endl;;
+
+	delete skeleton;
+}
+
+
 int main()
 {
+	
+	//WrongSKeletonTest();
 
-	nonCliqueConfigTest();
+	DoubleThinningTest();
+
+	
+	//nonCliqueConfigTest();
 
 	//BertrandStructureThinningTest();
 	
-	//nonCliqueConfigTest();
 
 	//find_wrong_skeletonization();
 

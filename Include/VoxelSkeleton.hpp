@@ -1182,9 +1182,14 @@ namespace grapholon {
 
 
 		/************************************************************************** ISTHMUS DETECTION **/
-		/** NOTE : check if simply checking connectedness of zero-neighborhoo also works*/
+		/** NOTE : check if simply checking connectedness of zero-neighborhoo also works
+		I'll use that for now since it's much faster*/
 		bool is_1_isthmus(GRuint x, GRuint y, GRuint z) {
 			
+			std::vector<GRuint> neighborhood2;
+			extract_0_neighborhood_star(x, y, z, neighborhood2);
+			return !is_k_connected(neighborhood2, 0u);
+
 			//first create a
 			VoxelSkeleton neighborhood(3, 3, 3);
 			GRuint neighbor_id;
@@ -1263,7 +1268,7 @@ namespace grapholon {
 		/***************************************************************************** THINNING ALGOS **/
 
 
-		void AsymmetricThinning(SelectionFunction Select, SkelFunction Skel) {
+		void AsymmetricThinning(SelectionFunction Select, SkelFunction Skel, bool print_debug = false) {
 			
 			/** description of the voxel sets :
 			 - K : the set of voxels that must be kept no matter what (defined by the Skel function)
@@ -1272,7 +1277,7 @@ namespace grapholon {
 			std::vector<GRuint> voxel_set_K;
 			bool stability(false);
 			GRuint iteration_count(0);
-
+			GRuint voxel_count_at_iteration_start(true_voxels_.size());
 			GRuint x, y, z;
 
 			bool debug_log(false);
@@ -1288,6 +1293,7 @@ namespace grapholon {
 
 			while (!stability && iteration_count < THINNING_ITERATION_LIMIT) {
 				iteration_count++;
+				voxel_count_at_iteration_start = true_voxels_.size();
 
 				IF_DEBUG_DO(std::cout << "	running iteration " << iteration_count << std::endl;)
 
@@ -1349,7 +1355,6 @@ namespace grapholon {
 					stability = true;
 				}
 				else {
-					GRuint removed_count = true_voxels_.size() - voxel_set_Y.size();
 
 					//replace the previous voxel_set
 					remove_all_voxels();
@@ -1357,6 +1362,7 @@ namespace grapholon {
 					for (GRuint i(0); i < voxel_set_Y.size(); i++) {
 						set_voxel(voxel_set_Y[i]);
 					}
+					GRuint removed_count = voxel_count_at_iteration_start - true_voxels_.size();
 					//std::cout << "	and replaced them with Y" << std::endl;
 
 					//and re-select the voxels in K (useful for the last step)
@@ -1371,12 +1377,17 @@ namespace grapholon {
 							voxel_set_K.push_back(true_voxels_[i]);
 						}
 					}
+					//and then un-select the voxels in K
+					for (GRuint i(0); i < voxel_set_K.size(); i++) {
+						voxels_[voxel_set_K[i]].selected_ = false;
+					}
 					IF_DEBUG_DO(std::cout << "	K now contains " << voxel_set_K.size() << " voxels " << std::endl;)
 
-						IF_DEBUG_DO(std::cout << "	removed " << removed_count << " voxels at iteration " << iteration_count << std::endl << std::endl;;)
+					IF_DEBUG_DO(std::cout << "	removed " << removed_count << " voxels at iteration " << iteration_count << std::endl << std::endl;;)
 
-						//stability check based on added count
-						stability = (removed_count == 0);
+					//stability check based on added count
+						
+					stability = (removed_count == 0);
 				}
 			}
 		}
