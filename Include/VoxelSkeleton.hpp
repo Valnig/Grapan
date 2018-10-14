@@ -1396,7 +1396,7 @@ namespace grapholon {
 		
 		
 		/***********************************************************************************************/
-		/******************************************************************************** SUBDIVISION **/
+		/******************************************************************* SKELETON-WISE OPERATIONS **/
 		/***********************************************************************************************/
 
 		VoxelSkeleton* subdivide(GRuint subdivision_level) {
@@ -1429,6 +1429,38 @@ namespace grapholon {
 			return subdivided_skeleton;
 		}
 
+		/** Returns a new skeleton of just the right size to contain the current skeleton */
+		VoxelSkeleton* fit_to_min_max() {
+
+			GRuint x_min(width_), y_min(height_), z_min(slice_);
+			GRuint x_max(0), y_max(0), z_max(0);
+
+			GRuint x, y, z;
+			for (auto voxel_id : true_voxels_) {
+				voxel_id_to_coordinates(voxel_id, x, y, z);
+				x_min = MIN(x, x_min);
+				y_min = MIN(y, y_min);
+				z_min = MIN(z, z_min);
+
+				x_max = MAX(x, x_max);
+				y_max = MAX(y, y_max);
+				z_max = MAX(z, z_max);
+			}
+
+			GRuint new_width  = x_max - x_min;
+			GRuint new_height = y_max - y_min;
+			GRuint new_slice  = z_max - z_min;
+
+			VoxelSkeleton* fit_skeleton = new VoxelSkeleton(new_width, new_height, new_slice);
+
+			for (auto voxel_id : true_voxels_) {
+				voxel_id_to_coordinates(voxel_id, x, y, z);
+
+				fit_skeleton->set_voxel(x - x_min, y - y_min, z - z_min);
+			}
+
+			return fit_skeleton;
+		}
 
 
 		/***********************************************************************************************/

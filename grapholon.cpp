@@ -527,8 +527,6 @@ void SubdivisionTest() {
 	skeleton->set_voxel(1, 1, 1);
 	
 
-
-
 	VoxelSkeleton* subdivided_skeleton1 = skeleton->subdivide(1);
 	VoxelSkeleton* subdivided_skeleton2 = skeleton->subdivide(2);
 	VoxelSkeleton* subdivided_skeleton3 = skeleton->subdivide(3);
