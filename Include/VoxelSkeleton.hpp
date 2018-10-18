@@ -1429,6 +1429,52 @@ namespace grapholon {
 			return subdivided_skeleton;
 		}
 
+		VoxelSkeleton* subdivide_smooth() {
+			VoxelSkeleton* subdivided_skeleton = this->subdivide(2);
+
+			std::vector<GRuint> voxels_to_add;
+
+			//look for all pairs of voxels that are not 2-connected in every direction
+			for (auto voxel_id : subdivided_skeleton->true_voxels_) {
+				GRuint x, y, z;
+				subdivided_skeleton->voxel_id_to_coordinates(voxel_id, x, y, z);
+
+				//checking the 1-neighborhood
+				if (subdivided_skeleton->voxel(x + 1, y, z - 1).value_
+					|| subdivided_skeleton->voxel(x - 1, y, z - 1).value_
+					|| subdivided_skeleton->voxel(x, y + 1, z - 1).value_
+					|| subdivided_skeleton->voxel(x, y - 1, z - 1).value_) {
+					voxels_to_add.push_back(subdivided_skeleton->voxel_coordinates_to_id(x, y, z - 1));
+				}
+				if (subdivided_skeleton->voxel(x + 1, y, z + 1).value_
+					|| subdivided_skeleton->voxel(x - 1, y, z + 1).value_
+					|| subdivided_skeleton->voxel(x, y + 1, z + 1).value_
+					|| subdivided_skeleton->voxel(x, y - 1, z + 1).value_) {
+					voxels_to_add.push_back(subdivided_skeleton->voxel_coordinates_to_id(x, y, z + 1));
+				}
+
+				//and the 0-neighborhood
+				for (GRuint i(0); i < 2; i++) {
+					for (GRuint j(0); j < 2; j++) {
+						for (GRuint k(0); k < 2; k++) {
+							if (subdivided_skeleton->voxel(x - 1 + i*2, y - 1 + j*2, z -1 + k*2).value_) {
+								voxels_to_add.push_back(subdivided_skeleton->voxel_coordinates_to_id(x, y, z - 1 + k * 2));
+								voxels_to_add.push_back(subdivided_skeleton->voxel_coordinates_to_id(x - 1 + i * 2, y, z - 1 + k * 2));
+								voxels_to_add.push_back(subdivided_skeleton->voxel_coordinates_to_id(x, y - 1 + j * 2, z - 1 + k * 2));
+							}
+						}
+					}
+				}
+			}
+
+			//and then add all the listed voxels
+			for (auto voxel_id : voxels_to_add) {
+				subdivided_skeleton->set_voxel(voxel_id);
+			}
+
+			return subdivided_skeleton;
+		}
+
 		/** Returns a new skeleton of just the right size to contain the current skeleton */
 		VoxelSkeleton* fit_to_min_max() {
 
@@ -1462,6 +1508,16 @@ namespace grapholon {
 			return fit_skeleton;
 		}
 
+
+		/** returns an allocated copy of this skeleton*/
+		VoxelSkeleton* copy() {
+			VoxelSkeleton* skeleton_copy = new VoxelSkeleton(width_-2, height_-2, slice_-2);
+			for (auto voxel_id : true_voxels_) {
+				skeleton_copy->set_voxel(voxel_id);
+			}
+
+			return skeleton_copy;
+		}
 
 		/***********************************************************************************************/
 		/************************************************************************ SKELETON GENERATORS **/
