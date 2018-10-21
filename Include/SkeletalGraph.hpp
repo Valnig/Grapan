@@ -23,40 +23,48 @@
 
 #include "boost/graph/adjacency_list.hpp"
 
-#include <vector>
-#include <list>
-
+#include "common.hpp"
 #include "GrapholonTypes.hpp"
 
-struct Position3d {
-	GRfloat X;
-	GRfloat Y;
-	GRfloat Z;
+struct Point3d {
+	GRfloat X = 0.f;
+	GRfloat Y = 0.f;
+	GRfloat Z = 0.f;
 };
 
-typedef std::vector<Position3d> CurvePoints;
+typedef std::vector<Point3d> Curve3d;
 
-class VertexProperties {
-	Position3d position;
+struct VertexProperties {
+	Point3d position;
 };
-
-class EdgeProperties {
-	CurvePoints curve;
-};
-
 
 typedef std::pair<GRuint, GRuint> Edge;
 
-typedef std::list<Edge> OutEdgeList;
+typedef std::vector<Edge> OutEdgeList;
+
+struct EdgeProperties {
+	Curve3d curve;
+};
+
+/** Boost Graph Library stuff*/
 
 typedef boost::adjacency_list<
 	boost::listS, boost::listS, boost::undirectedS,
 	VertexProperties, EdgeProperties>
 	InternalBoostGraph;
 
+typedef InternalBoostGraph::vertex_descriptor VertexDescriptor;
+typedef InternalBoostGraph::edge_descriptor EdgeDescriptor;
+typedef InternalBoostGraph::vertex_iterator VertexIterator;
+typedef boost::graph_traits<InternalBoostGraph>::edge_iterator EdgeIterator;
+
 class SkeletalGraph {
 private:
+
+
 	InternalBoostGraph internal_graph_;
+
+	/** Vertices and edges */
 
 public:
 	SkeletalGraph(GRuint vertex_count, OutEdgeList out_edge_list) :
@@ -70,5 +78,69 @@ public:
 
 	}
 
+	/** Vertex stuff */
+	VertexDescriptor add_vertex(VertexProperties properties) {
+		return boost::add_vertex(properties, internal_graph_);
+	}
 
+	void remove_vertex(VertexDescriptor vertex) {
+		boost::remove_vertex(vertex, internal_graph_);
+	}
+
+	VertexProperties& get_vertex(VertexDescriptor vertex) {
+		return internal_graph_[vertex];
+	}
+
+
+	/** Edge stuff*/
+	
+	EdgeDescriptor add_edge(VertexDescriptor from, VertexDescriptor to, EdgeProperties properties) {
+		return boost::add_edge(from, to, properties, internal_graph_).first;
+	}
+
+	void remove_edge(EdgeDescriptor edge) {
+		boost::remove_edge(edge, internal_graph_);
+	}
+
+	EdgeProperties& get_edge(EdgeDescriptor edge) {
+		return internal_graph_[edge];
+	}
+
+	void print_composition() {
+		std::cout << " SkeletalGraph contains " << internal_graph_.m_vertices.size() << " vertices and " << internal_graph_.m_edges.size() << " edges :" << std::endl;
+
+
+		std::pair<VertexIterator, VertexIterator> vp;
+
+		GRuint iteration_count(0);
+
+		std::cout << "------ vertices ------" << std::endl;
+		for (vp = boost::vertices(internal_graph_); vp.first != vp.second; ++vp.first) {
+			VertexDescriptor v = *vp.first;
+			Point3d pos = internal_graph_[v].position;
+			std::cout << iteration_count<<" : "<<pos.X << " "<<pos.Y<<" "<<pos.Z<<std::endl;
+			iteration_count++;
+		}
+		std::cout << std::endl<<std::endl;
+
+		std::pair<EdgeIterator, EdgeIterator> ep;
+
+		iteration_count = 0;
+
+		std::cout << "------- edges -------" << std::endl;
+		for (ep = boost::edges(internal_graph_); ep.first != ep.second; ++ep.first) {
+			EdgeDescriptor e = *ep.first;
+			Curve3d curve = internal_graph_[e].curve;
+			VertexDescriptor from(boost::source(e, internal_graph_)), to(boost::target(e, internal_graph_));
+			Point3d from_point(internal_graph_[from].position), to_point(internal_graph_[to].position);
+
+			std::cout << iteration_count 
+				<< " : (" << from_point.X << " " << from_point.Y << " " << from_point.Z
+				<<") --> (" << to_point.X << " " << to_point.Y << " " << to_point.Z
+				<< ")" << std::endl;
+			iteration_count++;
+		}
+		std::cout << std::endl;
+	}
+	
 };

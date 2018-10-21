@@ -566,11 +566,24 @@ void SubdivisionTest() {
 }
 
 void CreateSkeletalGraphAndAddStuff(){
-	OutEdgeList list({ Edge(0,1), Edge(1,2), Edge(2,0), Edge(2,3) });
 
-	SkeletalGraph graph(4, list);
+	SkeletalGraph graph(0);
+
+	std::vector<VertexDescriptor> vertex_descriptors;
+	std::vector<EdgeDescriptor> edge_descriptors;
+
+	GRuint vertex_count(10);
+
+	for (GRuint i(0); i < vertex_count; i++) {
+		vertex_descriptors.push_back(graph.add_vertex({ {(GRfloat)i, -(GRfloat)i, (GRfloat)i * 2} }));
+	}
+
+	for (GRuint i(0); i < vertex_count; i++) {
+		edge_descriptors.push_back(graph.add_edge(vertex_descriptors[rand() % vertex_count], vertex_descriptors[rand() % vertex_count], {}));
+	}
 
 
+	graph.print_composition();
 }
 
 

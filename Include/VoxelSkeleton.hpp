@@ -29,6 +29,7 @@
 #include <bitset>
 
 #include "GrapholonTypes.hpp"
+#include "SkeletalGraph.hpp"
 #include "common.hpp"
 
 namespace grapholon {
@@ -1517,6 +1518,11 @@ namespace grapholon {
 			}
 
 			return skeleton_copy;
+		}
+
+
+		SkeletalGraph* extract_skeletal_graph() {
+			return nullptr;
 		}
 
 		/***********************************************************************************************/
