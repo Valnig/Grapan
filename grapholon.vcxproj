@@ -140,11 +140,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Include\common.hpp" />
-    <ClInclude Include="Include\Edge.hpp" />
-    <ClInclude Include="Include\Graph.hpp" />
     <ClInclude Include="Include\GrapholonTypes.hpp" />
-    <ClInclude Include="Include\Node.hpp" />
-    <ClInclude Include="Include\PropertyList.hpp" />
+    <ClInclude Include="Include\SkeletalGraph.hpp" />
     <ClInclude Include="Include\VoxelSkeleton.hpp" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />

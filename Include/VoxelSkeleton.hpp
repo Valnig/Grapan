@@ -1186,9 +1186,9 @@ namespace grapholon {
 		I'll use that for now since it's much faster*/
 		bool is_1_isthmus(GRuint x, GRuint y, GRuint z) {
 			
-			std::vector<GRuint> neighborhood2;
+			/*std::vector<GRuint> neighborhood2;
 			extract_0_neighborhood_star(x, y, z, neighborhood2);
-			return !is_k_connected(neighborhood2, 0u);
+			return !is_k_connected(neighborhood2, 0u);*/
 
 			//first create a
 			VoxelSkeleton neighborhood(3, 3, 3);
@@ -1314,23 +1314,23 @@ namespace grapholon {
 					for (GRuint i(0); i < critical_cliques[d].size(); i++) {
 						voxels_in_d_cliques_count += critical_cliques[d][i].size();
 
-						IF_DEBUG_DO(std::cout << "			checking clique " << i << std::endl;)
+						/*IF_DEBUG_DO(std::cout << "			checking clique " << i << std::endl;)
 						for (GRuint j(0); j < critical_cliques[d][i].size(); j++) {
 							GRuint x2, y2, z2;
 							voxel_id_to_coordinates(critical_cliques[d][i][j], x2, y2, z2);
 							IF_DEBUG_DO(std::cout << "			" << x2 << " " << y2 << " "<<z2 << std::endl;)
 						}
-						IF_DEBUG_DO(std::cout << std::endl;)
+						IF_DEBUG_DO(std::cout << std::endl;)*/
 
 						GRuint voxel_id_from_critical_clique = (this->*Select)(critical_cliques[d][i]);
 
 						//select a voxel from the current clique
 						voxel_id_to_coordinates(voxel_id_from_critical_clique, x, y, z);
-						IF_DEBUG_DO(std::cout << "			selected voxel from "<<d<<"-clique " << i << " : " << voxel_id_from_critical_clique << " ; " << x << " " << y << " " << z << std::endl;)
+						//IF_DEBUG_DO(std::cout << "			selected voxel from "<<d<<"-clique " << i << " : " << voxel_id_from_critical_clique << " ; " << x << " " << y << " " << z << std::endl;)
 						
 						//if it hasn't already been selected we add it to Z
 						if (!voxel(voxel_id_from_critical_clique).selected_) {
-							IF_DEBUG_DO(std::cout << "				newly selected, added to Z" << std::endl;)
+							//IF_DEBUG_DO(std::cout << "				newly selected, added to Z" << std::endl;)
 							
 							voxels_[voxel_id_from_critical_clique].selected_ = true;
 							voxel_set_Z.push_back(voxel_id_from_critical_clique);
@@ -1340,10 +1340,10 @@ namespace grapholon {
 					//and add the voxels in Z to Y
 					for (GRuint i(0); i < voxel_set_Z.size(); i++) {
 						voxel_set_Y.push_back(voxel_set_Z[i]);
-						IF_DEBUG_DO(std::cout << "			added voxel " << voxel_set_Z[i] << " to Y" << std::endl;)
+						//IF_DEBUG_DO(std::cout << "			added voxel " << voxel_set_Z[i] << " to Y" << std::endl;)
 					}
 
-					IF_DEBUG_DO(std::cout << std::endl;)
+					//IF_DEBUG_DO(std::cout << std::endl;)
 				}
 				IF_DEBUG_DO(std::cout << "	Y now contains " << voxel_set_Y.size() << " voxels : " << std::endl;)
 

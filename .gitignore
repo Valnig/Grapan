@@ -4,6 +4,9 @@ build/
 lib_test/Build/
 Library/Build/
 
+#Boost folder
+Include/boost/
+
 
 #Visual Studio stuff
 .vs/

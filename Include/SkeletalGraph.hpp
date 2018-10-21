@@ -21,7 +21,54 @@
 
 #pragma once
 
-template<class _NODE_TYPE, class EDGE_TYPE>
-class Graph{
+#include "boost/graph/adjacency_list.hpp"
+
+#include <vector>
+#include <list>
+
+#include "GrapholonTypes.hpp"
+
+struct Position3d {
+	GRfloat X;
+	GRfloat Y;
+	GRfloat Z;
+};
+
+typedef std::vector<Position3d> CurvePoints;
+
+class VertexProperties {
+	Position3d position;
+};
+
+class EdgeProperties {
+	CurvePoints curve;
+};
+
+
+typedef std::pair<GRuint, GRuint> Edge;
+
+typedef std::list<Edge> OutEdgeList;
+
+typedef boost::adjacency_list<
+	boost::listS, boost::listS, boost::undirectedS,
+	VertexProperties, EdgeProperties>
+	InternalBoostGraph;
+
+class SkeletalGraph {
+private:
+	InternalBoostGraph internal_graph_;
+
+public:
+	SkeletalGraph(GRuint vertex_count, OutEdgeList out_edge_list) :
+		internal_graph_(out_edge_list.begin(), out_edge_list.end(), vertex_count) {
+
+		std::cout << "created SkeletalGraph with " << vertex_count << " vertices and " << out_edge_list.size() << " edges : " << std::endl;
+	}
+
+	SkeletalGraph(GRuint vertex_count) :internal_graph_(vertex_count) {
+		std::cout << "created SkeletalGraph with " << vertex_count << " vertices and no edges : " << std::endl;
+
+	}
+
 
 };

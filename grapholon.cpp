@@ -26,7 +26,9 @@
 #include "stdafx.h"
 #include <iostream>
 #include <bitset>
+#include <ctime>
 
+#include "SkeletalGraph.hpp"
 #include "VoxelSkeleton.hpp"
 
 using namespace std;
@@ -563,11 +565,20 @@ void SubdivisionTest() {
 
 }
 
+void CreateSkeletalGraphAndAddStuff(){
+	OutEdgeList list({ Edge(0,1), Edge(1,2), Edge(2,0), Edge(2,3) });
+
+	SkeletalGraph graph(4, list);
+
+
+}
+
 
 int main()
 {
 	
-	SubdivisionTest();
+
+	CreateSkeletalGraphAndAddStuff();
 
 	while (true);
     return 0;
