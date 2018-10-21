@@ -587,11 +587,78 @@ void CreateSkeletalGraphAndAddStuff(){
 }
 
 
+void ExtractGraphFromTestStructure() {
+	VoxelSkeleton* skeleton = new VoxelSkeleton(10, 10, 10);
+
+	skeleton->set_voxel(0, 4, 0);
+	
+	skeleton->set_voxel(1, 3, 0);
+	
+	skeleton->set_voxel(2, 2, 0);
+	skeleton->set_voxel(2, 6, 0);
+
+	skeleton->set_voxel(3, 0, 0);
+	skeleton->set_voxel(3, 1, 0);
+	skeleton->set_voxel(3, 2, 0);
+	skeleton->set_voxel(3, 6, 0);
+
+	skeleton->set_voxel(4, 3, 0);
+	skeleton->set_voxel(4, 4, 0);
+	skeleton->set_voxel(4, 5, 0);
+
+	skeleton->set_voxel(5, 6, 0);
+
+	skeleton->set_voxel(6, 6, 0);
+
+
+	SkeletalGraph* graph = skeleton->extract_skeletal_graph();
+
+	graph->print_composition();
+
+	delete graph;
+	delete skeleton;
+}
+
+
+void ExtractGraphFromTestStructure2() {
+	VoxelSkeleton* skeleton = new VoxelSkeleton(10, 10, 10);
+
+	skeleton->set_voxel(2, 3, 0);
+	skeleton->set_voxel(2, 4, 0);
+
+	skeleton->set_voxel(3, 2, 0);
+	skeleton->set_voxel(3, 5, 0);
+
+	skeleton->set_voxel(4, 2, 0);
+	skeleton->set_voxel(4, 4, 0);
+	skeleton->set_voxel(4, 7, 0);
+
+	skeleton->set_voxel(5, 3, 0);
+
+	skeleton->set_voxel(6, 2, 0);
+	skeleton->set_voxel(6, 4, 0);
+	skeleton->set_voxel(6, 5, 0);
+	skeleton->set_voxel(6, 6, 0);
+
+	skeleton->set_voxel(7, 2, 0);
+	skeleton->set_voxel(7, 7, 0);
+
+	skeleton->set_voxel(8, 1, 0);
+	skeleton->set_voxel(8, 3, 0);
+
+	SkeletalGraph* graph = skeleton->extract_skeletal_graph();
+
+	graph->print_composition();
+
+	delete graph;
+	delete skeleton;
+}
+
 int main()
 {
 	
 
-	CreateSkeletalGraphAndAddStuff();
+	ExtractGraphFromTestStructure2();
 
 	while (true);
     return 0;

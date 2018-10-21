@@ -73,7 +73,7 @@ public:
 		std::cout << "created SkeletalGraph with " << vertex_count << " vertices and " << out_edge_list.size() << " edges : " << std::endl;
 	}
 
-	SkeletalGraph(GRuint vertex_count) :internal_graph_(vertex_count) {
+	SkeletalGraph(GRuint vertex_count = 0) :internal_graph_(vertex_count) {
 		std::cout << "created SkeletalGraph with " << vertex_count << " vertices and no edges : " << std::endl;
 
 	}
@@ -131,12 +131,18 @@ public:
 		for (ep = boost::edges(internal_graph_); ep.first != ep.second; ++ep.first) {
 			EdgeDescriptor e = *ep.first;
 			Curve3d curve = internal_graph_[e].curve;
+
 			VertexDescriptor from(boost::source(e, internal_graph_)), to(boost::target(e, internal_graph_));
 			Point3d from_point(internal_graph_[from].position), to_point(internal_graph_[to].position);
 
-			std::cout << iteration_count 
+			std::cout << iteration_count
 				<< " : (" << from_point.X << " " << from_point.Y << " " << from_point.Z
-				<<") --> (" << to_point.X << " " << to_point.Y << " " << to_point.Z
+				<< ") --> ";
+			for (auto middle_point : curve) {
+				std::cout << "(" << middle_point.X << " " << middle_point.Y << " " << middle_point.Z << ") --> ";
+			}
+			
+			std::cout<<"(" << to_point.X << " " << to_point.Y << " " << to_point.Z
 				<< ")" << std::endl;
 			iteration_count++;
 		}

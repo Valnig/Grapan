@@ -74,6 +74,7 @@ namespace grapholon {
 			: value_(value), selected_(selected), topological_class_(top_class) {}
 	};
 
+	typedef std::vector<GRuint> IndexVector;
 
 	//todo
 	class zero_neighbour_iterator {
@@ -92,9 +93,9 @@ namespace grapholon {
 
 		SkeletonVoxel* voxels_;
 
-		std::vector<GRuint> true_voxels_;
+		IndexVector true_voxels_;
 
-		std::vector<GRuint> anchor_voxels_;///< Voxels that cannot be removed during thinning
+		IndexVector anchor_voxels_;///< Voxels that cannot be removed during thinning
 
 
 	public:
@@ -244,6 +245,24 @@ namespace grapholon {
 		/******************************************************************** NEIGHBORHOOD EXTRACTION **/
 		/***********************************************************************************************/
 		
+		void extract_0_neighborhood_star(GRuint voxel_id, std::vector<GRuint>& neighborhood, bool bar = false) {
+			GRuint x, y, z;
+			voxel_id_to_coordinates(voxel_id, x, y, z);
+			extract_0_neighborhood_star(x, y, z, neighborhood, bar);
+		}
+
+		void extract_1_neighborhood_star(GRuint voxel_id, std::vector<GRuint>& neighborhood, bool bar = false) {
+			GRuint x, y, z;
+			voxel_id_to_coordinates(voxel_id, x, y, z);
+			extract_1_neighborhood_star(x, y, z, neighborhood, bar);
+		}
+
+		void extract_2_neighborhood_star(GRuint voxel_id, std::vector<GRuint>& neighborhood, bool bar = false) {
+			GRuint x, y, z;
+			voxel_id_to_coordinates(voxel_id, x, y, z);
+			extract_2_neighborhood_star(x, y, z, neighborhood, bar);
+		}
+
 		void extract_0_neighborhood_star(GRuint x, GRuint y, GRuint z, std::vector<GRuint>& neighborhood, bool bar = false) {
 			bool debug_log = false;
 			
@@ -1522,7 +1541,237 @@ namespace grapholon {
 
 
 		SkeletalGraph* extract_skeletal_graph() {
-			return nullptr;
+			typedef enum{ISOLATED, TERMINAL, BRANCH, JUNCTION, UNCLASSIFIED} VOXEL_CLASS;
+
+			SkeletalGraph* graph = new SkeletalGraph();
+
+			std::vector<GRuint> labels(nb_voxels_, 0);
+			std::vector<VOXEL_CLASS> classes(nb_voxels_, UNCLASSIFIED);
+
+
+			IndexVector neighborhood;
+
+
+			//first step : label voxels depending on their neighborhood
+			for (auto voxel_id : true_voxels_) {
+				neighborhood = IndexVector();
+				extract_0_neighborhood_star(voxel_id, neighborhood);
+
+				labels[voxel_id] = neighborhood.size();
+			}
+
+			/*std::cout << " labels : " << std::endl;
+			for (auto voxel_id : true_voxels_) {
+				voxel_id_to_coordinates(voxel_id, x, y, z);
+				std::cout <<"("<<x<<" "<<y<<" "<<z<<") : "<< labels[voxel_id] << std::endl;
+			}
+			std::cout << std::endl;
+			*/
+
+			//then classify the voxels (junction, branch, etc.)
+			for (auto voxel_id : true_voxels_) {
+				neighborhood = IndexVector();
+				if(classes[voxel_id] == UNCLASSIFIED){
+					switch (labels[voxel_id]) {
+					case 4: {
+						classes[voxel_id] = JUNCTION;
+						extract_0_neighborhood_star(voxel_id, neighborhood);
+						for (auto neighbor_id : neighborhood) {
+							classes[neighbor_id] = BRANCH;
+						}
+						break;
+					}
+					case 3: {
+						extract_0_neighborhood_star(voxel_id, neighborhood);
+						bool one_neighbor_is_junction(false);
+						for (auto neighbor_id : neighborhood) {
+							one_neighbor_is_junction |= classes[neighbor_id] == JUNCTION;
+						}
+						if (one_neighbor_is_junction) {
+							classes[voxel_id] = BRANCH;
+						}
+						else {
+							classes[voxel_id] = JUNCTION;
+						}
+						break;
+					}//the voxel classes are ordered in a way corresponding to their number of neighbors
+					default: {
+						classes[voxel_id] = (VOXEL_CLASS)labels[voxel_id];
+					}
+					}
+				}
+			}
+
+			/*std::cout << " classes : " << std::endl;
+			for (auto voxel_id : true_voxels_) {
+				voxel_id_to_coordinates(voxel_id, x, y, z);
+				std::cout << "(" << x << " " << y << " " << z << ") : " << classes[voxel_id] << std::endl;
+			}
+			std::cout << std::endl;
+			*/
+
+
+			//and finally extract the graph
+
+			std::vector<bool> treated(nb_voxels_, false);
+			std::vector<VertexDescriptor> vertices(nb_voxels_);
+			std::vector<EdgeDescriptor> edges;
+			std::vector<bool> is_vertex(nb_voxels_, false);
+
+			GRuint treated_count(0);
+			GRuint true_voxel_count(true_voxels_.size());
+
+			GRuint first_terminal_id(0);
+
+			//first we add the terminal and junction points to the set of vertices
+			//and get the id of the first terminal point, which will be the starting point
+			//of the next step
+			for (auto voxel_id : true_voxels_) {
+				if (classes[voxel_id] == JUNCTION || classes[voxel_id] == TERMINAL) {
+					GRuint x, y, z;
+					voxel_id_to_coordinates(voxel_id, x, y, z);
+					
+					vertices[voxel_id] = graph->add_vertex({ {(GRfloat)x, (GRfloat)y, (GRfloat)z} });
+					is_vertex[voxel_id] = true;
+
+					if (!first_terminal_id && classes[voxel_id] == TERMINAL) {
+						first_terminal_id = voxel_id;
+					}
+				}
+			}
+
+			treated[first_terminal_id] = true;
+			treated_count++;
+
+			IndexVector starts;
+			starts.push_back(first_terminal_id);
+
+			IndexVector untreated_neighborhood;
+			GRuint iteration_count(0);
+
+			bool debug_log(true);
+
+			while (treated_count < true_voxel_count) {
+				IF_DEBUG_DO(std::cout << " Starting iteration " << iteration_count << std::endl);
+				IF_DEBUG_DO(std::cout << "	treated count : " << treated_count << std::endl);
+				IF_DEBUG_DO(std::cout << " list of starting points : " << std::endl);
+				for (auto start_id : starts) {
+					GRuint x, y, z;
+					voxel_id_to_coordinates(start_id, x, y, z);
+					IF_DEBUG_DO(std::cout << "        "<<start_id<<" : (" << x << " " << y << " " << z << ")" << std::endl);
+				}
+
+				IndexVector next_starts;
+				//for each starting points, we look for the next vertex
+				for (auto start_id : starts) {
+					IF_DEBUG_DO(std::cout << "	exploring from id " << start_id << std::endl);
+					neighborhood = IndexVector();
+					untreated_neighborhood = IndexVector();
+					extract_0_neighborhood_star(start_id, neighborhood);
+					IF_DEBUG_DO(std::cout << "		untreated neighbors : " << std::endl);
+
+					GRuint nb_adj(0);
+					for (auto neighbor_id : neighborhood) {
+						//replace with nb_adj++ if list is not needed
+						if (!treated[neighbor_id]) {
+							nb_adj++;
+
+							GRuint x, y, z;
+							voxel_id_to_coordinates(neighbor_id, x, y, z);
+							IF_DEBUG_DO(std::cout << "            " << neighbor_id << " : (" << x << " " << y << " " << z << ")" << std::endl);
+						}
+					}
+
+					std::vector<EdgeProperties> edge_properties(nb_adj);
+
+					//among all the adjacent voxels, 
+					for (GRuint i(0); i < nb_adj; i++) {
+						bool found_vertex = false;
+						GRuint current_id = start_id;
+						GRuint last_id = 0;
+
+						while (!found_vertex) {
+
+							IndexVector secondary_neighborhood;
+							extract_0_neighborhood_star(current_id, secondary_neighborhood);
+
+							IF_DEBUG_DO(std::cout << "			secondary neighbors of "<<current_id<<" : " << std::endl);
+							for (auto neighbor_id : secondary_neighborhood) {
+
+								GRuint x, y, z;
+								voxel_id_to_coordinates(neighbor_id, x, y, z);
+								IF_DEBUG_DO(std::cout << "                " << neighbor_id << " : (" << x << " " << y << " " << z << ")" << std::endl);
+							}
+
+							GRuint treated_neighbor_count(0);
+
+							for (auto neighbor_id : secondary_neighborhood) {
+								GRuint x, y, z;
+								voxel_id_to_coordinates(neighbor_id, x, y, z);
+
+								treated_neighbor_count += treated[neighbor_id];
+								//if the neighbor is untreated and not a vertex, we add it to the edge's
+								//curve and set the neighbor as the new current id
+								if (!treated[neighbor_id] && !is_vertex[neighbor_id]) {
+
+									IF_DEBUG_DO(std::cout << "			added voxel "<<neighbor_id<<" (" << x << " " << y << " " << z << ") to edge list "<<i << std::endl);
+
+									edge_properties[i].curve.push_back({ (GRfloat)x, (GRfloat)y, (GRfloat)z });
+
+									treated[neighbor_id] = true;
+									treated_count++;
+									
+									last_id = current_id;
+									current_id = neighbor_id;
+
+									IF_DEBUG_DO(std::cout<<" last id is now : "<<last_id<<" and current id is : "<<current_id<<std::endl;)
+									break;
+								}
+								//if it is a vertex then we add this vertex to the list of 
+								//starting points and add a new edge to the graph
+								else if (!treated[neighbor_id] && is_vertex[neighbor_id]) {
+									next_starts.push_back(neighbor_id);
+
+									treated[neighbor_id] = true;
+									treated_count++;
+									
+
+									found_vertex = true;
+									edges.push_back(graph->add_edge(vertices[start_id], vertices[neighbor_id], edge_properties[i]));
+									
+									last_id = current_id;
+
+									IF_DEBUG_DO(std::cout << "			voxel " << neighbor_id << " (" << x << " " << y << " " << z << ") is a vertex of " << i << std::endl);
+									IF_DEBUG_DO(std::cout << "			added an edge from " << start_id << " to " << neighbor_id << std::endl);
+									
+									break;
+								}
+								//if it's a vertex that's already been treated, it might represent a cycle
+								//in that case we check if it's not the last visited id
+								else if (treated[neighbor_id] && is_vertex[neighbor_id] && neighbor_id != last_id) {
+									IF_DEBUG_DO(std::cout << " found potential loop" << std::endl;)
+									found_vertex = true;
+									edges.push_back(graph->add_edge(vertices[start_id], vertices[neighbor_id], edge_properties[i]));
+
+									IF_DEBUG_DO(std::cout << "			voxel " << neighbor_id << " (" << x << " " << y << " " << z << ") is a vertex of " << i << std::endl);
+									IF_DEBUG_DO(std::cout << "			added an edge from " << start_id << " to " << neighbor_id << std::endl);
+
+									break;
+								}
+							}
+
+							if (treated_neighbor_count == secondary_neighborhood.size()) {
+								IF_DEBUG_DO(std::cout << " all neighbors of "<<current_id<<" have been treated " << std::endl;)
+								found_vertex = true;
+							}
+						}
+					}
+				}
+				starts = next_starts;
+				iteration_count++;
+			}
+
+			return graph;
 		}
 
 		/***********************************************************************************************/
