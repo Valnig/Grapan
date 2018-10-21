@@ -1617,6 +1617,7 @@ namespace grapholon {
 			std::vector<VertexDescriptor> vertices(nb_voxels_);
 			std::vector<EdgeDescriptor> edges;
 			std::vector<bool> is_vertex(nb_voxels_, false);
+			std::vector<GRuint> incident_voxel(nb_voxels_,0);
 
 			GRuint treated_count(0);
 			GRuint true_voxel_count(true_voxels_.size());
@@ -1651,7 +1652,8 @@ namespace grapholon {
 
 			bool debug_log(true);
 
-			while (treated_count < true_voxel_count) {
+			std::cout<<"true voxel count : "<<true_voxel_count<<std::endl;
+			while (treated_count < true_voxel_count && iteration_count <10) {
 				IF_DEBUG_DO(std::cout << " Starting iteration " << iteration_count << std::endl);
 				IF_DEBUG_DO(std::cout << "	treated count : " << treated_count << std::endl);
 				IF_DEBUG_DO(std::cout << " list of starting points : " << std::endl);
@@ -1676,6 +1678,8 @@ namespace grapholon {
 						if (!treated[neighbor_id]) {
 							nb_adj++;
 
+							untreated_neighborhood.push_back(neighbor_id);
+							
 							GRuint x, y, z;
 							voxel_id_to_coordinates(neighbor_id, x, y, z);
 							IF_DEBUG_DO(std::cout << "            " << neighbor_id << " : (" << x << " " << y << " " << z << ")" << std::endl);
@@ -1686,6 +1690,9 @@ namespace grapholon {
 
 					//among all the adjacent voxels, 
 					for (GRuint i(0); i < nb_adj; i++) {
+					//for (auto untreated_neighbor_id : untreated_neighborhood) {
+
+						std::cout<<"			starting from id "<<start_id<<std::endl;
 						bool found_vertex = false;
 						GRuint current_id = start_id;
 						GRuint last_id = 0;
@@ -1737,7 +1744,10 @@ namespace grapholon {
 									
 
 									found_vertex = true;
-									edges.push_back(graph->add_edge(vertices[start_id], vertices[neighbor_id], edge_properties[i]));
+									
+									incident_voxel[neighbor_id] = current_id;
+									
+									edges.push_back(graph->add_edge(vertices[start_id], vertices[neighbor_id], edge_properties[i]).first);
 									
 									last_id = current_id;
 
@@ -1748,15 +1758,23 @@ namespace grapholon {
 								}
 								//if it's a vertex that's already been treated, it might represent a cycle
 								//in that case we check if it's not the last visited id
-								else if (treated[neighbor_id] && is_vertex[neighbor_id] && neighbor_id != last_id) {
+								else if (treated[neighbor_id] 
+								&& is_vertex[neighbor_id] 
+								&& neighbor_id != last_id
+								&& incident_voxel[neighbor_id] != current_id) {
+									
+									
 									IF_DEBUG_DO(std::cout << " found potential loop" << std::endl;)
 									found_vertex = true;
-									edges.push_back(graph->add_edge(vertices[start_id], vertices[neighbor_id], edge_properties[i]));
+									std::pair<EdgeDescriptor, bool> edge_addition_result = graph->add_edge(vertices[start_id], vertices[neighbor_id], edge_properties[i]);
+									if(edge_addition_result.second){
+										edges.push_back(edge_addition_result.first);
+										found_vertex = true;
+										IF_DEBUG_DO(std::cout << "			voxel " << neighbor_id << " (" << x << " " << y << " " << z << ") is a vertex of " << i << std::endl);
+										IF_DEBUG_DO(std::cout << "			added an edge from " << start_id << " to " << neighbor_id << std::endl);
 
-									IF_DEBUG_DO(std::cout << "			voxel " << neighbor_id << " (" << x << " " << y << " " << z << ") is a vertex of " << i << std::endl);
-									IF_DEBUG_DO(std::cout << "			added an edge from " << start_id << " to " << neighbor_id << std::endl);
-
-									break;
+										break;
+									}
 								}
 							}
 

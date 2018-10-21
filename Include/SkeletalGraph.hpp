@@ -94,8 +94,8 @@ public:
 
 	/** Edge stuff*/
 	
-	EdgeDescriptor add_edge(VertexDescriptor from, VertexDescriptor to, EdgeProperties properties) {
-		return boost::add_edge(from, to, properties, internal_graph_).first;
+	std::pair<EdgeDescriptor, bool> add_edge(VertexDescriptor from, VertexDescriptor to, EdgeProperties properties) {
+		return boost::add_edge(from, to, properties, internal_graph_);
 	}
 
 	void remove_edge(EdgeDescriptor edge) {
