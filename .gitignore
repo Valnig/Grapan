@@ -3,6 +3,8 @@ Build/
 build/
 lib_test/Build/
 Library/Build/
+Debug/
+Release/
 
 #Boost folder
 Include/boost/
