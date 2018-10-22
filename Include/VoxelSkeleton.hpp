@@ -148,7 +148,7 @@ namespace grapholon {
 		}
 
 		GRuint set_voxel_count() const {
-			return true_voxels_.size();
+			return (GRuint)true_voxels_.size();
 		}
 
 		SkeletonVoxel voxel(GRint id) {
@@ -413,7 +413,7 @@ namespace grapholon {
 			
 
 			if (n == 0 || n >= voxel_ids.size()) {
-				n = voxel_ids.size();
+				n = (GRuint)voxel_ids.size();
 			}
 			
 			if (voxel_ids.size() == 1) {
@@ -603,7 +603,7 @@ namespace grapholon {
 			std::vector<GRuint> two_neighborhood_bar;
 			extract_2_neighborhood_star(x, y, z, two_neighborhood_bar, true);
 
-			GRuint two_neighborhood_bar_size(two_neighborhood_bar.size());
+			GRuint two_neighborhood_bar_size((GRuint)two_neighborhood_bar.size());
 			//and check that it is not empty
 			if (two_neighborhood_bar_size == 0) {
 				return false;
@@ -1297,7 +1297,7 @@ namespace grapholon {
 			std::vector<GRuint> voxel_set_K;
 			bool stability(false);
 			GRuint iteration_count(0);
-			GRuint voxel_count_at_iteration_start(true_voxels_.size());
+			GRuint voxel_count_at_iteration_start((GRuint)true_voxels_.size());
 			GRuint x, y, z;
 
 			bool debug_log(false);
@@ -1313,7 +1313,7 @@ namespace grapholon {
 
 			while (!stability && iteration_count < THINNING_ITERATION_LIMIT) {
 				iteration_count++;
-				voxel_count_at_iteration_start = true_voxels_.size();
+				voxel_count_at_iteration_start = (GRuint)true_voxels_.size();
 
 				IF_DEBUG_DO(std::cout << "	running iteration " << iteration_count << std::endl;)
 
@@ -1332,7 +1332,7 @@ namespace grapholon {
 
 					std::vector<GRuint> voxel_set_Z;
 					for (GRuint i(0); i < critical_cliques[d].size(); i++) {
-						voxels_in_d_cliques_count += critical_cliques[d][i].size();
+						voxels_in_d_cliques_count += (GRuint)critical_cliques[d][i].size();
 
 						/*IF_DEBUG_DO(std::cout << "			checking clique " << i << std::endl;)
 						for (GRuint j(0); j < critical_cliques[d][i].size(); j++) {
@@ -1382,7 +1382,7 @@ namespace grapholon {
 					for (GRuint i(0); i < voxel_set_Y.size(); i++) {
 						set_voxel(voxel_set_Y[i]);
 					}
-					GRuint removed_count = voxel_count_at_iteration_start - true_voxels_.size();
+					GRuint removed_count = voxel_count_at_iteration_start - (GRuint)true_voxels_.size();
 					//std::cout << "	and replaced them with Y" << std::endl;
 
 					//and re-select the voxels in K (useful for the last step)
@@ -1541,6 +1541,8 @@ namespace grapholon {
 
 
 		SkeletalGraph* extract_skeletal_graph() {
+			bool debug_log(true);
+
 			typedef enum{ISOLATED, TERMINAL, BRANCH, JUNCTION, UNCLASSIFIED} VOXEL_CLASS;
 
 			SkeletalGraph* graph = new SkeletalGraph();
@@ -1557,7 +1559,7 @@ namespace grapholon {
 				neighborhood = IndexVector();
 				extract_0_neighborhood_star(voxel_id, neighborhood);
 
-				labels[voxel_id] = neighborhood.size();
+				labels[voxel_id] = (GRuint)neighborhood.size();
 			}
 
 			/*std::cout << " labels : " << std::endl;
@@ -1617,26 +1619,33 @@ namespace grapholon {
 			std::vector<VertexDescriptor> vertices(nb_voxels_);
 			std::vector<EdgeDescriptor> edges;
 			std::vector<bool> is_vertex(nb_voxels_, false);
-			std::vector<GRuint> incident_voxel(nb_voxels_,0);
+			IndexVector incident_voxel(nb_voxels_,0);
+			IndexVector terminal_points_ids;
 
 			GRuint treated_count(0);
-			GRuint true_voxel_count(true_voxels_.size());
+			GRuint true_voxel_count((GRuint)true_voxels_.size());
 
 			GRuint first_terminal_id(0);
 
+			IF_DEBUG_DO(std::cout << "Identified the following terminal points : " << std::endl;)
 			//first we add the terminal and junction points to the set of vertices
 			//and get the id of the first terminal point, which will be the starting point
 			//of the next step
 			for (auto voxel_id : true_voxels_) {
-				if (classes[voxel_id] == JUNCTION || classes[voxel_id] == TERMINAL) {
+				if (classes[voxel_id] == JUNCTION || classes[voxel_id] == TERMINAL || classes[voxel_id] == ISOLATED) {
 					GRuint x, y, z;
 					voxel_id_to_coordinates(voxel_id, x, y, z);
 					
 					vertices[voxel_id] = graph->add_vertex({ {(GRfloat)x, (GRfloat)y, (GRfloat)z} });
 					is_vertex[voxel_id] = true;
 
-					if (!first_terminal_id && classes[voxel_id] == TERMINAL) {
-						first_terminal_id = voxel_id;
+					if (classes[voxel_id] != JUNCTION) {
+						IF_DEBUG_DO(std::cout << voxel_id<<" : (" << x << " " << y << " "<<z << ")" << std::endl;)
+						terminal_points_ids.push_back(voxel_id);
+
+						if (!first_terminal_id) {
+							first_terminal_id = voxel_id;
+						}
 					}
 				}
 			}
@@ -1650,13 +1659,32 @@ namespace grapholon {
 			IndexVector untreated_neighborhood;
 			GRuint iteration_count(0);
 
-			bool debug_log(true);
 
 			std::cout<<"true voxel count : "<<true_voxel_count<<std::endl;
 			while (treated_count < true_voxel_count && iteration_count <10) {
+				
+
 				IF_DEBUG_DO(std::cout << " Starting iteration " << iteration_count << std::endl);
 				IF_DEBUG_DO(std::cout << "	treated count : " << treated_count << std::endl);
-				IF_DEBUG_DO(std::cout << " list of starting points : " << std::endl);
+
+				if (!starts.size()) {
+					IF_DEBUG_DO(std::cout << "		no more ids in the start ids. Looking for a new one" << std::endl;)
+						GRuint j(0);
+					while (j < (GRuint)terminal_points_ids.size() && treated[terminal_points_ids[j]]) {
+						j++;
+					}
+					if (j < (GRuint)terminal_points_ids.size()) {
+						std::cout << "			added voxel " << terminal_points_ids[j] << " to the starting points" << std::endl;
+						starts.push_back(terminal_points_ids[j]);
+						treated[terminal_points_ids[j]] = true;
+						treated_count++;
+					}
+					else {
+						IF_DEBUG_DO(std::cout << " ERROR : Could not find new untreated vertex to start with" << std::endl;)
+					}
+				}
+
+				IF_DEBUG_DO(std::cout << "		list of starting points : " << std::endl);
 				for (auto start_id : starts) {
 					GRuint x, y, z;
 					voxel_id_to_coordinates(start_id, x, y, z);
@@ -1666,7 +1694,7 @@ namespace grapholon {
 				IndexVector next_starts;
 				//for each starting points, we look for the next vertex
 				for (auto start_id : starts) {
-					IF_DEBUG_DO(std::cout << "	exploring from id " << start_id << std::endl);
+					IF_DEBUG_DO(std::cout << "		exploring from id " << start_id << std::endl);
 					neighborhood = IndexVector();
 					untreated_neighborhood = IndexVector();
 					extract_0_neighborhood_star(start_id, neighborhood);
@@ -1731,12 +1759,14 @@ namespace grapholon {
 									last_id = current_id;
 									current_id = neighbor_id;
 
-									IF_DEBUG_DO(std::cout<<" last id is now : "<<last_id<<" and current id is : "<<current_id<<std::endl;)
+									IF_DEBUG_DO(std::cout<<"			last id is now : "<<last_id<<" and current id is : "<<current_id<<std::endl;)
 									break;
 								}
 								//if it is a vertex then we add this vertex to the list of 
 								//starting points and add a new edge to the graph
-								else if (!treated[neighbor_id] && is_vertex[neighbor_id]) {
+								else if (!treated[neighbor_id] 
+									&& is_vertex[neighbor_id]
+									&& neighbor_id != last_id) {
 									next_starts.push_back(neighbor_id);
 
 									treated[neighbor_id] = true;
@@ -1745,8 +1775,13 @@ namespace grapholon {
 
 									found_vertex = true;
 									
+									//GRuint first_voxel_of_edge(voxel_coordinates_to_id(edge_properties[i].curve[0].X, edge_properties[i].curve[0].Y, edge_properties[i].curve[0].Z));
+
 									incident_voxel[neighbor_id] = current_id;
-									
+									//incident_voxel[start_id] = first_voxel_of_edge;
+									IF_DEBUG_DO(std::cout << "			set incident voxel to " << neighbor_id << " as " << current_id << std::endl;)
+								//	IF_DEBUG_DO(std::cout << "			set incident voxel to " << start_id << " as " << first_voxel_of_edge << std::endl;)
+
 									edges.push_back(graph->add_edge(vertices[start_id], vertices[neighbor_id], edge_properties[i]).first);
 									
 									last_id = current_id;
@@ -1765,6 +1800,7 @@ namespace grapholon {
 									
 									
 									IF_DEBUG_DO(std::cout << " found potential loop" << std::endl;)
+									IF_DEBUG_DO(std::cout << "			 current id : "<<current_id << std::endl;)
 									found_vertex = true;
 									std::pair<EdgeDescriptor, bool> edge_addition_result = graph->add_edge(vertices[start_id], vertices[neighbor_id], edge_properties[i]);
 									if(edge_addition_result.second){
@@ -1893,7 +1929,7 @@ namespace grapholon {
 
 
 			//phase 2: thicken skeleton
-			for (GRuint i(true_voxels_.size()); i < nb_voxels; i++) {
+			for (GRuint i((GRuint)true_voxels_.size()); i < nb_voxels; i++) {
 				//std::cout << "true voxel count : " << true_voxels_.size() << std::endl;
 
 				GRint next_voxel_id = -1;
@@ -2000,7 +2036,7 @@ namespace grapholon {
 
 
 			//phase 2: thicken skeleton
-			for (GRuint i(true_voxels_.size()); i < nb_voxels; i++) {
+			for (GRuint i((GRuint)true_voxels_.size()); i < nb_voxels; i++) {
 				//std::cout << "true voxel count : " << true_voxels_.size() << std::endl;
 
 				GRint next_voxel_id = -1;

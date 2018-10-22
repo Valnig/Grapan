@@ -28,6 +28,7 @@
 #include <bitset>
 #include <ctime>
 
+
 #include "SkeletalGraph.hpp"
 #include "VoxelSkeleton.hpp"
 
@@ -579,7 +580,7 @@ void CreateSkeletalGraphAndAddStuff(){
 	}
 
 	for (GRuint i(0); i < vertex_count; i++) {
-		edge_descriptors.push_back(graph.add_edge(vertex_descriptors[rand() % vertex_count], vertex_descriptors[rand() % vertex_count], {}));
+		edge_descriptors.push_back(graph.add_edge(vertex_descriptors[rand() % vertex_count], vertex_descriptors[rand() % vertex_count], {}).first);
 	}
 
 
@@ -623,15 +624,19 @@ void ExtractGraphFromTestStructure() {
 void ExtractGraphFromTestStructure2() {
 	VoxelSkeleton* skeleton = new VoxelSkeleton(10, 10, 10);
 
+	skeleton->set_voxel(1, 1, 0);
+
 	skeleton->set_voxel(2, 3, 0);
 	skeleton->set_voxel(2, 4, 0);
 
 	skeleton->set_voxel(3, 2, 0);
 	skeleton->set_voxel(3, 5, 0);
+	skeleton->set_voxel(3, 9, 0);
 
 	skeleton->set_voxel(4, 2, 0);
 	skeleton->set_voxel(4, 4, 0);
 	skeleton->set_voxel(4, 7, 0);
+	skeleton->set_voxel(4, 8, 0);
 
 	skeleton->set_voxel(5, 3, 0);
 
