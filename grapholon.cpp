@@ -588,39 +588,6 @@ void CreateSkeletalGraphAndAddStuff(){
 }
 
 
-void ExtractGraphFromTestStructure() {
-	VoxelSkeleton* skeleton = new VoxelSkeleton(10, 10, 10);
-
-	skeleton->set_voxel(0, 4, 0);
-	
-	skeleton->set_voxel(1, 3, 0);
-	
-	skeleton->set_voxel(2, 2, 0);
-	skeleton->set_voxel(2, 6, 0);
-
-	skeleton->set_voxel(3, 0, 0);
-	skeleton->set_voxel(3, 1, 0);
-	skeleton->set_voxel(3, 2, 0);
-	skeleton->set_voxel(3, 6, 0);
-
-	skeleton->set_voxel(4, 3, 0);
-	skeleton->set_voxel(4, 4, 0);
-	skeleton->set_voxel(4, 5, 0);
-
-	skeleton->set_voxel(5, 6, 0);
-
-	skeleton->set_voxel(6, 6, 0);
-
-
-	SkeletalGraph* graph = skeleton->extract_skeletal_graph();
-
-	graph->print_composition();
-
-	delete graph;
-	delete skeleton;
-}
-
-
 void ExtractGraphFromTestStructure2() {
 	VoxelSkeleton* skeleton = new VoxelSkeleton(10, 10, 10);
 
@@ -659,11 +626,28 @@ void ExtractGraphFromTestStructure2() {
 	delete skeleton;
 }
 
+void ExtractGraphFromRandomSructure() {
+	VoxelSkeleton* skeleton = new VoxelSkeleton(100, 100, 100);
+	skeleton->generate_random(400,1234);
+	skeleton->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::OneIsthmusSkel, false);
+
+	std::cout << " voxel count after thinning : " << skeleton->set_voxel_count() << std::endl;
+
+	SkeletalGraph* graph = skeleton->extract_skeletal_graph();
+
+
+	graph->print_composition();
+
+	delete graph;
+	delete skeleton;
+}
+
+
 int main()
 {
 	
 
-	ExtractGraphFromTestStructure2();
+	ExtractGraphFromRandomSructure();
 
 	while (true);
     return 0;

@@ -1541,7 +1541,7 @@ namespace grapholon {
 
 
 		SkeletalGraph* extract_skeletal_graph() {
-			bool debug_log(true);
+			bool debug_log(false);
 
 			typedef enum{ISOLATED, TERMINAL, BRANCH, JUNCTION, UNCLASSIFIED} VOXEL_CLASS;
 
@@ -1636,7 +1636,16 @@ namespace grapholon {
 					GRuint x, y, z;
 					voxel_id_to_coordinates(voxel_id, x, y, z);
 					
-					vertices[voxel_id] = graph->add_vertex({ {(GRfloat)x, (GRfloat)y, (GRfloat)z} });
+					Point3d vertex_point;
+					vertex_point.X = (GRfloat)x;
+					vertex_point.Y = (GRfloat)y;
+					vertex_point.Z = (GRfloat)z;
+
+					VertexProperties vertex_properties;
+					vertex_properties.position = vertex_point;
+
+					vertices[voxel_id] 
+						= graph->add_vertex(vertex_properties);
 					is_vertex[voxel_id] = true;
 
 					if (classes[voxel_id] != JUNCTION) {
@@ -1661,7 +1670,7 @@ namespace grapholon {
 
 
 			std::cout<<"true voxel count : "<<true_voxel_count<<std::endl;
-			while (treated_count < true_voxel_count && iteration_count <10) {
+			while (treated_count < true_voxel_count) {
 				
 
 				IF_DEBUG_DO(std::cout << " Starting iteration " << iteration_count << std::endl);
@@ -1681,6 +1690,7 @@ namespace grapholon {
 					}
 					else {
 						IF_DEBUG_DO(std::cout << " ERROR : Could not find new untreated vertex to start with" << std::endl;)
+							break;
 					}
 				}
 
@@ -1720,7 +1730,7 @@ namespace grapholon {
 					for (GRuint i(0); i < nb_adj; i++) {
 					//for (auto untreated_neighbor_id : untreated_neighborhood) {
 
-						std::cout<<"			starting from id "<<start_id<<std::endl;
+						IF_DEBUG_DO(std::cout<<"			starting from id "<<start_id<<std::endl;)
 						bool found_vertex = false;
 						GRuint current_id = start_id;
 						GRuint last_id = 0;
@@ -1750,8 +1760,12 @@ namespace grapholon {
 								if (!treated[neighbor_id] && !is_vertex[neighbor_id]) {
 
 									IF_DEBUG_DO(std::cout << "			added voxel "<<neighbor_id<<" (" << x << " " << y << " " << z << ") to edge list "<<i << std::endl);
+									Point3d next_point;
+									next_point.X = (GRfloat)x;
+									next_point.Y = (GRfloat)y;
+									next_point.Z = (GRfloat)z;
 
-									edge_properties[i].curve.push_back({ (GRfloat)x, (GRfloat)y, (GRfloat)z });
+									edge_properties[i].curve.push_back(next_point);
 
 									treated[neighbor_id] = true;
 									treated_count++;

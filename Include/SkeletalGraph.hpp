@@ -78,6 +78,16 @@ public:
 
 	}
 
+	/** size getters */
+
+	GRuint vertex_count() const{
+		return internal_graph_.m_vertices.size();
+	}
+
+	GRuint edge_count() const {
+		return internal_graph_.m_edges.size();
+	}
+
 	/** Vertex stuff */
 	VertexDescriptor add_vertex(VertexProperties properties) {
 		return boost::add_vertex(properties, internal_graph_);
@@ -89,6 +99,10 @@ public:
 
 	VertexProperties& get_vertex(VertexDescriptor vertex) {
 		return internal_graph_[vertex];
+	}
+
+	std::pair<VertexIterator, VertexIterator> vertices() {
+		return boost::vertices(internal_graph_);
 	}
 
 
@@ -105,6 +119,20 @@ public:
 	EdgeProperties& get_edge(EdgeDescriptor edge) {
 		return internal_graph_[edge];
 	}
+
+	std::pair<EdgeIterator, EdgeIterator> edges() {
+		return boost::edges(internal_graph_);
+	}
+
+	VertexProperties& get_edge_source(EdgeDescriptor edge) {
+		return internal_graph_[boost::source(edge, internal_graph_)];
+	}
+
+	VertexProperties& get_edge_target(EdgeDescriptor edge) {
+		return internal_graph_[boost::target(edge, internal_graph_)];
+	}
+
+	/** Print stuff */
 
 	void print_composition() {
 		std::cout << " SkeletalGraph contains " << internal_graph_.m_vertices.size() << " vertices and " << internal_graph_.m_edges.size() << " edges :" << std::endl;
