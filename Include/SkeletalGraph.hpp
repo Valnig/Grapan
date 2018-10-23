@@ -81,11 +81,11 @@ public:
 	/** size getters */
 
 	GRuint vertex_count() const{
-		return internal_graph_.m_vertices.size();
+		return (GRuint)internal_graph_.m_vertices.size();
 	}
 
 	GRuint edge_count() const {
-		return internal_graph_.m_edges.size();
+		return (GRuint)internal_graph_.m_edges.size();
 	}
 
 	/** Vertex stuff */

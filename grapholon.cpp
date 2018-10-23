@@ -626,6 +626,51 @@ void ExtractGraphFromTestStructure2() {
 	delete skeleton;
 }
 
+void ExtractGraphFromTestStructure3() {
+	VoxelSkeleton* skeleton = new VoxelSkeleton(10, 10, 10);
+
+	skeleton->set_voxel(0, 7, 0);
+
+	skeleton->set_voxel(1, 6, 0);
+
+	skeleton->set_voxel(2, 2, 0);
+	skeleton->set_voxel(2, 3, 0);
+	skeleton->set_voxel(2, 5, 0);
+
+	skeleton->set_voxel(3, 1, 0);
+	skeleton->set_voxel(3, 4, 0);
+
+	skeleton->set_voxel(4, 1, 0);
+	skeleton->set_voxel(4, 3, 0);
+	skeleton->set_voxel(4, 5, 0);
+
+	skeleton->set_voxel(5, 1, 0);
+	skeleton->set_voxel(5, 3, 0);
+	skeleton->set_voxel(5, 6, 0);
+
+	skeleton->set_voxel(6, 1, 0);
+	skeleton->set_voxel(6, 3, 0);
+	skeleton->set_voxel(6, 5, 0);
+
+	skeleton->set_voxel(7, 2, 0);
+	skeleton->set_voxel(7, 4, 0);
+	skeleton->set_voxel(7, 6, 0);
+
+	skeleton->set_voxel(8, 4, 0);
+	skeleton->set_voxel(8, 7, 0);
+
+	skeleton->set_voxel(9, 5, 0);
+	skeleton->set_voxel(9, 6, 0);
+
+	SkeletalGraph* graph = skeleton->extract_skeletal_graph();
+
+	graph->print_composition();
+
+	delete graph;
+	delete skeleton;
+}
+
+
 void ExtractGraphFromRandomSructure() {
 	VoxelSkeleton* skeleton = new VoxelSkeleton(100, 100, 100);
 	skeleton->generate_random(400,1234);
@@ -647,7 +692,7 @@ int main()
 {
 	
 
-	ExtractGraphFromRandomSructure();
+	ExtractGraphFromTestStructure3();
 
 	while (true);
     return 0;

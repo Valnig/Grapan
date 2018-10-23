@@ -1541,7 +1541,7 @@ namespace grapholon {
 
 
 		SkeletalGraph* extract_skeletal_graph() {
-			bool debug_log(false);
+			bool debug_log(true);
 
 			typedef enum{ISOLATED, TERMINAL, BRANCH, JUNCTION, UNCLASSIFIED} VOXEL_CLASS;
 
@@ -1559,11 +1559,16 @@ namespace grapholon {
 				neighborhood = IndexVector();
 				extract_0_neighborhood_star(voxel_id, neighborhood);
 
-				labels[voxel_id] = (GRuint)neighborhood.size();
+				labels[voxel_id] = (GRuint)neighborhood.size(); 
+				classes[voxel_id] = (VOXEL_CLASS)labels[voxel_id];
+				if (labels[voxel_id] == 4) {
+					classes[voxel_id] = JUNCTION;
+				}
 			}
 
 			/*std::cout << " labels : " << std::endl;
 			for (auto voxel_id : true_voxels_) {
+				GRuint x, y, z;
 				voxel_id_to_coordinates(voxel_id, x, y, z);
 				std::cout <<"("<<x<<" "<<y<<" "<<z<<") : "<< labels[voxel_id] << std::endl;
 			}
@@ -1571,7 +1576,8 @@ namespace grapholon {
 			*/
 
 			//then classify the voxels (junction, branch, etc.)
-			for (auto voxel_id : true_voxels_) {
+			/*for (auto voxel_id : true_voxels_) {
+				
 				neighborhood = IndexVector();
 				if(classes[voxel_id] == UNCLASSIFIED){
 					switch (labels[voxel_id]) {
@@ -1602,10 +1608,11 @@ namespace grapholon {
 					}
 					}
 				}
-			}
+			}*/
 
 			/*std::cout << " classes : " << std::endl;
 			for (auto voxel_id : true_voxels_) {
+				GRuint x, y, z;
 				voxel_id_to_coordinates(voxel_id, x, y, z);
 				std::cout << "(" << x << " " << y << " " << z << ") : " << classes[voxel_id] << std::endl;
 			}
@@ -1620,6 +1627,7 @@ namespace grapholon {
 			std::vector<EdgeDescriptor> edges;
 			std::vector<bool> is_vertex(nb_voxels_, false);
 			IndexVector incident_voxel(nb_voxels_,0);
+
 			IndexVector terminal_points_ids;
 
 			GRuint treated_count(0);
@@ -1808,14 +1816,18 @@ namespace grapholon {
 								//if it's a vertex that's already been treated, it might represent a cycle
 								//in that case we check if it's not the last visited id
 								else if (treated[neighbor_id] 
-								&& is_vertex[neighbor_id] 
-								&& neighbor_id != last_id
-								&& incident_voxel[neighbor_id] != current_id) {
+									&& is_vertex[neighbor_id] 
+									&& neighbor_id != last_id
+									&& incident_voxel[neighbor_id] != current_id
+									&&incident_voxel[current_id] != neighbor_id) {
 									
 									
 									IF_DEBUG_DO(std::cout << " found potential loop" << std::endl;)
 									IF_DEBUG_DO(std::cout << "			 current id : "<<current_id << std::endl;)
-									found_vertex = true;
+									incident_voxel[neighbor_id] = current_id;
+									IF_DEBUG_DO(std::cout << "			set incident voxel to " << neighbor_id << " as " << current_id << std::endl;)
+
+										found_vertex = true;
 									std::pair<EdgeDescriptor, bool> edge_addition_result = graph->add_edge(vertices[start_id], vertices[neighbor_id], edge_properties[i]);
 									if(edge_addition_result.second){
 										edges.push_back(edge_addition_result.first);
