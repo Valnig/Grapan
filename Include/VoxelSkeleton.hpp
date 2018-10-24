@@ -1543,18 +1543,69 @@ namespace grapholon {
 		SkeletalGraph* extract_skeletal_graph() {
 			bool debug_log(true);
 
+
+
 			typedef enum{ISOLATED, TERMINAL, BRANCH, JUNCTION, UNCLASSIFIED} VOXEL_CLASS;
 
+			//create a new graph
 			SkeletalGraph* graph = new SkeletalGraph();
 
+			if (!set_voxel_count()) {
+				std::cerr << "Cannot extract graph from empty skeleton. Returning empty graph" << std::endl;
+				return graph;
+			}
+
 			GRuint true_voxel_count((GRuint)true_voxels_.size());
+			/*the expected total count of treated voxels.
+			It's one for the terminal and edge voxels and how many
+			neighbors they have for junction voxels*/
 			GRuint expected_total_treated_count(0);
 
+			/*NOTE : most of the following vectors have the same size of the
+			total number of voxel in this skeleton to allow for O(1) lookups
+			e.g. : 
+			GRuint first_voxel_id = true_voxels_[i];
+			labels[first_voxel_id] = 2;
+			*/
+
+			//the number of neighbors for each true voxel
 			std::vector<GRuint> labels(nb_voxels_, 0);
+
+			//the class (see above) of each true voxel
 			std::vector<VOXEL_CLASS> classes(nb_voxels_, UNCLASSIFIED);
+
+			//the expected treated count for each true voxel
 			std::vector<GRuint> expected_treated_count(nb_voxels_, 0);
 
+			/*the current treated count for each true voxel. 
+			The goal is to have those values match those of the vector right above*/
+			std::vector<GRuint> treated_count(nb_voxels_, 0);
 
+			/*a vector containing the vertexDescriptors of the voxels 
+			identified as vertices (terminal, junction and isolated voxels)*/
+			std::vector<VertexDescriptor> vertices(nb_voxels_);
+
+			/*a vector containing all the edges that will be added to the graph*/
+			std::vector<EdgeDescriptor> edges;
+			/*whether a particular voxel is a vertex or not*/
+			std::vector<bool> is_vertex(nb_voxels_, false);
+			/*for each vertex, which was the incident voxel.
+			This is used to avoid adding twice the same edge*/
+			IndexVector incident_voxel(nb_voxels_, 0);
+
+			IndexVector terminal_points_ids;
+
+			GRuint total_treated_count(0);
+
+			GRuint first_terminal_id(0);
+
+			//in case there are no terminal voxels (i.e. only junctions and branches)
+			GRuint back_up_terminal_id(0);
+
+			//In case there are no vertices (i.e. only branches)
+			bool at_least_one_non_branch_voxel(false);
+
+			IF_DEBUG_DO(std::cout << "Identified the terminal points : " << std::endl;)
 
 
 			//first step : label voxels depending on their neighborhood
@@ -1566,57 +1617,21 @@ namespace grapholon {
 				labels[voxel_id] = (GRuint)neighborhood.size(); 
 				classes[voxel_id] = (VOXEL_CLASS)labels[voxel_id];
 
-				if (labels[voxel_id] == 2) {
-					expected_treated_count[voxel_id] = 1;
-				}
-				else {
-					expected_treated_count[voxel_id] = labels[voxel_id];
-				}
-
-				expected_total_treated_count += expected_treated_count[voxel_id];
-
-				if (labels[voxel_id] == 4) {
+				if (labels[voxel_id] >= 4) {
 					classes[voxel_id] = JUNCTION;
 				}
 
-			}
-
-			std::cout << "labels/classes : " << std::endl;
-			for (auto voxel_id : true_voxels_) {
-				GRuint x, y, z;
-				voxel_id_to_coordinates(voxel_id, x, y, z);
-				std::cout << " voxel : " << voxel_id << " : (" << x << " " << y << " " << z << ") : " << labels[voxel_id] << " / " << classes[voxel_id] << std::endl;
-			}
-
-
-
-			//and finally extract the graph
-
-			std::vector<GRuint> treated_count(nb_voxels_, 0);
-			std::vector<VertexDescriptor> vertices(nb_voxels_);
-			std::vector<EdgeDescriptor> edges;
-			std::vector<bool> is_vertex(nb_voxels_, false);
-			IndexVector incident_voxel(nb_voxels_,0);
-
-			IndexVector terminal_points_ids;
-
-			GRuint total_treated_count(0);
-
-			GRuint first_terminal_id(0);
-
-			IF_DEBUG_DO(std::cout << "Identified the terminal points : " << std::endl;)
-			//first we add the terminal and junction points to the set of vertices
-			//and get the id of the first terminal point, which will be the starting point
-			//of the next step
-			for (auto voxel_id : true_voxels_) {
 				GRuint x, y, z;
 				voxel_id_to_coordinates(voxel_id, x, y, z);
 
 				expected_treated_count[voxel_id] = (labels[voxel_id] == 2 ? 1 : labels[voxel_id]);
 
-				if (classes[voxel_id] == JUNCTION || classes[voxel_id] == TERMINAL || classes[voxel_id] == ISOLATED) {
+				expected_total_treated_count += expected_treated_count[voxel_id];
 
-					
+				if (classes[voxel_id] == JUNCTION || classes[voxel_id] == TERMINAL || classes[voxel_id] == ISOLATED) {
+					at_least_one_non_branch_voxel = true;
+					back_up_terminal_id = voxel_id;
+
 					Point3d vertex_point;
 					vertex_point.X = (GRfloat)x;
 					vertex_point.Y = (GRfloat)y;
@@ -1636,27 +1651,63 @@ namespace grapholon {
 						IF_DEBUG_DO(std::cout << voxel_id << " : (" << x << " " << y << " " << z << ") : " << expected_treated_count[voxel_id] << std::endl;)
 					}
 				}
+
 			}
 
+			IF_DEBUG_DO(std::cout << "labels/classes : " << std::endl;)
+			for (auto voxel_id : true_voxels_) {
+				GRuint x, y, z;
+				voxel_id_to_coordinates(voxel_id, x, y, z);
+				IF_DEBUG_DO(std::cout << " voxel : " << voxel_id << " : (" << x << " " << y << " " << z << ") : " << labels[voxel_id] << " / " << classes[voxel_id] << std::endl;)
+			}
 
+			//If we have found no terminal vertex
+			if (!terminal_points_ids.size()) {
+				//if there's at least one non-branch voxel we use the back-up id
+				if (at_least_one_non_branch_voxel) {
+					first_terminal_id = back_up_terminal_id;
+				}
+				//and if there are no vertex at all then we use the first true voxel
+				else {
+					GRuint first_voxel_id = true_voxels_[0];
+					GRuint x, y, z;
+					voxel_id_to_coordinates(first_voxel_id, x, y, z);
 
-			/*treated_count[first_terminal_id] = 1;
-			total_treated_count++;*/
+					Point3d vertex_point;
+					vertex_point.X = (GRfloat)x;
+					vertex_point.Y = (GRfloat)y;
+					vertex_point.Z = (GRfloat)z;
+
+					VertexProperties vertex_properties;
+					vertex_properties.position = vertex_point;
+
+					vertices[first_voxel_id] = graph->add_vertex(vertex_properties);
+					is_vertex[first_voxel_id] = true;
+					expected_treated_count[first_voxel_id]++;
+
+					first_terminal_id = first_voxel_id;
+				}
+			}
 
 			IndexVector starts;
+
 			starts.push_back(first_terminal_id);
 
+			//this is just for debugging
 			GRuint iteration_count(0);
 
 			
-			std::cout<<"true voxel count : "<<true_voxel_count<<std::endl;
-			std::cout << "expected total treated count : " << expected_total_treated_count << std::endl;
+			IF_DEBUG_DO(std::cout<<"true voxel count : "<<true_voxel_count<<std::endl;)
+			IF_DEBUG_DO(std::cout << "expected total treated count : " << expected_total_treated_count << std::endl;)
+			
+			//we look for edges while the expecte total count is not reached	
 			while (total_treated_count < expected_total_treated_count) {
 				
-
 				IF_DEBUG_DO(std::cout << " Starting iteration " << iteration_count << std::endl);
 				IF_DEBUG_DO(std::cout << "	treated count : " << total_treated_count << std::endl);
 
+				/*If there are no starts left, it means we hav fully treated the current 
+				connected component so we look for a new one*/
 				if (!starts.size()) {
 					IF_DEBUG_DO(std::cout << "		no more ids in the start ids. Looking for a new one" << std::endl;)
 						GRuint j(0);
@@ -1668,9 +1719,6 @@ namespace grapholon {
 					if (j < (GRuint)terminal_points_ids.size()) {
 						std::cout << "			added voxel " << terminal_points_ids[j] << " to the starting points" << std::endl;
 						starts.push_back(terminal_points_ids[j]);
-						
-						/*treated_count[terminal_points_ids[j]]++;
-						total_treated_count++;*/
 					}
 					else {
 						IF_DEBUG_DO(std::cout << " ERROR : Could not find new untreated vertex to start with" << std::endl;)
@@ -1697,11 +1745,8 @@ namespace grapholon {
 						extract_0_neighborhood_star(start_id, neighborhood);
 						IF_DEBUG_DO(std::cout << "		untreated neighbors : " << std::endl);
 
-						GRuint nb_adj(0);
 						for (auto neighbor_id : neighborhood) {
-							//replace with nb_adj++ if list is not needed
 							if (treated_count[neighbor_id] != expected_treated_count[neighbor_id]) {
-								nb_adj++;
 
 								untreated_neighborhood.push_back(neighbor_id);
 
@@ -1744,14 +1789,7 @@ namespace grapholon {
 
 									found_vertex = true;
 
-
-									//incident_voxel[untreated_neighbor_id] = start_id;
-									//incident_voxel[start_id] = first_voxel_of_edge;
-									//IF_DEBUG_DO(std::cout << "			set incident voxel to " << untreated_neighbor_id << " as " << start_id << std::endl;)
-										//	IF_DEBUG_DO(std::cout << "			set incident voxel to " << start_id << " as " << first_voxel_of_edge << std::endl;)
 									edges.push_back(graph->add_edge(vertices[start_id], vertices[current_id], edge_properties).first);
-
-									//last_id = current_id;
 
 									IF_DEBUG_DO(std::cout << "			voxel " << current_id << " (" << x << " " << y << " " << z << ") is a vertex " << std::endl;)
 									IF_DEBUG_DO(std::cout << "			added an edge from " << start_id << " to " << current_id << std::endl;)
@@ -1763,7 +1801,6 @@ namespace grapholon {
 									GRuint x, y, z;
 									voxel_id_to_coordinates(current_id, x, y, z);
 
-									//treated_neighbor_count += treated_count[current_id];
 									//if the neighbor is untreated and not a vertex, we add it to the edge's
 									//curve and set the neighbor as the new current id
 
@@ -1804,18 +1841,17 @@ namespace grapholon {
 											found_vertex = true;
 									}
 
-									//GRuint treated_neighbor_count(0);
-
 									last_id = current_id;
 									current_id = next_untreated_id;
 
 									IF_DEBUG_DO(std::cout << "			last id is now : " << last_id << " and current id is : " << current_id << std::endl;)
 
 								}
-								/*else if (treated_neighbor_count == expected_treated_neighbor_count) {
-									IF_DEBUG_DO(std::cout << "		all neighbors of " << current_id << " have been fully treated " << std::endl;)
+								else if (current_id == untreated_neighbor_id
+									&& treated_count[current_id] == expected_treated_count[current_id]) {
+									IF_DEBUG_DO(std::cout << " This path was already treated. This probably means that there is a loop from and to voxel "<<start_id<< std::endl;)
 										found_vertex = true;
-								}*/ else{
+								} else{
 										IF_DEBUG_DO(std::cout << " ERROR : Found a fully treatead vertex on a non-treated path" << std::endl;)
 											found_vertex = true;
 								}
