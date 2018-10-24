@@ -28,7 +28,7 @@
 #include <bitset>
 #include <ctime>
 
-
+#include "Curve.hpp"
 #include "SkeletalGraph.hpp"
 #include "VoxelSkeleton.hpp"
 
@@ -756,7 +756,22 @@ void ExtractGraphFromRandomSructure() {
 
 int main()
 {
-	ExtractGraphFromDoubleLoop();
+	PointTangent point1({ 0,0,0 }, { 1,0,0 });
+	PointTangent point2({ 1,0,0 }, { 1,0,0 });
+
+	std::vector<PointTangent> list1({ point1 });
+	std::vector<PointTangent> list2({ point1, point2 });
+	try {
+		SplineCurve curve1(list1);
+		std::cout << curve1.to_string() << std::endl;
+	}
+	catch (exception e) {
+		std::cout << e.what() << std::endl;
+	}
+
+	SplineCurve curve2(list2);
+
+	std::cout << curve2.to_string() << std::endl;
 
 	while (true);
     return 0;
