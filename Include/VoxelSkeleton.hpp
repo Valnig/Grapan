@@ -1578,7 +1578,16 @@ namespace grapholon {
 				if (labels[voxel_id] == 4) {
 					classes[voxel_id] = JUNCTION;
 				}
+
 			}
+
+			std::cout << "labels/classes : " << std::endl;
+			for (auto voxel_id : true_voxels_) {
+				GRuint x, y, z;
+				voxel_id_to_coordinates(voxel_id, x, y, z);
+				std::cout << " voxel : " << voxel_id << " : (" << x << " " << y << " " << z << ") : " << labels[voxel_id] << " / " << classes[voxel_id] << std::endl;
+			}
+
 
 
 			//and finally extract the graph
@@ -1628,6 +1637,8 @@ namespace grapholon {
 					}
 				}
 			}
+
+
 
 			/*treated_count[first_terminal_id] = 1;
 			total_treated_count++;*/
@@ -1680,7 +1691,6 @@ namespace grapholon {
 					if (treated_count[start_id] != expected_treated_count[start_id]) {
 						IF_DEBUG_DO(std::cout << "		exploring from id " << start_id << std::endl);
 
-						
 
 						IndexVector neighborhood;
 						IndexVector untreated_neighborhood;
@@ -1700,7 +1710,6 @@ namespace grapholon {
 								IF_DEBUG_DO(std::cout << "		" << neighbor_id << " : (" << x << " " << y << " " << z << ")" << std::endl);
 							}
 						}
-
 
 						//among all the adjacent voxels, 
 						for (auto untreated_neighbor_id : untreated_neighborhood) {
@@ -1730,7 +1739,7 @@ namespace grapholon {
 									}
 
 									treated_count[start_id]++;
-									treated_count[untreated_neighbor_id]++;
+									treated_count[current_id]++;
 									total_treated_count += 2;
 
 									found_vertex = true;
@@ -1791,7 +1800,8 @@ namespace grapholon {
 									IF_DEBUG_DO(std::cout << "			expected treated neighbor count : " << expected_treated_neighbor_count << std::endl);
 
 									if (next_untreated_id == current_id) {
-										IF_DEBUG_DO(std::cout << " ERROR : Could not find a non-fully-treated neighbor to "<<current_id << std::endl;)
+										IF_DEBUG_DO(std::cout << " ERROR : Could not find a non-fully-treated neighbor to " << current_id << std::endl;)
+											found_vertex = true;
 									}
 
 									//GRuint treated_neighbor_count(0);
@@ -1806,7 +1816,8 @@ namespace grapholon {
 									IF_DEBUG_DO(std::cout << "		all neighbors of " << current_id << " have been fully treated " << std::endl;)
 										found_vertex = true;
 								}*/ else{
-									IF_DEBUG_DO(std::cout << " ERROR : Found a fully treatead vertex on a non-treated path" << std::endl;)
+										IF_DEBUG_DO(std::cout << " ERROR : Found a fully treatead vertex on a non-treated path" << std::endl;)
+											found_vertex = true;
 								}
 							}
 						}
