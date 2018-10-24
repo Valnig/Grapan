@@ -76,6 +76,13 @@ public:
 	}
 	Vector3() : Vector() {}
 
+	/**Copy constructor to avoid the side effect of copying the member reference X,Y & Z*/
+	Vector3(const Vector3& other) {
+		X = other.X;
+		Y = other.Y;
+		Z = other.Z;
+	}
+
 	_TYPE& X = data_[0];
 	_TYPE& Y = data_[1];
 	_TYPE& Z = data_[2];
@@ -119,7 +126,12 @@ public:
 		return *this;
 	}
 
-	_TYPE dot(const _Vector3& other) {
+	_Vector3 operator/=(const _TYPE& scalar) {
+		(*this) = (*this)/scalar;
+		return *this;
+	}
+
+	_TYPE dot(const _Vector3& other) const {
 		return X*other.X + Y*other.Y + Z*other.Z;
 	}
 

@@ -756,22 +756,22 @@ void ExtractGraphFromRandomSructure() {
 
 int main()
 {
-	PointTangent point1({ 0,0,0 }, { 1,0,0 });
-	PointTangent point2({ 1,0,0 }, { 1,0,0 });
+	ExtractGraphFromDoubleLoop();
 
-	std::vector<PointTangent> list1({ point1 });
-	std::vector<PointTangent> list2({ point1, point2 });
-	try {
-		SplineCurve curve1(list1);
-		std::cout << curve1.to_string() << std::endl;
-	}
-	catch (exception e) {
-		std::cout << e.what() << std::endl;
-	}
+	/*Vector3f u(1, 2, 3);
+	Vector3f v(1, 2, 3);
 
-	SplineCurve curve2(list2);
+	cout << u.to_string() << endl;
+	cout << v.to_string() << endl;
+	cout << (u + v).to_string() << endl;
+	cout << (u - v).to_string() << endl;
+	cout << u.dot(v) << endl;
+	cout << (u.normalize()).to_string() << endl;
+	cout << (u -= v).to_string() << endl;
+	cout << (u += v).to_string() << endl;
+	cout << (u*10.f).to_string() << endl;
+	cout << (u/=10.f).to_string() << endl;*/
 
-	std::cout << curve2.to_string() << std::endl;
 
 	while (true);
     return 0;

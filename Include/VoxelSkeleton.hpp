@@ -1541,9 +1541,7 @@ namespace grapholon {
 
 
 		SkeletalGraph* extract_skeletal_graph() {
-			bool debug_log(true);
-
-
+			bool debug_log(false);
 
 			typedef enum{ISOLATED, TERMINAL, BRANCH, JUNCTION, UNCLASSIFIED} VOXEL_CLASS;
 
@@ -1585,8 +1583,11 @@ namespace grapholon {
 			identified as vertices (terminal, junction and isolated voxels)*/
 			std::vector<VertexDescriptor> vertices(nb_voxels_);
 
-			/*a vector containing all the edges that will be added to the graph*/
-			std::vector<EdgeDescriptor> edges;
+			/*a vector containing the curves of the edges that will be added to the graph*/
+			std::vector<DiscreteCurve> edge_curves;
+
+			std::vector<std::pair<VertexDescriptor, VertexDescriptor>> edges_source_targets;
+
 			/*whether a particular voxel is a vertex or not*/
 			std::vector<bool> is_vertex(nb_voxels_, false);
 			/*for each vertex, which was the incident voxel.
@@ -1632,7 +1633,7 @@ namespace grapholon {
 					at_least_one_non_branch_voxel = true;
 					back_up_terminal_id = voxel_id;
 
-					Point3d vertex_point;
+					Vector3f vertex_point;
 					vertex_point.X = (GRfloat)x;
 					vertex_point.Y = (GRfloat)y;
 					vertex_point.Z = (GRfloat)z;
@@ -1673,7 +1674,7 @@ namespace grapholon {
 					GRuint x, y, z;
 					voxel_id_to_coordinates(first_voxel_id, x, y, z);
 
-					Point3d vertex_point;
+					Vector3f vertex_point;
 					vertex_point.X = (GRfloat)x;
 					vertex_point.Y = (GRfloat)y;
 					vertex_point.Z = (GRfloat)z;
@@ -1759,7 +1760,12 @@ namespace grapholon {
 						//among all the adjacent voxels, 
 						for (auto untreated_neighbor_id : untreated_neighborhood) {
 
-							EdgeProperties edge_properties;
+							GRuint x, y, z;
+							voxel_id_to_coordinates(start_id, x, y, z);
+
+							DiscreteCurve discrete_edge_curve;
+							//adding the source voxel's position to the edge's curve
+							discrete_edge_curve.push_back(Vector3f((GRfloat)x, (GRfloat)y, (GRfloat)z));
 
 							IF_DEBUG_DO(std::cout << "		starting from id " << untreated_neighbor_id << std::endl;)
 							bool found_vertex = false;
@@ -1772,7 +1778,6 @@ namespace grapholon {
 								if (treated_count[current_id] != expected_treated_count[current_id]
 									&& is_vertex[current_id]) {
 
-									GRuint x, y, z;
 									voxel_id_to_coordinates(current_id, x, y, z);
 
 									bool already_in_next_starts(false);
@@ -1789,7 +1794,12 @@ namespace grapholon {
 
 									found_vertex = true;
 
-									edges.push_back(graph->add_edge(vertices[start_id], vertices[current_id], edge_properties).first);
+									//adding the target voxel's position to the edge's curve
+									discrete_edge_curve.push_back(Vector3f((GRfloat)x, (GRfloat)y, (GRfloat)z));
+
+									EdgeProperties edge_properties({ *(discrete_edge_curve.to_spline_curve(DiscreteCurve::MIDDLE_POINT)) });
+
+									graph->add_edge(vertices[start_id], vertices[current_id], edge_properties);
 
 									IF_DEBUG_DO(std::cout << "			voxel " << current_id << " (" << x << " " << y << " " << z << ") is a vertex " << std::endl;)
 									IF_DEBUG_DO(std::cout << "			added an edge from " << start_id << " to " << current_id << std::endl;)
@@ -1805,12 +1815,8 @@ namespace grapholon {
 									//curve and set the neighbor as the new current id
 
 									IF_DEBUG_DO(std::cout << "			added voxel " << current_id << " (" << x << " " << y << " " << z << ") to edge list starting from " << start_id << std::endl);
-									Point3d next_point;
-									next_point.X = (GRfloat)x;
-									next_point.Y = (GRfloat)y;
-									next_point.Z = (GRfloat)z;
 
-									edge_properties.curve.push_back(next_point);
+									discrete_edge_curve.push_back(Vector3f((GRfloat)x, (GRfloat)y, (GRfloat)z));
 
 									treated_count[current_id] = 1;
 									total_treated_count++;
@@ -1862,6 +1868,21 @@ namespace grapholon {
 				starts = next_starts;
 				iteration_count++;
 			}
+
+
+			/*VertexDescriptor from(boost::source(e, internal_graph_)), to(boost::target(e, internal_graph_));
+			Point3d from_point(internal_graph_[from].position), to_point(internal_graph_[to].position);
+
+			std::cout << iteration_count
+				<< " : (" << from_point.X << " " << from_point.Y << " " << from_point.Z
+				<< ") --> ";
+			for (auto middle_point : curve) {
+				std::cout << "(" << middle_point.X << " " << middle_point.Y << " " << middle_point.Z << ") --> ";
+			}
+
+			std::cout << "(" << to_point.X << " " << to_point.Y << " " << to_point.Z
+				<< ")" << std::endl;
+				*/
 
 			return graph;
 		}

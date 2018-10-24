@@ -49,6 +49,12 @@ private:
 	std::vector<PointTangent> points_and_tangents_;/** single vector of pairs to ensure we have the same
 												   number of points than tangents*/
 public:
+	/** Creates a default SplineCurve : a straigt line going from the origin to (1,0,0)*/
+	SplineCurve() {
+		points_and_tangents_.push_back(PointTangent(Vector3f(0, 0, 0), Vector3f(1, 0, 0)));
+		points_and_tangents_.push_back(PointTangent(Vector3f(1, 0, 0), Vector3f(1, 0, 0)));
+	}
+
 	SplineCurve(PointTangent start, PointTangent end) {
 		points_and_tangents_.push_back(start);
 		points_and_tangents_.push_back(end);
@@ -98,25 +104,6 @@ public:
 		msg << points_line.str() << tangents_line.str();
 		return msg.str();
 	}
-
-	/*bool add_middle_points_starting_from_index(std::vector<PointTangent> points_and_tangents, GRuint start_index) {
-	if (start_index >= points_and_tangents_.size) {
-	std::cerr << "Cannot add middle points starting from " << start_index << " in curve with " << points_and_tangents_.size() << " points" << std::endl;
-	return false;
-	}
-
-	std::vector<PointTangent> end_points;
-	for (GRuint i(start_index); i < points_and_tangents_.size(); i++) {
-	end_points.push_back(points_and_tangents_[i]);
-
-	}
-	for (GRuint i(start_index); i < MIN(points_and_tangents_.size(), start_index + points_and_tangents.size()); i++) {
-	points_and_tangents_[i] = points_and_tangents[i - start_index];
-	}
-
-	return true;
-	}
-	*/
 };
 
 
@@ -129,22 +116,26 @@ public:
 
 	DiscreteCurve() {}
 
-	typedef enum {SINGLE_POINT, FULL_CURVE, HIGH_CURVATURE} CONVERSION_METHOD;
+	typedef enum { MIDDLE_POINT, FULL_CURVE, HIGH_CURVATURE} CONVERSION_METHOD;
 
 	/** NOTE : allocates a new SplineCurve -> call 'delete' on the return value*/
 	SplineCurve* to_spline_curve(CONVERSION_METHOD method) {
+		std::cout << "converting discrete curve : " << to_string() << std::endl;
 		if (size() < 2) {
-			throw invalid_argument("Cannot convert DiscreteCurve with less than two points to SplineCurve. Returning nullptr");
+			throw std::invalid_argument("Cannot convert DiscreteCurve with less than two points to SplineCurve. Returning nullptr");
 		}else{
 			switch (method) {
-			case SINGLE_POINT: {
+			case MIDDLE_POINT: {
 				if (size() == 2) {
+					std::cout << "size is 2" << std::endl;
 					Vector3f tangent = back() - front();
 					return new SplineCurve(PointTangent(front(), tangent), PointTangent(back(), tangent));
 				}
 				else {
-					GRuint middle_point_index = ((GRuint)size() + 1) / 2;
+					GRuint middle_point_index = (GRuint)size() / 2;
+
 					std::vector<PointTangent> points_and_tangents;
+
 					points_and_tangents.push_back(PointTangent(front(), (*this)[1] - front()));
 					points_and_tangents.push_back(PointTangent(
 						(*this)[middle_point_index], 
@@ -178,7 +169,7 @@ public:
 				break;
 			}
 			default: {
-				return to_spline_curve(SINGLE_POINT);
+				return to_spline_curve(MIDDLE_POINT);
 			}
 			}
 		}

@@ -23,19 +23,10 @@
 
 #include "boost/graph/adjacency_list.hpp"
 
-#include "common.hpp"
-#include "GrapholonTypes.hpp"
-
-struct Point3d {
-	GRfloat X = 0.f;
-	GRfloat Y = 0.f;
-	GRfloat Z = 0.f;
-};
-
-typedef std::vector<Point3d> Curve3d;
+#include "Curve.hpp"
 
 struct VertexProperties {
-	Point3d position;
+	Vector3f position;
 };
 
 typedef std::pair<GRuint, GRuint> Edge;
@@ -43,7 +34,7 @@ typedef std::pair<GRuint, GRuint> Edge;
 typedef std::vector<Edge> OutEdgeList;
 
 struct EdgeProperties {
-	Curve3d curve;
+	SplineCurve curve;
 };
 
 /** Boost Graph Library stuff*/
@@ -145,8 +136,8 @@ public:
 		std::cout << "------ vertices ------" << std::endl;
 		for (vp = boost::vertices(internal_graph_); vp.first != vp.second; ++vp.first) {
 			VertexDescriptor v = *vp.first;
-			Point3d pos = internal_graph_[v].position;
-			std::cout << iteration_count<<" : "<<pos.X << " "<<pos.Y<<" "<<pos.Z<<std::endl;
+			std::cout << iteration_count<<" : " << std::endl << internal_graph_[v].position.to_string() << std::endl;
+
 			iteration_count++;
 		}
 		std::cout << std::endl<<std::endl;
@@ -158,20 +149,8 @@ public:
 		std::cout << "------- edges -------" << std::endl;
 		for (ep = boost::edges(internal_graph_); ep.first != ep.second; ++ep.first) {
 			EdgeDescriptor e = *ep.first;
-			Curve3d curve = internal_graph_[e].curve;
+			std::cout << iteration_count<<" : "<<std::endl<< internal_graph_[e].curve.to_string() << std::endl;
 
-			VertexDescriptor from(boost::source(e, internal_graph_)), to(boost::target(e, internal_graph_));
-			Point3d from_point(internal_graph_[from].position), to_point(internal_graph_[to].position);
-
-			std::cout << iteration_count
-				<< " : (" << from_point.X << " " << from_point.Y << " " << from_point.Z
-				<< ") --> ";
-			for (auto middle_point : curve) {
-				std::cout << "(" << middle_point.X << " " << middle_point.Y << " " << middle_point.Z << ") --> ";
-			}
-			
-			std::cout<<"(" << to_point.X << " " << to_point.Y << " " << to_point.Z
-				<< ")" << std::endl;
 			iteration_count++;
 		}
 		std::cout << std::endl;
