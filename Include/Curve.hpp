@@ -44,47 +44,47 @@ class Curve {
 
 typedef std::pair<Vector3f, Vector3f> PointTangent;
 
-class SplineCurve : Curve {
+class SplineCurve : public Curve, public std::vector<PointTangent> {
 private:
-	std::vector<PointTangent> points_and_tangents_;/** single vector of pairs to ensure we have the same
+	/*std::vector<PointTangent> points_and_tangents_; single vector of pairs to ensure we have the same
 												   number of points than tangents*/
 public:
 	/** Creates a default SplineCurve : a straigt line going from the origin to (1,0,0)*/
 	SplineCurve() {
-		points_and_tangents_.push_back(PointTangent(Vector3f(0, 0, 0), Vector3f(1, 0, 0)));
-		points_and_tangents_.push_back(PointTangent(Vector3f(1, 0, 0), Vector3f(1, 0, 0)));
+		push_back(PointTangent(Vector3f(0, 0, 0), Vector3f(1, 0, 0)));
+		push_back(PointTangent(Vector3f(1, 0, 0), Vector3f(1, 0, 0)));
 	}
 
 	SplineCurve(PointTangent start, PointTangent end) {
-		points_and_tangents_.push_back(start);
-		points_and_tangents_.push_back(end);
+		push_back(start);
+		push_back(end);
 	}
 
-	SplineCurve(std::vector<PointTangent> points_and_tangents){
+	SplineCurve(std::vector<PointTangent> points_and_tangents) 
+		: std::vector<PointTangent >(points_and_tangents){
 		if (points_and_tangents.size() < 2) {
 			throw std::invalid_argument("Cannot create spine curve with less than two points and tangents");
 		}
-		points_and_tangents_ = points_and_tangents;
 	}
 
 	void add_middle_point(PointTangent middle_point) {
-		PointTangent end = points_and_tangents_.back();
-		points_and_tangents_.pop_back();
+		PointTangent end = back();
+		pop_back();
 
-		points_and_tangents_.push_back(middle_point);
+		push_back(middle_point);
 
-		points_and_tangents_.push_back(end);
+		push_back(end);
 	}
 
 	void add_middle_points(std::vector<PointTangent> points_and_tangents) {
-		PointTangent end = points_and_tangents_.back();
-		points_and_tangents_.pop_back();
+		PointTangent end = back();
+		pop_back();
 
 		for (auto point_and_tangent : points_and_tangents) {
-			points_and_tangents_.push_back(point_and_tangent);
+			push_back(point_and_tangent);
 		}
 
-		points_and_tangents_.push_back(end);
+		push_back(end);
 	}
 
 
@@ -95,7 +95,7 @@ public:
 
 		points_line << " points   : ";
 		tangents_line << " tangents : ";
-		for (auto point_and_tangent : points_and_tangents_) {
+		for (auto point_and_tangent : (*this)) {
 			points_line << point_and_tangent.first.to_string() << " ";
 			tangents_line << point_and_tangent.second.to_string() << " ";
 		}
