@@ -752,25 +752,32 @@ void ExtractGraphFromRandomSructure() {
 }
 
 
+void HighCurvaturePointsFromSinusoidalDiscreteCurve() {
+
+	DiscreteCurve discrete_curve;
+	
+	GRuint length(10);
+	GRuint nb_samples(100);
+	GRfloat increment((GRfloat)length / (GRfloat)nb_samples);
+
+	for (GRuint i(0); i < nb_samples; i++) {
+		GRfloat x = increment * i;
+		GRfloat y = (std::sin(increment*i) + 1) * 0.5f * length;
+		discrete_curve.push_back(Vector3f(x, y, 0));
+	}
+
+	SplineCurve* spline_curve = discrete_curve.to_spline_curve(DiscreteCurve::LOCAL_CURVATURE_EXTREMA);
+
+	std::cout << "discrete : " << endl << discrete_curve.to_string() << endl;
+	std::cout << "spline   : " << endl << spline_curve->to_string() << endl;
+
+}
 
 
 int main()
 {
-	ExtractGraphFromDoubleLoop();
+	HighCurvaturePointsFromSinusoidalDiscreteCurve();
 
-	/*Vector3f u(1, 2, 3);
-	Vector3f v(1, 2, 3);
-
-	cout << u.to_string() << endl;
-	cout << v.to_string() << endl;
-	cout << (u + v).to_string() << endl;
-	cout << (u - v).to_string() << endl;
-	cout << u.dot(v) << endl;
-	cout << (u.normalize()).to_string() << endl;
-	cout << (u -= v).to_string() << endl;
-	cout << (u += v).to_string() << endl;
-	cout << (u*10.f).to_string() << endl;
-	cout << (u/=10.f).to_string() << endl;*/
 
 
 	while (true);

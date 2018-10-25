@@ -116,33 +116,32 @@ public:
 
 	DiscreteCurve() {}
 
-	typedef enum { MIDDLE_POINT, FULL_CURVE, START_AND_END, HIGH_CURVATURE} CONVERSION_METHOD;
+	typedef enum { MIDDLE_POINT, FULL_CURVE, START_AND_END, LOCAL_CURVATURE_EXTREMA} CONVERSION_METHOD;
 
 	/** NOTE : allocates a new SplineCurve -> call 'delete' on the return value*/
 	SplineCurve* to_spline_curve(CONVERSION_METHOD method) {
-		std::cout << "converting discrete curve : " << to_string() << std::endl;
 		if (size() < 2) {
 			throw std::invalid_argument("Cannot convert DiscreteCurve with less than two points to SplineCurve. Returning nullptr");
-		}else{
+		}else if (size() == 2) {
+			std::cout << "size is 2" << std::endl;
+			Vector3f tangent = back() - front();
+			return new SplineCurve(PointTangent(front(), tangent), PointTangent(back(), tangent));
+		}
+		else {
 			switch (method) {
 			case MIDDLE_POINT: {
-				if (size() == 2) {
-					std::cout << "size is 2" << std::endl;
-					Vector3f tangent = back() - front();
-					return new SplineCurve(PointTangent(front(), tangent), PointTangent(back(), tangent));
-				}
-				else {
-					GRuint middle_point_index = (GRuint)size() / 2;
+				
+				GRuint middle_point_index = (GRuint)size() / 2;
 
-					std::vector<PointTangent> points_and_tangents;
+				std::vector<PointTangent> points_and_tangents;
 
-					points_and_tangents.push_back(PointTangent(front(), (*this)[1] - front()));
-					points_and_tangents.push_back(PointTangent(
-						(*this)[middle_point_index], 
-						((*this)[middle_point_index + 1] - (*this)[middle_point_index - 1])*0.5f));
-					points_and_tangents.push_back(PointTangent(back(), back() - (*this)[size()-2]));
-					return new SplineCurve(points_and_tangents);
-				}
+				points_and_tangents.push_back(PointTangent(front(), (*this)[1] - front()));
+				points_and_tangents.push_back(PointTangent(
+					(*this)[middle_point_index], 
+					((*this)[middle_point_index + 1] - (*this)[middle_point_index - 1])*0.5f));
+				points_and_tangents.push_back(PointTangent(back(), back() - (*this)[size()-2]));
+				return new SplineCurve(points_and_tangents);
+				
 				break;
 			}
 			case FULL_CURVE: {
@@ -175,9 +174,38 @@ public:
 
 				break;
 			}
-			case HIGH_CURVATURE: {
-				return nullptr;
-				//TODO
+			case LOCAL_CURVATURE_EXTREMA: {
+				//first, compute the angle at each point
+				std::vector<GRfloat> angles;
+				
+				//we add a first element to have the angles and positions aligned
+				angles.push_back(0.f);
+
+				//note : we only care about the middle points so that's why we start from i=1
+				for (GRuint i(1); i < size() - 1; i++) {
+					//TODO : check if same result with cos_theta directly
+					GRfloat cos_theta 
+						= ((*this)[i + 1].dot((*this)[i])) 
+						/ ((*this)[i + 1].norm() * (*this)[i].norm());
+					angles.push_back(acos(cos_theta));
+				}
+				//we copy the first and last angles so ensure that they won't be considered as extrema
+				angles[0] = angles[1];
+				angles.push_back(angles.back());
+
+				std::vector<PointTangent> points_and_tangents;
+				points_and_tangents.push_back(PointTangent(front(), (*this)[1] - front()));
+
+				//then add the positions where there are local curvature extrema
+				for (GRuint i(1); i < size() - 1; i++) {
+					if ((angles[i - 1] < angles[i] && angles[i + 1] < angles[i])
+						|| (angles[i - 1] > angles[i] && angles[i + 1] > angles[i])) {
+						points_and_tangents.push_back(PointTangent((*this)[i], (*this)[i + 1] - (*this)[i - 1]));
+					}
+				}
+				points_and_tangents.push_back(PointTangent(back(), back() - (*this)[size() - 2]));
+
+				return new SplineCurve(points_and_tangents);
 				break;
 			}
 			default: {
