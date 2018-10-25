@@ -25,148 +25,151 @@
 
 #include "Curve.hpp"
 
-struct VertexProperties {
-	Vector3f position;
-};
+namespace grapholon {
 
-typedef std::pair<GRuint, GRuint> Edge;
+	struct VertexProperties {
+		Vector3f position;
+	};
 
-typedef std::vector<Edge> OutEdgeList;
+	typedef std::pair<GRuint, GRuint> Edge;
 
-struct EdgeProperties {
-	SplineCurve curve;
-};
+	typedef std::vector<Edge> OutEdgeList;
 
-/** Boost Graph Library stuff*/
+	struct EdgeProperties {
+		SplineCurve curve;
+	};
 
-typedef boost::adjacency_list<
-	boost::listS, boost::listS, boost::undirectedS,
-	VertexProperties, EdgeProperties>
-	InternalBoostGraph;
+	/** Boost Graph Library stuff*/
 
-typedef InternalBoostGraph::vertex_descriptor VertexDescriptor;
-typedef InternalBoostGraph::edge_descriptor EdgeDescriptor;
-typedef InternalBoostGraph::vertex_iterator VertexIterator;
-typedef boost::graph_traits<InternalBoostGraph>::edge_iterator EdgeIterator;
+	typedef boost::adjacency_list<
+		boost::listS, boost::listS, boost::undirectedS,
+		VertexProperties, EdgeProperties>
+		InternalBoostGraph;
 
-class SkeletalGraph {
-private:
+	typedef InternalBoostGraph::vertex_descriptor VertexDescriptor;
+	typedef InternalBoostGraph::edge_descriptor EdgeDescriptor;
+	typedef InternalBoostGraph::vertex_iterator VertexIterator;
+	typedef boost::graph_traits<InternalBoostGraph>::edge_iterator EdgeIterator;
 
-	GRuint edge_spline_count_ = 0;
+	class SkeletalGraph {
+	private:
 
-	InternalBoostGraph internal_graph_;
+		GRuint edge_spline_count_ = 0;
 
-	/** Vertices and edges */
+		InternalBoostGraph internal_graph_;
 
-public:
-	SkeletalGraph(GRuint vertex_count, OutEdgeList out_edge_list) :
-		internal_graph_(out_edge_list.begin(), out_edge_list.end(), vertex_count) {
+		/** Vertices and edges */
 
-		std::cout << "created SkeletalGraph with " << vertex_count << " vertices and " << out_edge_list.size() << " edges : " << std::endl;
-	}
+	public:
+		SkeletalGraph(GRuint vertex_count, OutEdgeList out_edge_list) :
+			internal_graph_(out_edge_list.begin(), out_edge_list.end(), vertex_count) {
 
-	SkeletalGraph(GRuint vertex_count = 0) :internal_graph_(vertex_count) {
-		std::cout << "created SkeletalGraph with " << vertex_count << " vertices and no edges : " << std::endl;
-
-	}
-
-	/** size getters */
-
-	GRuint vertex_count() const{
-		return (GRuint)internal_graph_.m_vertices.size();
-	}
-
-	GRuint edge_count() const {
-		return (GRuint)internal_graph_.m_edges.size();
-	}
-
-	GRuint edge_spline_count() const {
-		return edge_spline_count_;
-	}
-
-	/** Vertex stuff */
-	VertexDescriptor add_vertex(VertexProperties properties) {
-		return boost::add_vertex(properties, internal_graph_);
-	}
-
-	void remove_vertex(VertexDescriptor vertex) {
-		boost::remove_vertex(vertex, internal_graph_);
-	}
-
-	VertexProperties& get_vertex(VertexDescriptor vertex) {
-		return internal_graph_[vertex];
-	}
-
-	std::pair<VertexIterator, VertexIterator> vertices() {
-		return boost::vertices(internal_graph_);
-	}
-
-
-	/** Edge stuff*/
-	
-	std::pair<EdgeDescriptor, bool> add_edge(VertexDescriptor from, VertexDescriptor to, EdgeProperties properties) {
-		edge_spline_count_ += properties.curve.size();
-		return boost::add_edge(from, to, properties, internal_graph_);
-	}
-
-	void remove_edge(EdgeDescriptor edge) {
-		edge_spline_count_ -= internal_graph_[edge].curve.size();
-
-		boost::remove_edge(edge, internal_graph_);
-	}
-
-	EdgeProperties& get_edge(EdgeDescriptor edge) {
-		return internal_graph_[edge];
-	}
-
-	std::pair<EdgeIterator, EdgeIterator> edges() {
-		return boost::edges(internal_graph_);
-	}
-
-	VertexProperties& get_edge_source(EdgeDescriptor edge) {
-		return internal_graph_[boost::source(edge, internal_graph_)];
-	}
-
-	VertexProperties& get_edge_target(EdgeDescriptor edge) {
-		return internal_graph_[boost::target(edge, internal_graph_)];
-	}
-
-	/** Print stuff */
-
-	std::string to_string() {
-		std::stringstream msg;
-
-		msg << " SkeletalGraph contains " << internal_graph_.m_vertices.size() << " vertices and " << internal_graph_.m_edges.size() << " edges :" << std::endl;
-
-
-		std::pair<VertexIterator, VertexIterator> vp;
-
-		GRuint iteration_count(0);
-
-		msg << "------ vertices ------" << std::endl;
-		for (vp = boost::vertices(internal_graph_); vp.first != vp.second; ++vp.first) {
-			VertexDescriptor v = *vp.first;
-			msg << iteration_count << " : " << std::endl << internal_graph_[v].position.to_string() << std::endl;
-
-			iteration_count++;
+			std::cout << "created SkeletalGraph with " << vertex_count << " vertices and " << out_edge_list.size() << " edges : " << std::endl;
 		}
-		msg << std::endl << std::endl;
 
-		std::pair<EdgeIterator, EdgeIterator> ep;
+		SkeletalGraph(GRuint vertex_count = 0) :internal_graph_(vertex_count) {
+			std::cout << "created SkeletalGraph with " << vertex_count << " vertices and no edges : " << std::endl;
 
-		iteration_count = 0;
-
-		msg << "------- edges -------" << std::endl;
-		for (ep = boost::edges(internal_graph_); ep.first != ep.second; ++ep.first) {
-			EdgeDescriptor e = *ep.first;
-			msg << iteration_count << " : " << std::endl << internal_graph_[e].curve.to_string() << std::endl;
-
-			iteration_count++;
 		}
-		msg << std::endl;
 
-		return msg.str();
-	}
+		/** size getters */
 
-	
-};
+		GRuint vertex_count() const {
+			return (GRuint)internal_graph_.m_vertices.size();
+		}
+
+		GRuint edge_count() const {
+			return (GRuint)internal_graph_.m_edges.size();
+		}
+
+		GRuint edge_spline_count() const {
+			return edge_spline_count_;
+		}
+
+		/** Vertex stuff */
+		VertexDescriptor add_vertex(VertexProperties properties) {
+			return boost::add_vertex(properties, internal_graph_);
+		}
+
+		void remove_vertex(VertexDescriptor vertex) {
+			boost::remove_vertex(vertex, internal_graph_);
+		}
+
+		VertexProperties& get_vertex(VertexDescriptor vertex) {
+			return internal_graph_[vertex];
+		}
+
+		std::pair<VertexIterator, VertexIterator> vertices() {
+			return boost::vertices(internal_graph_);
+		}
+
+
+		/** Edge stuff*/
+
+		std::pair<EdgeDescriptor, bool> add_edge(VertexDescriptor from, VertexDescriptor to, EdgeProperties properties) {
+			edge_spline_count_ += (GRuint)properties.curve.size();
+			return boost::add_edge(from, to, properties, internal_graph_);
+		}
+
+		void remove_edge(EdgeDescriptor edge) {
+			edge_spline_count_ -= (GRuint)internal_graph_[edge].curve.size();
+
+			boost::remove_edge(edge, internal_graph_);
+		}
+
+		EdgeProperties& get_edge(EdgeDescriptor edge) {
+			return internal_graph_[edge];
+		}
+
+		std::pair<EdgeIterator, EdgeIterator> edges() {
+			return boost::edges(internal_graph_);
+		}
+
+		VertexProperties& get_edge_source(EdgeDescriptor edge) {
+			return internal_graph_[boost::source(edge, internal_graph_)];
+		}
+
+		VertexProperties& get_edge_target(EdgeDescriptor edge) {
+			return internal_graph_[boost::target(edge, internal_graph_)];
+		}
+
+		/** Print stuff */
+
+		std::string to_string() {
+			std::stringstream msg;
+
+			msg << " SkeletalGraph contains " << internal_graph_.m_vertices.size() << " vertices and " << internal_graph_.m_edges.size() << " edges :" << std::endl;
+
+
+			std::pair<VertexIterator, VertexIterator> vp;
+
+			GRuint iteration_count(0);
+
+			msg << "------ vertices ------" << std::endl;
+			for (vp = boost::vertices(internal_graph_); vp.first != vp.second; ++vp.first) {
+				VertexDescriptor v = *vp.first;
+				msg << iteration_count << " : " << std::endl << internal_graph_[v].position.to_string() << std::endl;
+
+				iteration_count++;
+			}
+			msg << std::endl << std::endl;
+
+			std::pair<EdgeIterator, EdgeIterator> ep;
+
+			iteration_count = 0;
+
+			msg << "------- edges -------" << std::endl;
+			for (ep = boost::edges(internal_graph_); ep.first != ep.second; ++ep.first) {
+				EdgeDescriptor e = *ep.first;
+				msg << iteration_count << " : " << std::endl << internal_graph_[e].curve.to_string() << std::endl;
+
+				iteration_count++;
+			}
+			msg << std::endl;
+
+			return msg.str();
+		}
+
+
+	};
+}

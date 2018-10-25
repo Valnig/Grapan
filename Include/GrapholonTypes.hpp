@@ -26,3 +26,7 @@ using GRuint = unsigned int;
 using GRint = int;
 using GRfloat = float;
 using GRdouble = double;
+
+namespace grapholon {
+	typedef enum { X_AXIS, Y_AXIS, Z_AXIS } AXIS;
+};

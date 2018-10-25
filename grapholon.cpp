@@ -801,8 +801,20 @@ void MovingAverageDiscreteCurve2() {
 
 int main()
 {
+	Vector3f vx(1, 0, 0);
+	Vector3f vy(0, 1, 0);
+	Vector3f vz(0, 0, 1);
 
-	MovingAverageDiscreteCurve2();
+	Vector3f vx2 = vx.move_from_axis(X_AXIS);
+	Vector3f vy2 = vy.move_from_axis(Y_AXIS);
+	Vector3f vz2 = vz.move_from_axis(Z_AXIS);
+
+	vx2.move_from_axis(X_AXIS);
+	vy2.move_from_axis(Y_AXIS);
+	vz2.move_from_axis(Z_AXIS);
+
+	std::cout << vx.to_string() << " " << vy.to_string() << " " << vz.to_string() << endl;
+	std::cout << vx2.to_string() << " " << vy2.to_string() << " " << vz2.to_string() << endl;
 
 	while (true);
     return 0;

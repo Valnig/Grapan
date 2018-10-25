@@ -60,8 +60,6 @@ namespace grapholon {
 		VoxelState state;
 	};
 
-	enum Axis{X_AXIS, Y_AXIS, Z_AXIS};
-
 	enum CriticalClique{ NON_CRITICAL, CLIQUE3, CLIQUE2, CLIQUE1, CLIQUE0};
 	enum TopologicalClass{UNCLASSIFIED, INTERIOR_POINT, ISOLATED_POINT, BORDER_POINT, CURVES_POINT, CURVE_JUNCTION, SURFACE_CURVES_JUNCTION, SURFACE_JUNCTION, SURFACES_CURVE_JUNCTION};
 	
@@ -625,7 +623,7 @@ namespace grapholon {
 
 		/**K_2 mask matchings. 
 		\param axis 0:X-axis, 1:Y-axis, 2:Z-axis */
-		bool clique_matches_K2_mask(const GRuint x, const GRuint y, const GRuint z, const Axis axis) {
+		bool clique_matches_K2_mask(const GRuint x, const GRuint y, const GRuint z, const AXIS axis) {
 
 			if (axis > Z_AXIS) {
 				std::cerr << "wrong axis to apply K2 mask. Returning false" << std::endl;
@@ -752,7 +750,7 @@ namespace grapholon {
 			GRuint x_B, GRuint y_B, GRuint z_B,
 			GRuint x_C, GRuint y_C, GRuint z_C,
 			GRuint x_D, GRuint y_D, GRuint z_D,
-			Axis axis) {
+			AXIS axis) {
 			
 			
 			GRint axis_vector[3] = { axis == X_AXIS, axis == Y_AXIS, axis == Z_AXIS };
@@ -813,7 +811,7 @@ namespace grapholon {
 
 
 		/*Eventually this will be replaced with a mask table lookup*/
-		bool is_critical_2_clique(GRuint x, GRuint y, GRuint z, Axis axis) {
+		bool is_critical_2_clique(GRuint x, GRuint y, GRuint z, AXIS axis) {
 			return clique_matches_K2_mask(x, y, z, axis);
 		}
 
@@ -822,7 +820,7 @@ namespace grapholon {
 			GRuint x_B, GRuint y_B, GRuint z_B,
 			GRuint x_C, GRuint y_C, GRuint z_C,
 			GRuint x_D, GRuint y_D, GRuint z_D,
-			Axis axis) {
+			AXIS axis) {
 			return clique_matches_K1_mask(x, y, z, x_B, y_B, z_B, x_C, y_C, z_C, x_D, y_D, z_D, axis);
 		}
 
@@ -970,7 +968,7 @@ namespace grapholon {
 				//then detect 2-cliques
 				for (GRuint axis(X_AXIS); axis <= Z_AXIS; axis++) {
 					//IF_DEBUG_DO(std::cout << "checkin 1-clique on axis " << axis << std::endl;)
-					if (this->is_critical_2_clique(x, y, z, (Axis)axis)) {
+					if (this->is_critical_2_clique(x, y, z, (AXIS)axis)) {
 						GRuint voxel_B_id(this->voxel_coordinates_to_id(x + (axis == X_AXIS), y + (axis == Y_AXIS), z + (axis == Z_AXIS)));
 						critical_cliques[2].push_back({ voxel_id, voxel_B_id });
 					//	IF_DEBUG_DO(std::cout << "		there is a 2-clique on axis " << axis << std::endl;)
@@ -1013,7 +1011,7 @@ namespace grapholon {
 							x_B, y_B, z_B,
 							x_C, y_C, z_C,
 							x_D, y_D, z_D,
-							(Axis)axis)) {
+							(AXIS)axis)) {
 
 							//std::cout << "		there is a 1-clique on axis " << axis << std::endl;
 
