@@ -125,35 +125,40 @@ public:
 
 	/** Print stuff */
 
-	void print_composition() {
-		std::cout << " SkeletalGraph contains " << internal_graph_.m_vertices.size() << " vertices and " << internal_graph_.m_edges.size() << " edges :" << std::endl;
+	std::string to_string() {
+		std::stringstream msg;
+
+		msg << " SkeletalGraph contains " << internal_graph_.m_vertices.size() << " vertices and " << internal_graph_.m_edges.size() << " edges :" << std::endl;
 
 
 		std::pair<VertexIterator, VertexIterator> vp;
 
 		GRuint iteration_count(0);
 
-		std::cout << "------ vertices ------" << std::endl;
+		msg << "------ vertices ------" << std::endl;
 		for (vp = boost::vertices(internal_graph_); vp.first != vp.second; ++vp.first) {
 			VertexDescriptor v = *vp.first;
-			std::cout << iteration_count<<" : " << std::endl << internal_graph_[v].position.to_string() << std::endl;
+			msg << iteration_count << " : " << std::endl << internal_graph_[v].position.to_string() << std::endl;
 
 			iteration_count++;
 		}
-		std::cout << std::endl<<std::endl;
+		msg << std::endl << std::endl;
 
 		std::pair<EdgeIterator, EdgeIterator> ep;
 
 		iteration_count = 0;
 
-		std::cout << "------- edges -------" << std::endl;
+		msg << "------- edges -------" << std::endl;
 		for (ep = boost::edges(internal_graph_); ep.first != ep.second; ++ep.first) {
 			EdgeDescriptor e = *ep.first;
-			std::cout << iteration_count<<" : "<<std::endl<< internal_graph_[e].curve.to_string() << std::endl;
+			msg << iteration_count << " : " << std::endl << internal_graph_[e].curve.to_string() << std::endl;
 
 			iteration_count++;
 		}
-		std::cout << std::endl;
+		msg << std::endl;
+
+		return msg.str();
 	}
+
 	
 };

@@ -116,7 +116,7 @@ public:
 
 	DiscreteCurve() {}
 
-	typedef enum { MIDDLE_POINT, FULL_CURVE, HIGH_CURVATURE} CONVERSION_METHOD;
+	typedef enum { MIDDLE_POINT, FULL_CURVE, START_AND_END, HIGH_CURVATURE} CONVERSION_METHOD;
 
 	/** NOTE : allocates a new SplineCurve -> call 'delete' on the return value*/
 	SplineCurve* to_spline_curve(CONVERSION_METHOD method) {
@@ -158,6 +158,18 @@ public:
 				}
 				
 				points_and_tangents.push_back(PointTangent(back(), back() - (*this)[size() - 2]));
+
+				return new SplineCurve(points_and_tangents);
+
+				break;
+			}
+			case START_AND_END: {
+
+				std::vector<PointTangent> points_and_tangents;
+
+				points_and_tangents.push_back(PointTangent(front(), back() - front()));
+
+				points_and_tangents.push_back(PointTangent(back(), back() - front()));
 
 				return new SplineCurve(points_and_tangents);
 

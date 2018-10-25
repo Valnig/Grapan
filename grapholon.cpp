@@ -584,7 +584,7 @@ void CreateSkeletalGraphAndAddStuff(){
 	}
 
 
-	graph.print_composition();
+	std::cout<<graph.to_string();
 }
 
 
@@ -620,7 +620,7 @@ void ExtractGraphFromTestStructure2() {
 
 	SkeletalGraph* graph = skeleton->extract_skeletal_graph();
 
-	graph->print_composition();
+	std::cout<<graph->to_string();
 
 	delete graph;
 	delete skeleton;
@@ -670,7 +670,7 @@ void ExtractGraphFromTestStructure3() {
 
 	SkeletalGraph* graph = skeleton->extract_skeletal_graph();
 
-	graph->print_composition();
+	std::cout << graph->to_string();
 
 	delete graph;
 	delete skeleton;
@@ -694,7 +694,7 @@ void ExtractGraphFromLoop() {
 
 	SkeletalGraph* graph = skeleton->extract_skeletal_graph();
 
-	graph->print_composition();
+	std::cout << graph->to_string();
 
 	delete graph;
 	delete skeleton;
@@ -729,7 +729,7 @@ void ExtractGraphFromDoubleLoop() {
 
 	SkeletalGraph* graph = skeleton->extract_skeletal_graph();
 
-	graph->print_composition();
+	std::cout << graph->to_string();
 
 	delete graph;
 	delete skeleton;
@@ -745,7 +745,7 @@ void ExtractGraphFromRandomSructure() {
 	SkeletalGraph* graph = skeleton->extract_skeletal_graph();
 
 
-	graph->print_composition();
+	std::cout << graph->to_string();
 
 	delete graph;
 	delete skeleton;
