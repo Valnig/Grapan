@@ -752,12 +752,13 @@ void ExtractGraphFromRandomSructure() {
 }
 
 
-void HighCurvaturePointsFromSinusoidalDiscreteCurve() {
+void MovingAverageDiscreteCurve() {
 
 	DiscreteCurve discrete_curve;
+	DiscreteCurve averaged_curve;
 	
 	GRuint length(10);
-	GRuint nb_samples(100);
+	GRuint nb_samples(10);
 	GRfloat increment((GRfloat)length / (GRfloat)nb_samples);
 
 	for (GRuint i(0); i < nb_samples; i++) {
@@ -766,19 +767,42 @@ void HighCurvaturePointsFromSinusoidalDiscreteCurve() {
 		discrete_curve.push_back(Vector3f(x, y, 0));
 	}
 
-	SplineCurve* spline_curve = discrete_curve.to_spline_curve(DiscreteCurve::LOCAL_CURVATURE_EXTREMA);
+	averaged_curve = discrete_curve;
 
-	std::cout << "discrete : " << endl << discrete_curve.to_string() << endl;
-	std::cout << "spline   : " << endl << spline_curve->to_string() << endl;
+	averaged_curve.smooth_moving_average(5);
+
+	std::cout << "base    : " << std::endl << discrete_curve.to_string() << std::endl;
+	std::cout << "average : " << std::endl << averaged_curve.to_string() << std::endl;
 
 }
 
+void MovingAverageDiscreteCurve2() {
+	DiscreteCurve discrete_curve;
+	DiscreteCurve averaged_curve3;
+	DiscreteCurve averaged_curve5;
+
+	GRuint length(10);
+
+	for (GRuint i(0); i < length; i++) {
+		discrete_curve.push_back(Vector3f(i, 0, 0));
+	}
+	discrete_curve[length / 2] = Vector3f(length / 2, 1, 0);
+
+	averaged_curve3 = discrete_curve;
+	averaged_curve5 = discrete_curve;
+
+	averaged_curve3.smooth_moving_average(3);
+	averaged_curve5.smooth_moving_average(5);
+
+	std::cout << "base    : " << std::endl << discrete_curve.to_string() << std::endl;
+	std::cout << "average 3 : " << std::endl << averaged_curve3.to_string() << std::endl;
+	std::cout << "average 5 : " << std::endl << averaged_curve5.to_string() << std::endl;
+}
 
 int main()
 {
-	HighCurvaturePointsFromSinusoidalDiscreteCurve();
 
-
+	MovingAverageDiscreteCurve2();
 
 	while (true);
     return 0;

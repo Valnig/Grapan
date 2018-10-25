@@ -52,6 +52,7 @@ typedef boost::graph_traits<InternalBoostGraph>::edge_iterator EdgeIterator;
 class SkeletalGraph {
 private:
 
+	GRuint edge_spline_count_ = 0;
 
 	InternalBoostGraph internal_graph_;
 
@@ -79,6 +80,10 @@ public:
 		return (GRuint)internal_graph_.m_edges.size();
 	}
 
+	GRuint edge_spline_count() const {
+		return edge_spline_count_;
+	}
+
 	/** Vertex stuff */
 	VertexDescriptor add_vertex(VertexProperties properties) {
 		return boost::add_vertex(properties, internal_graph_);
@@ -100,10 +105,13 @@ public:
 	/** Edge stuff*/
 	
 	std::pair<EdgeDescriptor, bool> add_edge(VertexDescriptor from, VertexDescriptor to, EdgeProperties properties) {
+		edge_spline_count_ += properties.curve.size();
 		return boost::add_edge(from, to, properties, internal_graph_);
 	}
 
 	void remove_edge(EdgeDescriptor edge) {
+		edge_spline_count_ -= internal_graph_[edge].curve.size();
+
 		boost::remove_edge(edge, internal_graph_);
 	}
 

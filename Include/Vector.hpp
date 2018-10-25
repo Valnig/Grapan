@@ -40,6 +40,7 @@ public:
 	}
 
 
+
 	//math operators
 
 
@@ -69,12 +70,16 @@ private:
 	///<this allows for more compact representation
 	typedef Vector3<_TYPE> _Vector3;
 public:
+
+	Vector3() : Vector() {}
+
 	Vector3(_TYPE x, _TYPE y, _TYPE z) {
 		X = x;
 		Y = y;
 		Z = z;
 	}
-	Vector3() : Vector() {}
+
+	Vector3(_TYPE value) : Vector3(value, value, value) {}
 
 	/**Copy constructor to avoid the side effect of copying the member reference X,Y & Z*/
 	Vector3(const Vector3& other) {

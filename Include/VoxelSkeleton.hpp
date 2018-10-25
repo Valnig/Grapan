@@ -1540,7 +1540,9 @@ namespace grapholon {
 		}
 
 
-		SkeletalGraph* extract_skeletal_graph(DiscreteCurve::CONVERSION_METHOD spline_extraction_method = DiscreteCurve::LOCAL_CURVATURE_EXTREMA) {
+		SkeletalGraph* extract_skeletal_graph(
+			DiscreteCurve::CONVERSION_METHOD spline_extraction_method = DiscreteCurve::LOCAL_CURVATURE_EXTREMA,
+			GRuint smoothing_window_width = 5) {
 			bool debug_log(false);
 
 			typedef enum{ISOLATED, TERMINAL, BRANCH, JUNCTION, UNCLASSIFIED} VOXEL_CLASS;
@@ -1796,6 +1798,8 @@ namespace grapholon {
 
 									//adding the target voxel's position to the edge's curve
 									discrete_edge_curve.push_back(Vector3f((GRfloat)x, (GRfloat)y, (GRfloat)z));
+
+									discrete_edge_curve.smooth_moving_average(smoothing_window_width);
 
 									EdgeProperties edge_properties({ *(discrete_edge_curve.to_spline_curve(spline_extraction_method)) });
 

@@ -118,6 +118,7 @@ public:
 
 	typedef enum { MIDDLE_POINT, FULL_CURVE, START_AND_END, LOCAL_CURVATURE_EXTREMA} CONVERSION_METHOD;
 
+
 	/** NOTE : allocates a new SplineCurve -> call 'delete' on the return value*/
 	SplineCurve* to_spline_curve(CONVERSION_METHOD method) {
 		if (size() < 2) {
@@ -126,6 +127,16 @@ public:
 			std::cout << "size is 2" << std::endl;
 			Vector3f tangent = back() - front();
 			return new SplineCurve(PointTangent(front(), tangent), PointTangent(back(), tangent));
+		}
+		else if (size() == 3) {
+			std::vector<PointTangent> points_and_tangents;
+
+			points_and_tangents.push_back(PointTangent(front(), (*this)[1] - front()));
+			points_and_tangents.push_back(PointTangent(
+				(*this)[1],
+				(back() - front())*0.5f));
+			points_and_tangents.push_back(PointTangent(back(), back() - (*this)[1]));
+			return new SplineCurve(points_and_tangents);
 		}
 		else {
 			switch (method) {
@@ -188,10 +199,13 @@ public:
 						= ((*this)[i + 1].dot((*this)[i])) 
 						/ ((*this)[i + 1].norm() * (*this)[i].norm());
 					angles.push_back(acos(cos_theta));
+					if(i>1){
+						angles[i] = fabs(angles[i] - angles[i - 1]);
+					}
 				}
 				//we copy the first and last angles so ensure that they won't be considered as extrema
-				angles[0] = angles[1];
-				angles.push_back(angles.back());
+				angles[0] = 0.f;
+				angles.push_back(0.f);
 
 				std::vector<PointTangent> points_and_tangents;
 				points_and_tangents.push_back(PointTangent(front(), (*this)[1] - front()));
@@ -212,6 +226,28 @@ public:
 				return to_spline_curve(MIDDLE_POINT);
 			}
 			}
+		}
+	}
+
+	void smooth_moving_average(GRuint window_width) {
+		if (window_width > 2 && window_width < size()) {
+			DiscreteCurve smoothed;
+			smoothed.push_back(front());
+
+			for (GRuint i(1); i < size() - 1; i++) {
+				std::cout << "smoothing element " << i << std::endl;
+				GRuint start((GRuint)(i < window_width / 2 ? 0 : i - window_width / 2));
+				GRuint end((GRuint)((i + window_width / 2) >= size() ? size()-1 : i + window_width / 2));
+
+				std::cout << "from " << start << " to " << end << std::endl;
+				Vector3f local_average(0.f);
+				for (GRuint j(start); j <= end; j++) {
+					local_average += (*this)[j];
+				}
+				smoothed.push_back(local_average / (GRfloat)(end - start + 1));
+			}
+			smoothed.push_back(back());
+			(*this) = smoothed;
 		}
 	}
 
