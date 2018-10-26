@@ -141,6 +141,13 @@ namespace grapholon {
 			return X*other.X + Y*other.Y + Z*other.Z;
 		}
 
+		_Vector3 cross(const _Vector3& other) const {
+			return _Vector3(
+				Y*other.Z - Z*other.Y,
+				Z*other.X - X*other.Z,
+				X*other.Y - Y*other.X);
+		}
+
 		GRfloat norm() const {
 			return sqrtf((GRfloat)(this->dot(*this)));
 		}
@@ -157,12 +164,31 @@ namespace grapholon {
 			return _Vector3(axis == X_AXIS, axis == Y_AXIS, axis == Z_AXIS);
 		}
 
+		GRfloat distance(const _Vector3& other) const {
+			return ((*this) - other).norm();
+		}
+
+		GRfloat distance_to_line(const Vector3<GRfloat>& from, const Vector3<GRfloat>& to) const {
+			return fabs(((*this) - from).cross((*this) - to).norm() / (to - from).norm());
+		}
+
+
+		//uncomment and test if it becomes useful
+		/*_Vector3 move_from_axis(const _Vector3& other) {
+			if ((this->normalized() - other->normalized()).norm() <= FLT_EPSILON) {
+				(*this) += axis_vector(Z_AXIS))*2.f*FLT_EPSILON;
+				move_from_axis(axis_vector(Z_AXIS));
+			}
+			return (*this);
+		}*/
+
 		/** If this vector is perfectly aligned with an axis we add a small ammount
 		of another axis.
 		NOTE : modification is done in-place*/
 		_Vector3 move_from_axis(AXIS axis) {
-			if ((this->normalized() - axis_vector(axis)).norm() <= FLT_EPSILON) {
-				(*this) += axis_vector((AXIS)((axis + 1) % 3))*2.f*FLT_EPSILON;
+			if ((this->normalized() - axis_vector(axis)).norm() <= FLT_EPSILON
+				|| (this->normalized() + axis_vector(axis)).norm() <= FLT_EPSILON) {
+				(*this) += axis_vector((AXIS)((axis + 1) % 3))*128.f*FLT_EPSILON;
 			}
 			return (*this);
 		}

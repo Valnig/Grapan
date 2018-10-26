@@ -114,9 +114,77 @@ namespace grapholon {
 	public:
 		DiscreteCurve(std::vector<Vector3f> points) : std::vector<Vector3f>(points) {}
 
+		DiscreteCurve(GRuint size) : std::vector<Vector3f>((size_t)size) {}
+
 		DiscreteCurve() {}
 
-		typedef enum { MIDDLE_POINT, FULL_CURVE, START_AND_END, LOCAL_CURVATURE_EXTREMA } CONVERSION_METHOD;
+		typedef enum {START_AND_END, MIDDLE_POINT, CURVE_FITTING, FULL_CURVE} CONVERSION_METHOD;
+
+		GRuint nearest_point_index(GRuint start, GRuint end, Vector3f point) {
+			if (start > end
+				|| start >= size()
+				|| end >= size()) {
+				return -1;
+			}
+			GRuint min_index(0);
+			GRfloat min(std::numeric_limits<GRfloat>::max());
+			for (GRuint i(start); i <= end; i++) {
+				GRfloat distance((*this)[i].distance(point));
+				if (distance < min) {
+					min = distance;
+					min_index = i;
+				}
+			}
+			return min_index;
+		}
+
+		void fit_curve_rec(GRuint start,
+			GRuint end,
+			GRuint current_iteration,
+			GRuint max_iterations,
+			DiscreteCurve& result,
+			std::vector<bool>& is_set) {
+			if (start <= end
+				&& start < size()
+				&& end < size()
+				&& current_iteration <= max_iterations) {
+				/*std::cout << "current iteration : " << current_iteration << std::endl;
+				std::cout << " from " << start << " to " << end << std::endl;
+				*/
+				Vector3f middle_point(((*this)[start] + (*this)[end])*0.5f);
+				GRuint nearest_index(nearest_point_index(start, end, middle_point));
+
+				/*
+				std::cout << "middle point : " << middle_point.to_string() << std::endl;
+				std::cout<< "nearest_index : " << nearest_index << std::endl;
+				*/
+				is_set[nearest_index] = true;
+				result[nearest_index] = (*this)[nearest_index];
+
+				fit_curve_rec(start, nearest_index, current_iteration + 1, max_iterations, result, is_set);
+				fit_curve_rec(nearest_index, end, current_iteration + 1, max_iterations, result, is_set);
+			}
+		}
+
+		DiscreteCurve fit_curve(
+			GRuint max_iterations) {
+
+			DiscreteCurve result_rec(size());
+			std::vector<bool> is_set(size());
+			DiscreteCurve result;
+
+			fit_curve_rec(0, size() - 1, 0, max_iterations, result_rec, is_set);
+
+			for (GRuint i(0); i < size(); i++) {
+				if (is_set[i]) {
+					result.push_back(result_rec[i]);
+				}
+			}
+
+			return result;
+		}
+
+
 
 
 		/** NOTE : allocates a new SplineCurve -> call 'delete' on the return value*/
@@ -141,6 +209,18 @@ namespace grapholon {
 			}
 			else {
 				switch (method) {
+				case START_AND_END: {
+
+					std::vector<PointTangent> points_and_tangents;
+
+					points_and_tangents.push_back(PointTangent(front(), back() - front()));
+
+					points_and_tangents.push_back(PointTangent(back(), back() - front()));
+
+					return new SplineCurve(points_and_tangents);
+
+					break;
+				}
 				case MIDDLE_POINT: {
 
 					GRuint middle_point_index = (GRuint)size() / 2;
@@ -155,6 +235,27 @@ namespace grapholon {
 					return new SplineCurve(points_and_tangents);
 
 					break;
+				}
+				case CURVE_FITTING: {
+					std::vector<PointTangent> points_and_tangents;
+					points_and_tangents.push_back(PointTangent(front(), (*this)[1] - front()));
+
+					DiscreteCurve reduced_curve(fit_curve(3));
+
+					points_and_tangents.push_back(PointTangent(reduced_curve[0], reduced_curve[1] - front()));
+
+					for (GRuint point_index(1); point_index < reduced_curve.size()-1; point_index++) {
+			
+						points_and_tangents.push_back(PointTangent(
+							reduced_curve[point_index],
+							(reduced_curve[point_index + 1] - reduced_curve[point_index - 1])*0.5f));
+					}
+
+
+					points_and_tangents.push_back(PointTangent(reduced_curve.back(), back()- reduced_curve[reduced_curve.size() - 1]));
+					
+					points_and_tangents.push_back(PointTangent(back(), back() - (*this)[size() - 2]));
+					return new SplineCurve(points_and_tangents);
 				}
 				case FULL_CURVE: {
 
@@ -172,55 +273,6 @@ namespace grapholon {
 
 					return new SplineCurve(points_and_tangents);
 
-					break;
-				}
-				case START_AND_END: {
-
-					std::vector<PointTangent> points_and_tangents;
-
-					points_and_tangents.push_back(PointTangent(front(), back() - front()));
-
-					points_and_tangents.push_back(PointTangent(back(), back() - front()));
-
-					return new SplineCurve(points_and_tangents);
-
-					break;
-				}
-				case LOCAL_CURVATURE_EXTREMA: {
-					//first, compute the angle at each point
-					std::vector<GRfloat> angles;
-
-					//we add a first element to have the angles and positions aligned
-					angles.push_back(0.f);
-
-					//note : we only care about the middle points so that's why we start from i=1
-					for (GRuint i(1); i < size() - 1; i++) {
-						//TODO : check if same result with cos_theta directly
-						GRfloat cos_theta
-							= ((*this)[i + 1].dot((*this)[i]))
-							/ ((*this)[i + 1].norm() * (*this)[i].norm());
-						angles.push_back(acos(cos_theta));
-						if (i > 1) {
-							angles[i] = fabs(angles[i] - angles[i - 1]);
-						}
-					}
-					//we copy the first and last angles so ensure that they won't be considered as extrema
-					angles[0] = 0.f;
-					angles.push_back(0.f);
-
-					std::vector<PointTangent> points_and_tangents;
-					points_and_tangents.push_back(PointTangent(front(), (*this)[1] - front()));
-
-					//then add the positions where there are local curvature extrema
-					for (GRuint i(1); i < size() - 1; i++) {
-						if ((angles[i - 1] < angles[i] && angles[i + 1] < angles[i])
-							|| (angles[i - 1] > angles[i] && angles[i + 1] > angles[i])) {
-							points_and_tangents.push_back(PointTangent((*this)[i], (*this)[i + 1] - (*this)[i - 1]));
-						}
-					}
-					points_and_tangents.push_back(PointTangent(back(), back() - (*this)[size() - 2]));
-
-					return new SplineCurve(points_and_tangents);
 					break;
 				}
 				default: {

@@ -799,22 +799,26 @@ void MovingAverageDiscreteCurve2() {
 	std::cout << "average 5 : " << std::endl << averaged_curve5.to_string() << std::endl;
 }
 
+void CurveFittinSpline() {
+	DiscreteCurve discrete_curve;
+
+	GRuint nb_points(100);
+
+	for (GRuint i(0); i < nb_points; i++) {
+		discrete_curve.push_back(Vector3f(i, sin(3*i /(GRfloat)nb_points), 0));
+	}
+
+	SplineCurve* spline = discrete_curve.to_spline_curve(DiscreteCurve::CURVE_FITTING);
+
+	std::cout << "base    : " << std::endl << discrete_curve.to_string() << std::endl;
+	std::cout << "spline  : " << std::endl << spline->to_string() << std::endl;
+
+}
+
 int main()
 {
-	Vector3f vx(1, 0, 0);
-	Vector3f vy(0, 1, 0);
-	Vector3f vz(0, 0, 1);
-
-	Vector3f vx2 = vx.move_from_axis(X_AXIS);
-	Vector3f vy2 = vy.move_from_axis(Y_AXIS);
-	Vector3f vz2 = vz.move_from_axis(Z_AXIS);
-
-	vx2.move_from_axis(X_AXIS);
-	vy2.move_from_axis(Y_AXIS);
-	vz2.move_from_axis(Z_AXIS);
-
-	std::cout << vx.to_string() << " " << vy.to_string() << " " << vz.to_string() << endl;
-	std::cout << vx2.to_string() << " " << vy2.to_string() << " " << vz2.to_string() << endl;
+	
+	CurveFittinSpline();
 
 	while (true);
     return 0;

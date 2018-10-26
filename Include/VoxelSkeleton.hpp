@@ -1539,7 +1539,7 @@ namespace grapholon {
 
 
 		SkeletalGraph* extract_skeletal_graph(
-			DiscreteCurve::CONVERSION_METHOD spline_extraction_method = DiscreteCurve::LOCAL_CURVATURE_EXTREMA,
+			DiscreteCurve::CONVERSION_METHOD spline_extraction_method = DiscreteCurve::CURVE_FITTING,
 			GRuint smoothing_window_width = 5) {
 			bool debug_log(false);
 
