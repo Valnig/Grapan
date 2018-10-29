@@ -5,6 +5,8 @@ lib_test/Build/
 Library/Build/
 Debug/
 Release/
+x64/
+grapholon/x64/
 
 #Boost folder
 Include/boost/
