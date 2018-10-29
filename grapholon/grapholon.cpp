@@ -820,7 +820,7 @@ void movingAverageSmoothTest() {
 
 	VoxelSkeleton skeleton(100, 100, 100);
 
-	skeleton.generate_random(100, 1234);
+	skeleton.generate_random(10000, 1234);
 
 	cout << "count before : " << skeleton.set_voxel_count() << endl;
 

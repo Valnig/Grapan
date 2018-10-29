@@ -1499,39 +1499,68 @@ namespace grapholon {
 			IndexVector to_set;
 			IndexVector to_unset;
 
-			VoxelSkeleton* smoothed_skeleton = new VoxelSkeleton(width_, height_, slice_);
+			std::vector<bool> in_to_check(voxel_count());
+
+			IndexVector to_check;
+
+			VoxelSkeleton* smoothed_skeleton = copy();
 
 			GRuint count(0);
 
-			for (GRuint x(0);x<width_; x++){
-				for (GRuint y(0); y < height_; y++) {
-					for (GRuint z(0); z < slice_; z++) {
-						GRfloat average(0.f);
-						GRfloat neighbors_count(0);
+			//first establish the list of voxels to treat. 
+			//That is, the border voxels and their neighborhood
+			//we also set all the current true voxels to save the trouble of checking the interior voxels
+			for (auto voxel_id : true_voxels_) {
+				GRuint x, y, z;
+				voxel_id_to_coordinates(voxel_id, x, y, z);
 
-						for (GRuint i(0); i <= max_distance*2; i++) {
-							for (GRuint j(0); j <= max_distance*2; j++) {
-								for (GRuint k(0); k <= max_distance*2; k++) {
-									average += voxel(x - max_distance + i, y - max_distance + j, z - max_distance + k).value_;
-									neighbors_count++;
+				IndexVector neighborhood;
+				extract_0_neighborhood_star(voxel_id, neighborhood, true);
+
+				if (neighborhood.size()) {
+					smoothed_skeleton->set_voxel(voxel_id);
+					for (GRuint i(0); i <= max_distance * 2; i++) {
+						for (GRuint j(0); j <= max_distance * 2; j++) {
+							for (GRuint k(0); k <= max_distance * 2; k++) {
+								GRuint neighbor_id = voxel_coordinates_to_id(x - max_distance + i, y - max_distance + j, z - max_distance + k);
+								if (!in_to_check[neighbor_id]) {
+									in_to_check[neighbor_id] = true;
+									to_check.push_back(neighbor_id);
 								}
 							}
 						}
-						count = neighbors_count;
-
-						average /= neighbors_count;
-
-						if (average >= threshold) {
-							to_set.push_back(voxel_coordinates_to_id(x,y,z));
-						}
-						else {
-							to_unset.push_back(voxel_coordinates_to_id(x, y, z));
-						}
-
 					}
 				}
 			}
-			std::cout << "neighbors count : " << count << std::endl;
+
+			//std::cout << "voxels to check : " << to_check.size() << std::endl;
+
+			for (auto voxel_id : to_check){
+				GRuint x, y, z;
+				voxel_id_to_coordinates(voxel_id, x, y, z);
+
+				GRfloat average(0.f);
+				GRfloat neighbors_count(0);
+
+				for (GRuint i(0); i <= max_distance*2; i++) {
+					for (GRuint j(0); j <= max_distance*2; j++) {
+						for (GRuint k(0); k <= max_distance*2; k++) {
+							average += voxel(x - max_distance + i, y - max_distance + j, z - max_distance + k).value_;
+							neighbors_count++;
+						}
+					}
+				}
+				count = neighbors_count;
+
+				average /= neighbors_count;
+
+				if (average >= threshold) {
+					to_set.push_back(voxel_id);
+				}
+				else {
+					to_unset.push_back(voxel_id);
+				}
+			}
 
 			for (auto to_set_id : to_set) {
 				smoothed_skeleton->set_voxel(to_set_id, true);
