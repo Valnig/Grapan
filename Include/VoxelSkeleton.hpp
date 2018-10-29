@@ -1493,6 +1493,59 @@ namespace grapholon {
 			return subdivided_skeleton;
 		}
 
+		/* Smoothind of the 0-connected max_distance neighborhood.
+		0.5 threshold means that half of the neighborhood must be set. i.e. each voxel will take the value of the majority over its neighbors**/
+		VoxelSkeleton* smooth_moving_average(GRuint max_distance, GRfloat threshold = 0.5f) {
+			IndexVector to_set;
+			IndexVector to_unset;
+
+			VoxelSkeleton* smoothed_skeleton = new VoxelSkeleton(width_, height_, slice_);
+
+			GRuint count(0);
+
+			for (GRuint x(0);x<width_; x++){
+				for (GRuint y(0); y < height_; y++) {
+					for (GRuint z(0); z < slice_; z++) {
+						GRfloat average(0.f);
+						GRfloat neighbors_count(0);
+
+						for (GRuint i(0); i <= max_distance*2; i++) {
+							for (GRuint j(0); j <= max_distance*2; j++) {
+								for (GRuint k(0); k <= max_distance*2; k++) {
+									average += voxel(x - max_distance + i, y - max_distance + j, z - max_distance + k).value_;
+									neighbors_count++;
+								}
+							}
+						}
+						count = neighbors_count;
+
+						average /= neighbors_count;
+
+						if (average >= threshold) {
+							to_set.push_back(voxel_coordinates_to_id(x,y,z));
+						}
+						else {
+							to_unset.push_back(voxel_coordinates_to_id(x, y, z));
+						}
+
+					}
+				}
+			}
+			std::cout << "neighbors count : " << count << std::endl;
+
+			for (auto to_set_id : to_set) {
+				smoothed_skeleton->set_voxel(to_set_id, true);
+			}
+
+			for (auto to_unset_id : to_unset) {
+				smoothed_skeleton->set_voxel(to_unset_id, false);
+			}
+
+
+			return smoothed_skeleton;
+		}
+
+
 		/** Returns a new skeleton of just the right size to contain the current skeleton */
 		VoxelSkeleton* fit_to_min_max() {
 
@@ -1872,20 +1925,6 @@ namespace grapholon {
 				iteration_count++;
 			}
 
-
-			/*VertexDescriptor from(boost::source(e, internal_graph_)), to(boost::target(e, internal_graph_));
-			Point3d from_point(internal_graph_[from].position), to_point(internal_graph_[to].position);
-
-			std::cout << iteration_count
-				<< " : (" << from_point.X << " " << from_point.Y << " " << from_point.Z
-				<< ") --> ";
-			for (auto middle_point : curve) {
-				std::cout << "(" << middle_point.X << " " << middle_point.Y << " " << middle_point.Z << ") --> ";
-			}
-
-			std::cout << "(" << to_point.X << " " << to_point.Y << " " << to_point.Z
-				<< ")" << std::endl;
-				*/
 
 			return graph;
 		}

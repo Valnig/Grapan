@@ -815,10 +815,32 @@ void CurveFittinSpline() {
 
 }
 
+
+void movingAverageSmoothTest() {
+
+	VoxelSkeleton skeleton(100, 100, 100);
+
+	skeleton.generate_random(100, 1234);
+
+	cout << "count before : " << skeleton.set_voxel_count() << endl;
+
+	VoxelSkeleton* smoothed1 = skeleton.smooth_moving_average(0, 0.01f);
+
+	cout << "count after smoothing with_window width = 1 : " << smoothed1->set_voxel_count() << endl;
+
+	VoxelSkeleton* smoothed2 = skeleton.smooth_moving_average(1, 0.5f);
+
+	cout << "count after smoothing with_window width = 1, thresh = 0.5 : " << smoothed2->set_voxel_count() << endl;
+
+	VoxelSkeleton* smoothed3 = skeleton.smooth_moving_average(3, 0.1f);
+
+	cout << "count after smoothing with_window width = 5, thresh = 0.5 : " << smoothed3->set_voxel_count() << endl;
+}
+
 int main()
 {
 	
-	CurveFittinSpline();
+	movingAverageSmoothTest();
 
 	while (true);
     return 0;
