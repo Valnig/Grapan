@@ -1540,7 +1540,8 @@ namespace grapholon {
 
 		SkeletalGraph* extract_skeletal_graph(
 			DiscreteCurve::CONVERSION_METHOD spline_extraction_method = DiscreteCurve::CURVE_FITTING,
-			GRuint smoothing_window_width = 5) {
+			GRuint smoothing_window_width = 5,
+			GRfloat curve_fitting_max_error = 0.1f) {
 			bool debug_log(false);
 
 			typedef enum{ISOLATED, TERMINAL, BRANCH, JUNCTION, UNCLASSIFIED} VOXEL_CLASS;
@@ -1799,7 +1800,7 @@ namespace grapholon {
 
 									discrete_edge_curve.smooth_moving_average(smoothing_window_width);
 
-									EdgeProperties edge_properties({ *(discrete_edge_curve.to_spline_curve(spline_extraction_method)) });
+									EdgeProperties edge_properties({ *(discrete_edge_curve.to_spline_curve(spline_extraction_method, &curve_fitting_max_error)) });
 
 									graph->add_edge(vertices[start_id], vertices[current_id], edge_properties);
 
@@ -1888,6 +1889,9 @@ namespace grapholon {
 
 			return graph;
 		}
+
+
+
 
 		/***********************************************************************************************/
 		/************************************************************************ SKELETON GENERATORS **/

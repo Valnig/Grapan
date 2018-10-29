@@ -112,13 +112,20 @@ namespace grapholon {
 	private:
 
 	public:
+
+		typedef enum { START_AND_END, MIDDLE_POINT, CURVE_FITTING, FULL_CURVE } CONVERSION_METHOD;
+
+#define MAX_CURVE_FITTING_ITERATIONS 10
+#define DEFAULT_MAX_ERROR 0.1f
+
 		DiscreteCurve(std::vector<Vector3f> points) : std::vector<Vector3f>(points) {}
 
 		DiscreteCurve(GRuint size) : std::vector<Vector3f>((size_t)size) {}
 
+		DiscreteCurve(size_t size) : std::vector<Vector3f>(size) {}
+
 		DiscreteCurve() {}
 
-		typedef enum {START_AND_END, MIDDLE_POINT, CURVE_FITTING, FULL_CURVE} CONVERSION_METHOD;
 
 		GRuint nearest_point_index(GRuint start, GRuint end, Vector3f point) {
 			if (start > end
@@ -138,42 +145,65 @@ namespace grapholon {
 			return min_index;
 		}
 
+		GRuint furthest_point_to_line_index(GRuint start, GRuint end, Vector3f from, Vector3f to, GRfloat& max_distance) const {
+			GRuint max_index(0);
+			max_distance = -std::numeric_limits<GRfloat>::max();
+			for (GRuint i(start); i <= end; i++) {
+				GRfloat distance((*this)[i].distance_to_line(from, to));
+				if (distance > max_distance) {
+					max_distance = distance;
+					max_index = i;
+				}
+			}
+			return max_index;
+		}
+
+
+
 		void fit_curve_rec(GRuint start,
 			GRuint end,
 			GRuint current_iteration,
-			GRuint max_iterations,
+			GRfloat max_error,
 			DiscreteCurve& result,
 			std::vector<bool>& is_set) {
 			if (start <= end
 				&& start < size()
 				&& end < size()
-				&& current_iteration <= max_iterations) {
-				/*std::cout << "current iteration : " << current_iteration << std::endl;
+				&& current_iteration <= MAX_CURVE_FITTING_ITERATIONS) {
+				std::cout << "current iteration : " << current_iteration << std::endl;
 				std::cout << " from " << start << " to " << end << std::endl;
-				*/
-				Vector3f middle_point(((*this)[start] + (*this)[end])*0.5f);
-				GRuint nearest_index(nearest_point_index(start, end, middle_point));
+				
 
-				/*
-				std::cout << "middle point : " << middle_point.to_string() << std::endl;
-				std::cout<< "nearest_index : " << nearest_index << std::endl;
-				*/
-				is_set[nearest_index] = true;
-				result[nearest_index] = (*this)[nearest_index];
+				GRfloat error;
 
-				fit_curve_rec(start, nearest_index, current_iteration + 1, max_iterations, result, is_set);
-				fit_curve_rec(nearest_index, end, current_iteration + 1, max_iterations, result, is_set);
+				GRuint furthest_point_index(furthest_point_to_line_index(start, end, (*this)[start], (*this)[end], error));
+
+				
+				std::cout<< "furthest_point_index : " << furthest_point_index << std::endl;
+				std::cout << "error : " << error << std::endl;
+				
+				is_set[furthest_point_index] = true;
+				result[furthest_point_index] = (*this)[furthest_point_index];
+
+				if (error > max_error) {
+					fit_curve_rec(start, furthest_point_index, current_iteration + 1, max_error, result, is_set);
+					fit_curve_rec(furthest_point_index, end, current_iteration + 1, max_error, result, is_set);
+				}
 			}
 		}
 
-		DiscreteCurve fit_curve(
-			GRuint max_iterations) {
+		DiscreteCurve fit_curve(GRfloat max_error = DEFAULT_MAX_ERROR) {
+
+			//to avoid 0.f max error
+			if (max_error < FLT_EPSILON) {
+				max_error = FLT_EPSILON;
+			}
 
 			DiscreteCurve result_rec(size());
 			std::vector<bool> is_set(size());
 			DiscreteCurve result;
 
-			fit_curve_rec(0, size() - 1, 0, max_iterations, result_rec, is_set);
+			fit_curve_rec(0, (GRuint)size() - 1, 0, max_error, result_rec, is_set);
 
 			for (GRuint i(0); i < size(); i++) {
 				if (is_set[i]) {
@@ -188,7 +218,7 @@ namespace grapholon {
 
 
 		/** NOTE : allocates a new SplineCurve -> call 'delete' on the return value*/
-		SplineCurve* to_spline_curve(CONVERSION_METHOD method) {
+		SplineCurve* to_spline_curve(CONVERSION_METHOD method, void* extra_parameter = nullptr) {
 			if (size() < 2) {
 				throw std::invalid_argument("Cannot convert DiscreteCurve with less than two points to SplineCurve. Returning nullptr");
 			}
@@ -240,7 +270,12 @@ namespace grapholon {
 					std::vector<PointTangent> points_and_tangents;
 					points_and_tangents.push_back(PointTangent(front(), (*this)[1] - front()));
 
-					DiscreteCurve reduced_curve(fit_curve(3));
+					GRfloat default_error;
+					if (extra_parameter == nullptr) {
+						extra_parameter = &default_error;
+					}
+
+					DiscreteCurve reduced_curve(fit_curve(*((GRfloat*)extra_parameter)));
 
 					points_and_tangents.push_back(PointTangent(reduced_curve[0], reduced_curve[1] - front()));
 
@@ -276,7 +311,7 @@ namespace grapholon {
 					break;
 				}
 				default: {
-					return to_spline_curve(MIDDLE_POINT);
+					return to_spline_curve(START_AND_END);
 				}
 				}
 			}

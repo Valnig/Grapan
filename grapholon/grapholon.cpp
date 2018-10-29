@@ -23,7 +23,8 @@
 // grapholon.cpp : Defines the entry point for the console application.
 //
 
-#include "stdafx.h"
+//#include "stdafx.h"
+#include "pch.h"
 #include <iostream>
 #include <bitset>
 #include <ctime>
@@ -783,9 +784,9 @@ void MovingAverageDiscreteCurve2() {
 	GRuint length(10);
 
 	for (GRuint i(0); i < length; i++) {
-		discrete_curve.push_back(Vector3f(i, 0, 0));
+		discrete_curve.push_back(Vector3f((GRfloat)i, 0.f, 0.f));
 	}
-	discrete_curve[length / 2] = Vector3f(length / 2, 1, 0);
+	discrete_curve[length / 2] = Vector3f((GRfloat)length / 2, 1.f, 0.f);
 
 	averaged_curve3 = discrete_curve;
 	averaged_curve5 = discrete_curve;
@@ -804,7 +805,7 @@ void CurveFittinSpline() {
 	GRuint nb_points(100);
 
 	for (GRuint i(0); i < nb_points; i++) {
-		discrete_curve.push_back(Vector3f(i, sin(3*i /(GRfloat)nb_points), 0));
+		discrete_curve.push_back(Vector3f((GRfloat)i, sin(3*i /(GRfloat)nb_points), 0));
 	}
 
 	SplineCurve* spline = discrete_curve.to_spline_curve(DiscreteCurve::CURVE_FITTING);

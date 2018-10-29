@@ -34,23 +34,13 @@ namespace grapholon {
 	protected:
 		_TYPE data_[_SIZE];
 
+		int data2;
+
 	public:
 
 		Vector() {
 			std::memset(data_, 0, _SIZE * sizeof(_TYPE));
 		}
-
-
-
-		//math operators
-
-
-		/*Vector<_TYPE, _SIZE> operator+(const Vector<_TYPE, _SIZE>& other) {
-
-			for (GRuint i(0); i < _SIZE; i++) {
-
-			}
-		}*/
 
 
 		//string stuff
@@ -65,14 +55,15 @@ namespace grapholon {
 		}
 	};
 
+
 	template<typename _TYPE>
-	class Vector3 : public Vector<_TYPE, 3> {
+	class Vector3 : public Vector<_TYPE, 3>{
 	private:
 		///<this allows for more compact representation
 		typedef Vector3<_TYPE> _Vector3;
 	public:
 
-		Vector3() : Vector() {}
+		Vector3() : Vector<_TYPE, 3>() {}
 
 		Vector3(_TYPE x, _TYPE y, _TYPE z) {
 			X = x;
@@ -89,9 +80,10 @@ namespace grapholon {
 			Z = other.Z;
 		}
 
-		_TYPE& X = data_[0];
-		_TYPE& Y = data_[1];
-		_TYPE& Z = data_[2];
+
+		_TYPE& X = Vector<_TYPE, 3>::data_[0];
+		_TYPE& Y = Vector<_TYPE, 3>::data_[1];
+		_TYPE& Z = Vector<_TYPE, 3>::data_[2];
 
 
 		//math operators
