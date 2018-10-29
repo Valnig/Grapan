@@ -1314,7 +1314,6 @@ namespace grapholon {
 				voxel_count_at_iteration_start = (GRuint)true_voxels_.size();
 
 				IF_DEBUG_DO(std::cout << "	running iteration " << iteration_count << std::endl;)
-
 				//critical cliques holder
 				std::vector<std::vector<std::vector<GRuint>>> critical_cliques;
 
@@ -1496,6 +1495,9 @@ namespace grapholon {
 		/* Smoothind of the 0-connected max_distance neighborhood.
 		0.5 threshold means that half of the neighborhood must be set. i.e. each voxel will take the value of the majority over its neighbors**/
 		VoxelSkeleton* smooth_moving_average(GRuint max_distance, GRfloat threshold = 0.5f) {
+			if (max_distance > 2) {
+				throw std::invalid_argument("You are trying to smooth over a distance greater than 2. That means smoothing over at least 125 voxels. This is not allowed");
+			}
 			IndexVector to_set;
 			IndexVector to_unset;
 
@@ -1523,7 +1525,8 @@ namespace grapholon {
 						for (GRuint j(0); j <= max_distance * 2; j++) {
 							for (GRuint k(0); k <= max_distance * 2; k++) {
 								GRuint neighbor_id = voxel_coordinates_to_id(x - max_distance + i, y - max_distance + j, z - max_distance + k);
-								if (!in_to_check[neighbor_id]) {
+
+								if (neighbor_id < voxel_count() && !in_to_check[neighbor_id]) {
 									in_to_check[neighbor_id] = true;
 									to_check.push_back(neighbor_id);
 								}
@@ -1717,9 +1720,9 @@ namespace grapholon {
 					back_up_terminal_id = voxel_id;
 
 					Vector3f vertex_point;
-					vertex_point.X = (GRfloat)x;
-					vertex_point.Y = (GRfloat)y;
-					vertex_point.Z = (GRfloat)z;
+					vertex_point.X() = (GRfloat)x;
+					vertex_point.Y() = (GRfloat)y;
+					vertex_point.Z() = (GRfloat)z;
 
 					VertexProperties vertex_properties;
 					vertex_properties.position = vertex_point;
@@ -1758,9 +1761,9 @@ namespace grapholon {
 					voxel_id_to_coordinates(first_voxel_id, x, y, z);
 
 					Vector3f vertex_point;
-					vertex_point.X = (GRfloat)x;
-					vertex_point.Y = (GRfloat)y;
-					vertex_point.Z = (GRfloat)z;
+					vertex_point.X() = (GRfloat)x;
+					vertex_point.Y() = (GRfloat)y;
+					vertex_point.Z() = (GRfloat)z;
 
 					VertexProperties vertex_properties;
 					vertex_properties.position = vertex_point;
@@ -2163,10 +2166,11 @@ namespace grapholon {
 
 					current_voxel_id = true_voxels_[rand() % true_voxels_.size()];
 					//std::cout << "branching at iteration " << i << std::endl;
-					//std::cout << "voxel id : " << current_voxel_id << std::endl;
+				//	std::cout << "voxel id : " << current_voxel_id << std::endl;
 				}
 			}
 
+			//std::cout << "done generating skeleton. Now thickening it" << std::endl;
 
 			//phase 2: thicken skeleton
 			for (GRuint i((GRuint)true_voxels_.size()); i < nb_voxels; i++) {
@@ -2175,37 +2179,25 @@ namespace grapholon {
 				GRint next_voxel_id = -1;
 				GRuint random_voxel_index = rand() % true_voxels_.size();
 				GRuint random_voxel_id = true_voxels_[random_voxel_index];
-				/*std::cout << "random index : " << random_voxel_index << std::endl;
-				std::cout << "true voxels size : " << true_voxels_.size() << std::endl;
-				std::cout << "random voxels id : " << random_voxel_id << std::endl;*/
+				//std::cout << "random index : " << random_voxel_index << std::endl;
+				//std::cout << "true voxels size : " << true_voxels_.size() << std::endl;
+				//std::cout << "random voxels id : " << random_voxel_id << std::endl;
 
-				GRuint tried_face_count(0);
 
-				while (next_voxel_id < 0 || next_voxel_id >= (GRint)nb_voxels_ || voxels_[next_voxel_id].value_) {
-					random_voxel_index = rand() % true_voxels_.size();
-					random_voxel_id = true_voxels_[random_voxel_index];
+				GRuint face_index = rand() % 6;
 
-					GRuint face_index = rand() % 6;
-
-					switch (face_index) {
-					case 0: next_voxel_id = random_voxel_id + 1; break;//right
-					case 1: next_voxel_id = random_voxel_id - 1; break;//left
-					case 2: next_voxel_id = random_voxel_id + width_; break;//back
-					case 3: next_voxel_id = random_voxel_id - width_; break;//front
-					case 4: next_voxel_id = random_voxel_id + height_*width_; break;//top
-					case 5: next_voxel_id = random_voxel_id - height_*width_; break;//bottom
-					}
-
-					if (tried_face_count++ >= 6) {
-						random_voxel_id = true_voxels_[rand() % true_voxels_.size()];
-					}
+				switch (face_index) {
+				case 0: next_voxel_id = random_voxel_id + 1; break;//right
+				case 1: next_voxel_id = random_voxel_id - 1; break;//left
+				case 2: next_voxel_id = random_voxel_id + width_; break;//back
+				case 3: next_voxel_id = random_voxel_id - width_; break;//front
+				case 4: next_voxel_id = random_voxel_id + height_*width_; break;//top
+				case 5: next_voxel_id = random_voxel_id - height_*width_; break;//bottom
 				}
 
-				//std::cout << "set voxel : " << random_voxel_id << std::endl;
-				set_voxel(next_voxel_id);
-
+				set_voxel(next_voxel_id);				
+			//	std::cout << "set voxel : " << next_voxel_id << std::endl;
 			}
-
 		}
 
 	};

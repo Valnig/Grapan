@@ -816,31 +816,79 @@ void CurveFittinSpline() {
 }
 
 
-void movingAverageSmoothTest() {
+void movingAverageSmoothSkeletonTest() {
 
 	VoxelSkeleton skeleton(100, 100, 100);
 
-	skeleton.generate_random(10000, 1234);
+	skeleton.generate_random_skeleton_like(1000, 1234);
 
-	cout << "count before : " << skeleton.set_voxel_count() << endl;
+	VoxelSkeleton* subdivided1 = skeleton.subdivide(2);
+	VoxelSkeleton* subdivided2 = subdivided1->subdivide(2);
+	cout << "count before : " << subdivided2->set_voxel_count() << endl;
 
-	VoxelSkeleton* smoothed1 = skeleton.smooth_moving_average(0, 0.01f);
+	VoxelSkeleton* smoothed = subdivided2->smooth_moving_average(0, 0.01f);
+	cout << "count after smoothing with distance = 0 : " << smoothed->set_voxel_count() << endl;
+	
+	delete smoothed;
+	smoothed = subdivided2->smooth_moving_average(1, 0.8f);
+	cout << "count after smoothing  with distance = 1, thresh = 0.8 : " << smoothed->set_voxel_count() << endl;
 
-	cout << "count after smoothing with_window width = 1 : " << smoothed1->set_voxel_count() << endl;
+	delete smoothed;
+	smoothed = subdivided2->smooth_moving_average(1, 0.5f);
+	cout << "count after smoothing  with distance = 1, thresh = 0.5 : " << smoothed->set_voxel_count() << endl;
 
-	VoxelSkeleton* smoothed2 = skeleton.smooth_moving_average(1, 0.5f);
+	delete smoothed;
+	smoothed = subdivided2->smooth_moving_average(1, 0.1f);
+	cout << "count after smoothing  with distance = 1, thresh = 0.1 : " << smoothed->set_voxel_count() << endl;
 
-	cout << "count after smoothing with_window width = 1, thresh = 0.5 : " << smoothed2->set_voxel_count() << endl;
+	delete smoothed;
+	smoothed = subdivided2->smooth_moving_average(2, 0.8f);
+	cout << "count after smoothing  with distance = 2, thresh = 0.8 : " << smoothed->set_voxel_count() << endl;
 
-	VoxelSkeleton* smoothed3 = skeleton.smooth_moving_average(3, 0.1f);
+	delete smoothed;
+	smoothed = subdivided2->smooth_moving_average(2, 0.5f);
+	cout << "count after smoothing  with distance = 2, thresh = 0.5 : " << smoothed->set_voxel_count() << endl;
 
-	cout << "count after smoothing with_window width = 5, thresh = 0.5 : " << smoothed3->set_voxel_count() << endl;
+	delete smoothed;
+	smoothed = subdivided2->smooth_moving_average(2, 0.1f);
+	cout << "count after smoothing  with distance = 2, thresh = 0.1 : " << smoothed->set_voxel_count() << endl;
+
+	delete subdivided1;
+	delete subdivided2;
+	delete smoothed;
 }
+
+
+void graphExtractionOnSkeletonLikeAndCurveFitting() {
+	VoxelSkeleton* base_skeleton = new VoxelSkeleton(100, 100, 100);
+	base_skeleton->generate_random_skeleton_like(1000, 12134);
+	std::cout << "generated voxel count : " << base_skeleton->set_voxel_count() << std::endl;
+
+	VoxelSkeleton* fit_skeleton = base_skeleton->fit_to_min_max();
+	std::cout << "fit skeleton dimensions : " << fit_skeleton->width() << " " << fit_skeleton->height() << " " << fit_skeleton->slice() << std::endl;
+
+	VoxelSkeleton* subdivided = fit_skeleton->subdivide(2);
+	cout << "subdivided voxel count : " << subdivided->set_voxel_count() << std::endl;
+
+	VoxelSkeleton* smoothed = subdivided->smooth_moving_average(1, 0.5f);
+	cout << "smoothed voxel count : " << smoothed->set_voxel_count() << endl;
+
+	smoothed->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::OneIsthmusSkel);
+	cout << "skeleton voxel count : " << smoothed->set_voxel_count() << endl;
+
+	SkeletalGraph* graph = smoothed->extract_skeletal_graph(DiscreteCurve::CURVE_FITTING, 5, 1.f);
+	cout << "resulting graph : " << graph->vertex_count()<<" vertices, "<<graph->edge_count()<<" edges and "<<graph->edge_spline_count()<<" splines" << endl;
+	cout << graph->to_string() << endl;
+
+	delete base_skeleton;
+	delete fit_skeleton;
+}
+
 
 int main()
 {
 	
-	movingAverageSmoothTest();
+	graphExtractionOnSkeletonLikeAndCurveFitting();
 
 	while (true);
     return 0;

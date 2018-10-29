@@ -63,50 +63,71 @@ namespace grapholon {
 		typedef Vector3<_TYPE> _Vector3;
 	public:
 
+
+
 		Vector3() : Vector<_TYPE, 3>() {}
 
 		Vector3(_TYPE x, _TYPE y, _TYPE z) {
-			X = x;
-			Y = y;
-			Z = z;
+			X() = x;
+			Y() = y;
+			Z() = z;
 		}
 
 		Vector3(_TYPE value) : Vector3(value, value, value) {}
 
-		/**Copy constructor to avoid the side effect of copying the member reference X,Y & Z*/
+		/**Copy constructor to avoid the side effect of copying the member reference X(),Y()& Z()*/
 		Vector3(const Vector3& other) {
-			X = other.X;
-			Y = other.Y;
-			Z = other.Z;
+			X() = other.X();
+			Y()= other.Y();
+			Z() = other.Z();
 		}
 
 
-		_TYPE& X = Vector<_TYPE, 3>::data_[0];
-		_TYPE& Y = Vector<_TYPE, 3>::data_[1];
-		_TYPE& Z = Vector<_TYPE, 3>::data_[2];
+		_TYPE& X() {
+			return Vector<_TYPE, 3>::data_[0];
+		}
 
+		_TYPE& Y() {
+			return Vector<_TYPE, 3>::data_[1];
+		}
+
+		_TYPE& Z() {
+			return Vector<_TYPE, 3>::data_[2];
+		}
+
+		const _TYPE& X() const {
+			return Vector<_TYPE, 3>::data_[0];
+		}
+
+		const _TYPE& Y() const {
+			return Vector<_TYPE, 3>::data_[1];
+		}
+
+		const _TYPE& Z() const {
+			return Vector<_TYPE, 3>::data_[2];
+		}
 
 		//math operators
 		void operator=(const _Vector3& other) {
-			X = other.X;
-			Y = other.Y;
-			Z = other.Z;
+			X() = other.X();
+			Y() = other.Y();
+			Z() = other.Z();
 		}
 
 		_Vector3 operator+(const _Vector3& other) const {
-			return _Vector3(X + other.X, Y + other.Y, Z + other.Z);
+			return _Vector3(X() + other.X(), Y()+ other.Y(), Z() + other.Z());
 		}
 
 		_Vector3 operator-(const _Vector3& other) const {
-			return _Vector3(X - other.X, Y - other.Y, Z - other.Z);
+			return _Vector3(X() - other.X(), Y()- other.Y(), Z() - other.Z());
 		}
 
 		_Vector3 operator*(const _TYPE& scalar) const {
-			return _Vector3(X*scalar, Y*scalar, Z*scalar);
+			return _Vector3(X()*scalar, Y()*scalar, Z()*scalar);
 		}
 
 		_Vector3 operator/(const _TYPE& scalar) const {
-			return _Vector3(X / scalar, Y / scalar, Z / scalar);
+			return _Vector3(X() / scalar, Y()/ scalar, Z() / scalar);
 		}
 
 		_Vector3 operator+=(const _Vector3& other) {
@@ -130,14 +151,14 @@ namespace grapholon {
 		}
 
 		_TYPE dot(const _Vector3& other) const {
-			return X*other.X + Y*other.Y + Z*other.Z;
+			return X()*other.X() + Y()*other.Y()+ Z()*other.Z();
 		}
 
 		_Vector3 cross(const _Vector3& other) const {
 			return _Vector3(
-				Y*other.Z - Z*other.Y,
-				Z*other.X - X*other.Z,
-				X*other.Y - Y*other.X);
+				Y()*other.Z() - Z()*other.Y(),
+				Z()*other.X() - X()*other.Z(),
+				X()*other.Y()- Y()*other.X());
 		}
 
 		GRfloat norm() const {

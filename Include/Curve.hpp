@@ -170,8 +170,8 @@ namespace grapholon {
 				&& start < size()
 				&& end < size()
 				&& current_iteration <= MAX_CURVE_FITTING_ITERATIONS) {
-				std::cout << "current iteration : " << current_iteration << std::endl;
-				std::cout << " from " << start << " to " << end << std::endl;
+				//std::cout << "current iteration : " << current_iteration << std::endl;
+				//std::cout << " from " << start << " to " << end << std::endl;
 				
 
 				GRfloat error;
@@ -179,8 +179,8 @@ namespace grapholon {
 				GRuint furthest_point_index(furthest_point_to_line_index(start, end, (*this)[start], (*this)[end], error));
 
 				
-				std::cout<< "furthest_point_index : " << furthest_point_index << std::endl;
-				std::cout << "error : " << error << std::endl;
+				//std::cout<< "furthest_point_index : " << furthest_point_index << std::endl;
+				//std::cout << "error : " << error << std::endl;
 				
 				is_set[furthest_point_index] = true;
 				result[furthest_point_index] = (*this)[furthest_point_index];
@@ -223,7 +223,6 @@ namespace grapholon {
 				throw std::invalid_argument("Cannot convert DiscreteCurve with less than two points to SplineCurve. Returning nullptr");
 			}
 			else if (size() == 2) {
-				std::cout << "size is 2" << std::endl;
 				Vector3f tangent = back() - front();
 				return new SplineCurve(PointTangent(front(), tangent), PointTangent(back(), tangent));
 			}
@@ -277,7 +276,10 @@ namespace grapholon {
 
 					DiscreteCurve reduced_curve(fit_curve(*((GRfloat*)extra_parameter)));
 
-					points_and_tangents.push_back(PointTangent(reduced_curve[0], reduced_curve[1] - front()));
+					if (reduced_curve.size() > 1) {
+						points_and_tangents.push_back(PointTangent(reduced_curve[0], reduced_curve[1] - front()));
+					}
+
 
 					for (GRuint point_index(1); point_index < reduced_curve.size()-1; point_index++) {
 			
@@ -323,11 +325,11 @@ namespace grapholon {
 				smoothed.push_back(front());
 
 				for (GRuint i(1); i < size() - 1; i++) {
-					std::cout << "smoothing element " << i << std::endl;
+					//std::cout << "smoothing element " << i << std::endl;
 					GRuint start((GRuint)(i < window_width / 2 ? 0 : i - window_width / 2));
 					GRuint end((GRuint)((i + window_width / 2) >= size() ? size() - 1 : i + window_width / 2));
 
-					std::cout << "from " << start << " to " << end << std::endl;
+					//std::cout << "from " << start << " to " << end << std::endl;
 					Vector3f local_average(0.f);
 					for (GRuint j(start); j <= end; j++) {
 						local_average += (*this)[j];
