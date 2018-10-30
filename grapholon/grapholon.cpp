@@ -884,14 +884,64 @@ void graphExtractionOnSkeletonLikeAndCurveFitting() {
 
 	delete base_skeleton;
 	delete fit_skeleton;
+	delete subdivided;
+	delete smoothed;
+	delete graph;
+}
+
+
+void modifiyGraphVertexPositions() {
+	
+	SkeletalGraph graph;
+
+	GRuint window_width(1);
+
+	Vector3f u1 = Vector3f(0, 0, 0);
+	Vector3f u2 = Vector3f(6, 0, 0);
+	Vector3f u3 = Vector3f(0, 6, 0);
+	Vector3f u4 = Vector3f(6, 6, 0);
+
+	Vector3f center = Vector3f(3, 3, 0);
+
+	VertexDescriptor v1 = graph.add_vertex({u1});
+	DiscreteCurve c1({ u1, Vector3f(1,1,0), Vector3f(2,2,0), center });
+	EdgeProperties e1({ *c1.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+
+	VertexDescriptor v2 = graph.add_vertex({ u2 });
+	DiscreteCurve c2({ center, Vector3f(4,2,0), Vector3f(5,1,0), u2 });
+	EdgeProperties e2({ *c2.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+
+	VertexDescriptor v3 = graph.add_vertex({ u3 });
+	DiscreteCurve c3({ u3, Vector3f(1,5,0), Vector3f(2,4,0), center });
+	EdgeProperties e3({ *c3.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+
+	VertexDescriptor v4 = graph.add_vertex({ u4 });
+	DiscreteCurve c4({ center, Vector3f(4,4,0), Vector3f(5,5,0), u4 });
+	EdgeProperties e4({ *c4.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+
+	//center
+	VertexDescriptor v_center = graph.add_vertex({ center});
+
+	graph.add_edge(v1, v_center, e1);
+	graph.add_edge(v_center, v2, e2);
+	graph.add_edge(v3, v_center, e3);
+	graph.add_edge(v_center, v4, e4);
+
+	std::cout << "graph at first : " << graph.to_string() << endl;
+
+	graph.update_vertex_position(v_center, { Vector3f(3,0,0) });
+
+
+	std::cout << "graph after moving center : " << graph.to_string() << endl;
+
+
 }
 
 
 int main()
 {
-	CurveFittinSpline();
-
-	//graphExtractionOnSkeletonLikeAndCurveFitting();
+	
+	modifiyGraphVertexPositions(); 
 
 	while (true);
     return 0;

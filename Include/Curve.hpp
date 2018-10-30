@@ -67,6 +67,49 @@ namespace grapholon {
 			}
 		}
 
+
+
+		//TODO : better version of both updates
+		void update_source(Vector3f source) {
+			std::cout << "updating source to " << source.to_string() << std::endl;
+			front().first = source;
+
+			//compute the new points
+			for (GRuint i(1); i < size() - 1; i++) {
+				(*this)[i].first = ((*this)[i].first + (*this)[i - 1].first)*0.5f;
+			}
+			
+			//and update the tangents
+			front().second = (*this)[1].first - front().first;
+
+			for (GRuint i(1); i < size() - 1; i++) {
+				(*this)[i].second = (*this)[i+1].first - (*this)[i-1].first;
+			}
+
+			back().second = back().first - (*this)[size()-2].first;
+		}
+
+		void update_target(Vector3f target) {
+			std::cout << "updating target to " << target.to_string() << std::endl;
+
+			back().first = target;
+
+			//compute the new points
+			for (GRuint i(size()-2); i > 0; i--) {
+				(*this)[i].first = ((*this)[i+1].first + (*this)[i].first)*0.5f;
+			}
+
+			//and update the tangents
+			front().second = (*this)[1].first - front().first;
+
+			for (GRuint i(1); i < size() - 1; i++) {
+				(*this)[i].second = (*this)[i + 1].first - (*this)[i - 1].first;
+			}
+
+			back().second = back().first - (*this)[size() - 2].first;
+		}
+
+
 		void add_middle_point(PointTangent middle_point) {
 			PointTangent end = back();
 			pop_back();
@@ -113,7 +156,7 @@ namespace grapholon {
 
 	public:
 
-		typedef enum { START_AND_END, MIDDLE_POINT, CURVE_FITTING, FULL_CURVE } CONVERSION_METHOD;
+		typedef enum { START_AND_END, CURVE_FITTING, FULL_CURVE, MIDDLE_POINT } CONVERSION_METHOD;
 
 #define MAX_CURVE_FITTING_ITERATIONS 10
 #define DEFAULT_MAX_ERROR 0.1f

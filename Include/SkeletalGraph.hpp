@@ -42,14 +42,16 @@ namespace grapholon {
 	/** Boost Graph Library stuff*/
 
 	typedef boost::adjacency_list<
-		boost::listS, boost::listS, boost::undirectedS,
+		boost::listS, boost::listS, boost::bidirectionalS,
 		VertexProperties, EdgeProperties>
 		InternalBoostGraph;
 
 	typedef InternalBoostGraph::vertex_descriptor VertexDescriptor;
 	typedef InternalBoostGraph::edge_descriptor EdgeDescriptor;
 	typedef InternalBoostGraph::vertex_iterator VertexIterator;
-	typedef boost::graph_traits<InternalBoostGraph>::edge_iterator EdgeIterator;
+	typedef InternalBoostGraph::edge_iterator EdgeIterator;
+	typedef InternalBoostGraph::in_edge_iterator InEdgeIterator;
+	typedef InternalBoostGraph::out_edge_iterator OutEdgeIterator;
 
 	class SkeletalGraph {
 	private:
@@ -95,12 +97,28 @@ namespace grapholon {
 			boost::remove_vertex(vertex, internal_graph_);
 		}
 
-		VertexProperties& get_vertex(VertexDescriptor vertex) {
+		const VertexProperties& get_vertex(VertexDescriptor vertex) const {
 			return internal_graph_[vertex];
 		}
 
 		std::pair<VertexIterator, VertexIterator> vertices() {
 			return boost::vertices(internal_graph_);
+		}
+
+		void update_vertex_position(VertexDescriptor vertex, Vector3f new_position) {
+
+			internal_graph_[vertex] = { new_position };
+
+			std::pair<InEdgeIterator, InEdgeIterator> in_edges = boost::in_edges(vertex, internal_graph_);
+			std::pair<OutEdgeIterator, OutEdgeIterator> out_edges = boost::out_edges(vertex, internal_graph_);
+
+			//in theory we only need to iterate through in_edges since it's an undirected graph
+			for (InEdgeIterator e_it(in_edges.first); e_it != in_edges.second; e_it++) {
+				internal_graph_[*e_it].curve.update_target(new_position);
+			}
+			for (OutEdgeIterator e_it(out_edges.first); e_it != out_edges.second; e_it++) {
+				internal_graph_[*e_it].curve.update_source(new_position);
+			}
 		}
 
 
@@ -125,14 +143,16 @@ namespace grapholon {
 			return boost::edges(internal_graph_);
 		}
 
-		VertexProperties& get_edge_source(EdgeDescriptor edge) {
+		const VertexProperties& get_edge_source(EdgeDescriptor edge) const {
 			return internal_graph_[boost::source(edge, internal_graph_)];
 		}
 
-		VertexProperties& get_edge_target(EdgeDescriptor edge) {
+		const VertexProperties& get_edge_target(EdgeDescriptor edge) const {
 			return internal_graph_[boost::target(edge, internal_graph_)];
 		}
 
+
+		
 		/** Print stuff */
 
 		std::string to_string() {
