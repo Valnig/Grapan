@@ -799,6 +799,8 @@ void MovingAverageDiscreteCurve2() {
 	std::cout << "average 5 : " << std::endl << averaged_curve5.to_string() << std::endl;
 }
 
+
+
 void CurveFittinSpline() {
 	DiscreteCurve discrete_curve;
 
@@ -887,8 +889,9 @@ void graphExtractionOnSkeletonLikeAndCurveFitting() {
 
 int main()
 {
-	
-	graphExtractionOnSkeletonLikeAndCurveFitting();
+	CurveFittinSpline();
+
+	//graphExtractionOnSkeletonLikeAndCurveFitting();
 
 	while (true);
     return 0;

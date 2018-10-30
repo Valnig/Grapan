@@ -164,7 +164,7 @@ namespace grapholon {
 			GRuint end,
 			GRuint current_iteration,
 			GRfloat max_error,
-			DiscreteCurve& result,
+			std::vector<PointTangent>& result,
 			std::vector<bool>& is_set) {
 			if (start <= end
 				&& start < size()
@@ -181,33 +181,51 @@ namespace grapholon {
 				
 				//std::cout<< "furthest_point_index : " << furthest_point_index << std::endl;
 				//std::cout << "error : " << error << std::endl;
-				
-				is_set[furthest_point_index] = true;
-				result[furthest_point_index] = (*this)[furthest_point_index];
+				if (!is_set[furthest_point_index]) {
+					is_set[furthest_point_index] = true;
 
-				if (error > max_error) {
-					fit_curve_rec(start, furthest_point_index, current_iteration + 1, max_error, result, is_set);
-					fit_curve_rec(furthest_point_index, end, current_iteration + 1, max_error, result, is_set);
+					Vector3f point = (*this)[furthest_point_index];
+					//std::cout << "point : " << point.to_string() << std::endl;
+
+					Vector3f local_tangent;
+					if (furthest_point_index > 0 && furthest_point_index < size() - 1) {
+						local_tangent = (*this)[furthest_point_index + 1] - (*this)[furthest_point_index - 1];
+					}
+					//std::cout << "tangent : " << local_tangent.to_string() << std::endl;
+
+					result[furthest_point_index] = PointTangent(point, local_tangent);
+
+					if (error > max_error) {
+						fit_curve_rec(start, furthest_point_index, current_iteration + 1, max_error, result, is_set);
+						fit_curve_rec(furthest_point_index, end, current_iteration + 1, max_error, result, is_set);
+					}
 				}
 			}
 		}
 
-		DiscreteCurve fit_curve(GRfloat max_error = DEFAULT_MAX_ERROR) {
+		std::vector<PointTangent> fit_curve(GRfloat max_error = DEFAULT_MAX_ERROR) {
 
 			//to avoid 0.f max error
 			if (max_error < FLT_EPSILON) {
 				max_error = FLT_EPSILON;
 			}
 
-			DiscreteCurve result_rec(size());
+			std::vector<PointTangent> result_rec(size());
 			std::vector<bool> is_set(size());
-			DiscreteCurve result;
+			std::vector<PointTangent> result;
 
 			fit_curve_rec(0, (GRuint)size() - 1, 0, max_error, result_rec, is_set);
 
+
 			for (GRuint i(0); i < size(); i++) {
 				if (is_set[i]) {
+					
 					result.push_back(result_rec[i]);
+					//here we set the norm as the one from the two new points.
+					if (i > 0 && i < size() - 1) {
+						result_rec[i].second.normalize();
+						result_rec[i].second *= (result_rec[i + 1].first - result_rec[i - 1].first).norm();
+					}
 				}
 			}
 
@@ -274,9 +292,9 @@ namespace grapholon {
 						extra_parameter = &default_error;
 					}
 
-					DiscreteCurve reduced_curve(fit_curve(*((GRfloat*)extra_parameter)));
+					std::vector<PointTangent> reduced_curve(fit_curve(*((GRfloat*)extra_parameter)));
 
-					if (reduced_curve.size() > 1) {
+					/*if (reduced_curve.size() > 1) {
 						points_and_tangents.push_back(PointTangent(reduced_curve[0], reduced_curve[1] - front()));
 					}
 
@@ -290,6 +308,11 @@ namespace grapholon {
 
 
 					points_and_tangents.push_back(PointTangent(reduced_curve.back(), back()- reduced_curve[reduced_curve.size() - 1]));
+					*/
+
+					for (auto point_tangent : reduced_curve) {
+						points_and_tangents.push_back(point_tangent);
+					}
 					
 					points_and_tangents.push_back(PointTangent(back(), back() - (*this)[size() - 2]));
 					return new SplineCurve(points_and_tangents);

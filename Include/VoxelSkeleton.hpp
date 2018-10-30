@@ -45,6 +45,12 @@ namespace grapholon {
 
 #define THINNING_ITERATION_LIMIT 10000 ///< Hard limit to avoid infinite loop in the thinning algo
 
+#define MIN_SMOOTHING_THRESHOLD 0.1f
+#define MAX_SMOOTHING_THRESHOLD 1.f
+#define MIN_SMOOTHING_DISTANCE 0
+#define MAX_SMOOTHING_DISTANCE 2
+
+
 
 #define IF_DEBUG_DO(command) {if(debug_log)command; }
 
@@ -99,8 +105,9 @@ namespace grapholon {
 	public:
 
 
+
 		/***********************************************************************************************/
-		/******************************************************************************* TYPEDEFS **/
+		/*********************************************************************************** TYPEDEFS **/
 		/***********************************************************************************************/
 
 		typedef bool(VoxelSkeleton::*AdjencyFunction)(GRuint, GRuint);
@@ -1498,6 +1505,13 @@ namespace grapholon {
 			if (max_distance > 2) {
 				throw std::invalid_argument("You are trying to smooth over a distance greater than 2. That means smoothing over at least 125 voxels. This is not allowed");
 			}
+			if (threshold < MIN_SMOOTHING_THRESHOLD) {
+				throw std::invalid_argument("You are trying to smooth with a threshold lower than the minimum threshold");
+			}
+			if (threshold > 1.f) {
+				throw std::invalid_argument("You are trying to smooth with a threshold greater than 1");
+			}
+
 			IndexVector to_set;
 			IndexVector to_unset;
 
