@@ -203,7 +203,7 @@ namespace grapholon {
 			GRfloat lambda(0.9f);
 
 			//to what extent the original positions are important
-			GRfloat mu(0.f);
+			GRfloat mu(0.05f);
 
 			GRfloat max_displacement(-std::numeric_limits<GRfloat>::max());
 			do {
@@ -236,15 +236,15 @@ namespace grapholon {
 
 					//std::cout << "x_i after first pass : " << x_i.to_string() << std::endl;
 
-					Vector3f t_i_prime = x_next - x_prev;
+					//Vector3f t_i_prime = x_next - x_prev;
 
 					//std::cout << "updated tangent : " << t_i_prime.to_string() << std::endl;
 
 					//second force application to maintain somewhat the same tangent-direction angle
-					GRfloat angle_difference = original_angles_[i] - t_i_prime.angular_distance(x_next - x_i);
-					Vector3f tangent_correction = (left_direction.cross(right_direction)).cross(t_i_prime).normalize() * (angle_difference/M_PI_2);
+					//GRfloat angle_difference = original_angles_[i] - t_i_prime.angular_distance(x_next - x_i);
+					//Vector3f tangent_correction = (left_direction.cross(right_direction)).cross(t_i_prime).normalize() * (angle_difference/M_PI_2);
 
-					x_i += tangent_correction * lambda;
+					//x_i += tangent_correction * lambda;
 
 					//std::cout << "x_i after second pass : " << x_i.to_string() << std::endl;
 
