@@ -67,47 +67,74 @@ namespace grapholon {
 			}
 		}
 
-
-
-		//TODO : better version of both updates
-		void update_source(Vector3f source) {
-			std::cout << "updating source to " << source.to_string() << std::endl;
-			front().first = source;
-
-			//compute the new points
-			for (GRuint i(1); i < size() - 1; i++) {
-				(*this)[i].first = ((*this)[i].first + (*this)[i - 1].first)*0.5f;
-			}
-			
-			//and update the tangents
+		//updates the tangents based on the points
+		void update_tangents() {
 			front().second = (*this)[1].first - front().first;
-
-			for (GRuint i(1); i < size() - 1; i++) {
-				(*this)[i].second = (*this)[i+1].first - (*this)[i-1].first;
+			for (GRuint i(1); i < size()-1; i++) {
+				(*this)[i].second *= ((*this)[i + 1].first - (*this)[i - 1].first).norm();
 			}
-
-			back().second = back().first - (*this)[size()-2].first;
-		}
-
-		void update_target(Vector3f target) {
-			std::cout << "updating target to " << target.to_string() << std::endl;
-
-			back().first = target;
-
-			//compute the new points
-			for (GRuint i(size()-2); i > 0; i--) {
-				(*this)[i].first = ((*this)[i+1].first + (*this)[i].first)*0.5f;
-			}
-
-			//and update the tangents
-			front().second = (*this)[1].first - front().first;
-
-			for (GRuint i(1); i < size() - 1; i++) {
-				(*this)[i].second = (*this)[i + 1].first - (*this)[i - 1].first;
-			}
-
 			back().second = back().first - (*this)[size() - 2].first;
 		}
+
+		void pseudo_elastic_deform(bool source, Vector3f new_position) {
+			GRfloat max_max_displacement(0.1f);
+			GRfloat elastic_constant(0.5f);
+			//GRfloat time_step(0.01f);
+			GRfloat mass(1.f);
+
+			std::cout << " size : " << size() << std::endl;
+
+			//length[i] = length from [i] to [i+1]
+			std::vector<GRfloat> original_lengths(size()-1);
+			for (GRuint i(0); i < size() - 1;i++) {
+				original_lengths[i] = ((*this)[i + 1].first - (*this)[i].first).norm();
+				std::cout << "original length " << i << " : " << original_lengths[i] << std::endl;
+			}
+
+			if (source) {
+				front().first = new_position;
+			}
+			else {
+				back().first = new_position;
+			}
+			GRuint iteration_count(0);
+
+			GRfloat max_displacement(-std::numeric_limits<GRfloat>::max());
+			do {
+				/*std::cout << "------------------------" << std::endl;
+				std::cout << "	iteration : " << iteration_count << std::endl;*/
+				max_displacement = -std::numeric_limits<GRfloat>::max();
+
+				for (GRuint i(1); i < size() - 1; i++) {
+					Vector3f left_direction = (*this)[i - 1].first - (*this)[i].first;
+					Vector3f left_force = left_direction * (1.f - original_lengths[i-1] / left_direction.norm());
+
+					Vector3f right_direction = (*this)[i + 1].first - (*this)[i].first;
+					Vector3f right_force = right_direction * (1.f - original_lengths[i] / right_direction.norm());
+
+
+					Vector3f displacement = (left_force + right_force)*(elastic_constant/mass);
+					GRfloat displacement_norm = displacement.norm();
+
+					(*this)[i].first += displacement;
+
+					/*std::cout << "left direction   : " << left_direction.to_string() << std::endl;
+					std::cout << "right direction  : " << right_direction.to_string() << std::endl;
+					std::cout << "left force       : " << left_force.to_string()   << std::endl;
+					std::cout << "right force      : " << right_force.to_string()  << std::endl;
+					std::cout << "displacement     : " << displacement.to_string() << std::endl;
+					std::cout << "norm             : " << displacement_norm        << std::endl;*/
+
+					max_displacement = MAX(max_displacement, displacement_norm);
+				}
+				//std::cout << "max displacement : "<< max_displacement << std::endl;
+
+				iteration_count++;
+			} while (max_displacement > max_max_displacement && iteration_count < 10);
+
+			update_tangents();
+		}
+
 
 
 		void add_middle_point(PointTangent middle_point) {

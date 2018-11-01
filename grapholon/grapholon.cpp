@@ -938,10 +938,40 @@ void modifiyGraphVertexPositions() {
 }
 
 
+void modifiyGraphVertexPositions3Points() {
+
+	SkeletalGraph graph;
+
+	GRuint window_width(1);
+
+	Vector3f u1 = Vector3f(0, 0, 0);
+	Vector3f u2 = Vector3f(1, 0, 0);
+	Vector3f u3 = Vector3f(2, 0, 0);
+
+	VertexDescriptor v1 = graph.add_vertex({ u1 });
+
+	DiscreteCurve c1({ u1, u2, u3 });
+	EdgeProperties e1({ *c1.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+
+	VertexDescriptor v3 = graph.add_vertex({ u3 });
+
+	graph.add_edge(v1, v3, e1);
+
+
+	std::cout << "graph at first : " << graph.to_string() << endl;
+
+	graph.update_vertex_position(v3, { Vector3f(4,0,0) });
+
+
+	std::cout << "graph after moving center : " << graph.to_string() << endl;
+
+
+}
+
 int main()
 {
 	
-	modifiyGraphVertexPositions(); 
+	modifiyGraphVertexPositions();
 
 	while (true);
     return 0;

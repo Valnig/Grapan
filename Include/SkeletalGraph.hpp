@@ -25,6 +25,8 @@
 
 #include "Curve.hpp"
 
+//TODO : add sizes on each edge and vertex
+
 namespace grapholon {
 
 	struct VertexProperties {
@@ -114,10 +116,10 @@ namespace grapholon {
 
 			//in theory we only need to iterate through in_edges since it's an undirected graph
 			for (InEdgeIterator e_it(in_edges.first); e_it != in_edges.second; e_it++) {
-				internal_graph_[*e_it].curve.update_target(new_position);
+				internal_graph_[*e_it].curve.pseudo_elastic_deform(false, new_position);
 			}
 			for (OutEdgeIterator e_it(out_edges.first); e_it != out_edges.second; e_it++) {
-				internal_graph_[*e_it].curve.update_source(new_position);
+				internal_graph_[*e_it].curve.pseudo_elastic_deform(true, new_position);
 			}
 		}
 
@@ -151,6 +153,25 @@ namespace grapholon {
 			return internal_graph_[boost::target(edge, internal_graph_)];
 		}
 
+		/** General operations*/
+
+		void move_and_scale(Vector3f displacement, GRfloat scale_factor) {
+
+			std::pair<VertexIterator, VertexIterator> vp;
+
+			for (vp = boost::vertices(internal_graph_); vp.first != vp.second; ++vp.first) {
+				VertexDescriptor v = *vp.first;
+				internal_graph_[v].position = (internal_graph_[v].position + displacement)*scale_factor;
+			}
+
+			std::pair<EdgeIterator, EdgeIterator> ep;
+			for (ep = boost::edges(internal_graph_); ep.first != ep.second; ++ep.first) {
+				EdgeDescriptor e = *ep.first;
+				for (auto& point_tangent : internal_graph_[e].curve) {
+					point_tangent.first = (point_tangent.first + displacement)*scale_factor;
+				}
+			}
+		}
 
 		
 		/** Print stuff */
