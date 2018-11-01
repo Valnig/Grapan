@@ -38,7 +38,7 @@ namespace grapholon {
 	typedef std::vector<Edge> OutEdgeList;
 
 	struct EdgeProperties {
-		SplineCurve curve;
+		DeformableSplineCurve curve;
 	};
 
 	/** Boost Graph Library stuff*/
@@ -107,7 +107,7 @@ namespace grapholon {
 			return boost::vertices(internal_graph_);
 		}
 
-		void update_vertex_position(VertexDescriptor vertex, Vector3f new_position) {
+		bool update_vertex_position(VertexDescriptor vertex, Vector3f new_position) {
 
 			internal_graph_[vertex] = { new_position };
 
@@ -116,11 +116,17 @@ namespace grapholon {
 
 			//in theory we only need to iterate through in_edges since it's an undirected graph
 			for (InEdgeIterator e_it(in_edges.first); e_it != in_edges.second; e_it++) {
-				internal_graph_[*e_it].curve.pseudo_elastic_deform(false, new_position);
+				if (!internal_graph_[*e_it].curve.pseudo_elastic_deform(false, new_position)) {
+					return false;
+				}
 			}
 			for (OutEdgeIterator e_it(out_edges.first); e_it != out_edges.second; e_it++) {
-				internal_graph_[*e_it].curve.pseudo_elastic_deform(true, new_position);
+				if (!internal_graph_[*e_it].curve.pseudo_elastic_deform(true, new_position)) {
+					return false;
+				}
 			}
+
+			return true;
 		}
 
 

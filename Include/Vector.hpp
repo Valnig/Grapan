@@ -166,11 +166,13 @@ namespace grapholon {
 		}
 
 		Vector3<GRfloat> normalize() {
-			return (*this) /= norm();
+			GRfloat _norm(norm());
+			return _norm > FLT_EPSILON ? (*this) /= norm() : (*this);
 		}
 
 		Vector3<GRfloat> normalized() {
-			return (*this) / norm();
+			GRfloat _norm(norm());
+			return _norm > FLT_EPSILON ? (*this) / norm() : (*this);
 		}
 
 		static _Vector3 axis_vector(AXIS axis) {

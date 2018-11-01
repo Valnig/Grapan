@@ -48,6 +48,7 @@ namespace grapholon {
 	private:
 		/*std::vector<PointTangent> points_and_tangents_; single vector of pairs to ensure we have the same
 													   number of points than tangents*/
+
 	public:
 		/** Creates a default SplineCurve : a straigt line going from the origin to (1,0,0)*/
 		SplineCurve() {
@@ -74,67 +75,6 @@ namespace grapholon {
 				(*this)[i].second = ((*this)[i + 1].first - (*this)[i - 1].first);
 			}
 			back().second = back().first - (*this)[size() - 2].first;
-		}
-
-		void pseudo_elastic_deform(bool source, Vector3f new_position) {
-			GRfloat max_max_displacement(0.1f);
-			GRfloat elastic_constant(0.5f);
-			//GRfloat time_step(0.01f);
-			GRfloat mass(1.f);
-
-			//std::cout << " size : " << size() << std::endl;
-
-			//length[i] = length from [i] to [i+1]
-			std::vector<GRfloat> original_lengths(size()-1);
-			for (GRuint i(0); i < size() - 1;i++) {
-				original_lengths[i] = ((*this)[i + 1].first - (*this)[i].first).norm();
-				//std::cout << "original length " << i << " : " << original_lengths[i] << std::endl;
-			}
-
-			if (source) {
-				front().first = new_position;
-			}
-			else {
-				back().first = new_position;
-			}
-			GRuint iteration_count(0);
-			GRfloat lambda(0.9f);
-
-			GRfloat max_displacement(-std::numeric_limits<GRfloat>::max());
-			do {
-				/*std::cout << "------------------------" << std::endl;
-				std::cout << "	iteration : " << iteration_count << std::endl;*/
-				max_displacement = -std::numeric_limits<GRfloat>::max();
-
-				for (GRuint i(1); i < size() - 1; i++) {
-					Vector3f left_direction = (*this)[i - 1].first - (*this)[i].first;
-					Vector3f left_force = left_direction * (1.f - original_lengths[i-1] / left_direction.norm());
-
-					Vector3f right_direction = (*this)[i + 1].first - (*this)[i].first;
-					Vector3f right_force = right_direction * (1.f - original_lengths[i] / right_direction.norm());
-
-
-					Vector3f displacement = (left_force + right_force)*(elastic_constant/mass);
-					GRfloat displacement_norm = displacement.norm();
-
-					(*this)[i].first += displacement;
-
-					/*std::cout << "left direction   : " << left_direction.to_string() << std::endl;
-					std::cout << "right direction  : " << right_direction.to_string() << std::endl;
-					std::cout << "left force       : " << left_force.to_string()   << std::endl;
-					std::cout << "right force      : " << right_force.to_string()  << std::endl;
-					std::cout << "displacement     : " << displacement.to_string() << std::endl;
-					std::cout << "norm             : " << displacement_norm        << std::endl;*/
-
-					max_displacement = MAX(max_displacement, displacement_norm);
-				}
-				//std::cout << "max displacement : "<< max_displacement << std::endl;
-
-				lambda *= 0.9f;
-				iteration_count++;
-			} while (max_displacement > max_max_displacement && iteration_count < 10);
-
-			update_tangents();
 		}
 
 
@@ -178,6 +118,98 @@ namespace grapholon {
 		}
 	};
 
+
+
+
+	class DeformableSplineCurve : public SplineCurve {
+	private:
+
+		std::vector<GRfloat> original_lengths_;
+		std::vector<Vector3f> original_points_;
+
+	public:
+		DeformableSplineCurve() : SplineCurve() {}
+
+		DeformableSplineCurve(PointTangent start, PointTangent end) : SplineCurve(start, end) {}
+
+		DeformableSplineCurve(std::vector<PointTangent> points_and_tangents)
+			: SplineCurve(points_and_tangents) {}
+
+
+		void set_original_lengths() {
+			original_lengths_ = std::vector<GRfloat>();
+			original_points_ = std::vector<Vector3f>();
+
+			for (GRuint i(0); i < size() - 1; i++) {
+				original_lengths_.push_back(((*this)[i + 1].first - (*this)[i].first).norm());
+
+				original_points_.push_back((*this)[i].first);
+			}
+
+			original_points_.push_back(back().first);
+		}
+
+		bool pseudo_elastic_deform(bool source, Vector3f new_position) {
+			GRfloat max_max_displacement(0.1f);
+			GRfloat elastic_constant(0.5f);
+			//GRfloat time_step(0.01f);
+			GRfloat mass(1.f);
+
+			if (!original_lengths_.size()) {
+				set_original_lengths();
+			}
+
+			if (source) {
+				front().first = new_position;
+			}
+			else {
+				back().first = new_position;
+			}
+			GRuint iteration_count(0);
+			GRfloat lambda(0.9f);
+
+			//to what extent the original positions are important
+			GRfloat mu(0.01f);
+
+			GRfloat max_displacement(-std::numeric_limits<GRfloat>::max());
+			do {
+				/*std::cout << "------------------------" << std::endl;
+				std::cout << "	iteration : " << iteration_count << std::endl;*/
+				max_displacement = -std::numeric_limits<GRfloat>::max();
+
+				for (GRuint i(1); i < size() - 1; i++) {
+					Vector3f left_direction = (*this)[i - 1].first - (*this)[i].first;
+					Vector3f left_force = left_direction * (1.f - original_lengths_[i - 1] / left_direction.norm());
+
+					Vector3f right_direction = (*this)[i + 1].first - (*this)[i].first;
+					Vector3f right_force = right_direction * (1.f - original_lengths_[i] / right_direction.norm());
+
+					Vector3f original_direction = original_points_[i] - (*this)[i].first ;
+
+					Vector3f displacement = ((left_force + right_force) * (1.f - mu) + original_direction * mu)*(elastic_constant / mass);
+					GRfloat displacement_norm = displacement.norm();
+
+					(*this)[i].first += displacement;
+
+					/*std::cout << "left direction   : " << left_direction.to_string() << std::endl;
+					std::cout << "right direction  : " << right_direction.to_string() << std::endl;
+					std::cout << "left force       : " << left_force.to_string()   << std::endl;
+					std::cout << "right force      : " << right_force.to_string()  << std::endl;
+					std::cout << "displacement     : " << displacement.to_string() << std::endl;
+					std::cout << "norm             : " << displacement_norm        << std::endl;*/
+
+					max_displacement = MAX(max_displacement, displacement_norm);
+				}
+				//std::cout << "max displacement : "<< max_displacement << std::endl;
+
+				lambda *= 0.9f;
+				iteration_count++;
+			} while (max_displacement > max_max_displacement && iteration_count < 10);
+
+			update_tangents();
+			return true;
+		}
+	};
 
 	/** Inherits from std::vector so we can use the same interface on it*/
 	class DiscreteCurve : public Curve, public std::vector<Vector3f> {
