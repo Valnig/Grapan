@@ -48,7 +48,7 @@ namespace grapholon {
 			std::stringstream msg;
 			msg << "(";
 			for (GRuint i(0); i < _SIZE - 1; i++) {
-				msg << data_[i] << " ";
+				msg << data_[i] << ", ";
 			}
 			msg << data_[_SIZE - 1] << ")";
 			return msg.str();
@@ -185,6 +185,15 @@ namespace grapholon {
 
 		GRfloat distance_to_line(const Vector3<GRfloat>& from, const Vector3<GRfloat>& to) const {
 			return fabs(((*this) - from).cross((*this) - to).norm() / (to - from).norm());
+		}
+
+		GRfloat angular_distance(const Vector3<GRfloat>& other)const {
+			GRfloat this_norm = norm();
+			GRfloat other_norm = other.norm();
+			if (fabs(this_norm) < FLT_EPSILON || fabs(other_norm) < FLT_EPSILON) {
+				return 0.f;
+			}
+			return acosf(MAX(MIN(this->dot(other) / (this_norm * other_norm), 1.f), -1.f));
 		}
 
 

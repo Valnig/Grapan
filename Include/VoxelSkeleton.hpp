@@ -1608,11 +1608,15 @@ namespace grapholon {
 				x_max = MAX(x, x_max);
 				y_max = MAX(y, y_max);
 				z_max = MAX(z, z_max);
+				//std::cout << " voxel : " << x << " " << y << " " << z << std::endl;
 			}
 
 			GRuint new_width  = x_max - x_min;
 			GRuint new_height = y_max - y_min;
 			GRuint new_slice  = z_max - z_min;
+
+			//std::cout << "max : " << x_max << " " << y_max << " " << z_max << std::endl;
+		//	std::cout << "min : " << x_min << " " << y_min << " " << z_min << std::endl;
 
 			VoxelSkeleton* fit_skeleton = new VoxelSkeleton(new_width, new_height, new_slice);
 
@@ -2008,6 +2012,49 @@ namespace grapholon {
 			return skeleton;
 		}
 
+
+		void generate_sinusoidal_skeleton() {
+			memset(voxels_, 0, nb_voxels_ * sizeof(SkeletonVoxel));
+
+			//horizontal branch
+			GRuint start_x(width_/4), start_y(height_/2), start_z(slice_/2);
+			GRuint x = start_x;
+			GRuint y = start_y;
+			GRuint z = start_z;
+
+			for (GRuint j(0); j < 5; j++) {
+				for (GRuint i(0); i < 5; i++) {
+					set_voxel(x++, y--, z++);
+					std::cout << "set voxel " << x << " " << y << " " << z << std::endl;
+				}
+				for (GRuint i(0); i < 5; i++) {
+					set_voxel(x++, y++, z--);
+					std::cout << "set voxel " << x << " " << y << " " << z << std::endl;
+				}
+
+				if (j == 3) {
+					start_x = x;
+					start_y = y;
+					start_z = z;
+				}
+			}
+
+			x = start_x;
+			y = start_y;
+			z = start_z;
+
+			for (GRuint j(0); j < 5; j++) {
+				for (GRuint i(0); i < 5; i++) {
+					set_voxel(x--, y++, z++);
+					std::cout << "set voxel " << x << " " << y << " " << z << std::endl;
+				}
+				for (GRuint i(0); i < 5; i++) {
+					set_voxel(x++, y--, z++);
+					std::cout << "set voxel " << x << " " << y << " " << z << std::endl;
+				}
+			}
+
+		}
 
 		/**Generates a random connected voxel set*/
 		void generate_random(GRuint nb_voxels, GRuint seed = 1234) {

@@ -801,21 +801,7 @@ void MovingAverageDiscreteCurve2() {
 
 
 
-void CurveFittinSpline() {
-	DiscreteCurve discrete_curve;
 
-	GRuint nb_points(100);
-
-	for (GRuint i(0); i < nb_points; i++) {
-		discrete_curve.push_back(Vector3f((GRfloat)i, sin(3*i /(GRfloat)nb_points), 0));
-	}
-
-	SplineCurve* spline = discrete_curve.to_spline_curve(DiscreteCurve::CURVE_FITTING);
-
-	std::cout << "base    : " << std::endl << discrete_curve.to_string() << std::endl;
-	std::cout << "spline  : " << std::endl << spline->to_string() << std::endl;
-
-}
 
 
 void movingAverageSmoothSkeletonTest() {
@@ -890,8 +876,57 @@ void graphExtractionOnSkeletonLikeAndCurveFitting() {
 }
 
 
+
+void modifiyGraphVertexPositions3Points() {
+
+	SkeletalGraph graph;
+
+	GRuint window_width(1);
+
+	Vector3f u1 = Vector3f(0, 0, 0);
+	Vector3f u2 = Vector3f(1, 1, 0);
+	Vector3f u3 = Vector3f(2, 0, 0);
+
+	VertexDescriptor v1 = graph.add_vertex({ u1 });
+
+	DiscreteCurve c1({ u1, u2, u3 });
+	EdgeProperties e1({ *c1.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+
+	VertexDescriptor v3 = graph.add_vertex({ u3 });
+
+	graph.add_edge(v1, v3, e1);
+
+
+	std::cout << "graph at first : " << graph.to_string() << endl;
+
+	graph.update_vertex_position(v3, { Vector3f(2,1,0) });
+
+	std::cout << "graph after moving center : " << graph.to_string() << endl;
+}
+
+
+void CurveFittinSpline() {
+	DiscreteCurve discrete_curve;
+
+	GRuint nb_points(100);
+
+	for (GRuint i(0); i < nb_points; i++) {
+		discrete_curve.push_back(Vector3f((GRfloat)i, sin(3 * i / (GRfloat)nb_points), 0));
+	}
+
+	GRfloat error(0.1f);
+
+	SplineCurve* spline = discrete_curve.to_spline_curve(DiscreteCurve::FULL_CURVE);
+
+	std::cout << "base    : " << std::endl << discrete_curve.to_string() << std::endl;
+	std::cout << "size : " << discrete_curve.size() << std::endl;
+	std::cout << "spline  : " << std::endl << spline->to_string() << std::endl;
+	std::cout << "size : " << spline->size() << std::endl;
+}
+
+
 void modifiyGraphVertexPositions() {
-	
+
 	SkeletalGraph graph;
 
 	GRuint window_width(1);
@@ -903,7 +938,7 @@ void modifiyGraphVertexPositions() {
 
 	Vector3f center = Vector3f(3, 3, 0);
 
-	VertexDescriptor v1 = graph.add_vertex({u1});
+	VertexDescriptor v1 = graph.add_vertex({ u1 });
 	DiscreteCurve c1({ u1, Vector3f(1,1,0), Vector3f(2,2,0), center });
 	EdgeProperties e1({ *c1.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
 
@@ -920,7 +955,7 @@ void modifiyGraphVertexPositions() {
 	EdgeProperties e4({ *c4.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
 
 	//center
-	VertexDescriptor v_center = graph.add_vertex({ center});
+	VertexDescriptor v_center = graph.add_vertex({ center });
 
 	graph.add_edge(v1, v_center, e1);
 	graph.add_edge(v_center, v2, e2);
@@ -930,50 +965,18 @@ void modifiyGraphVertexPositions() {
 	std::cout << "graph at first : " << graph.to_string() << endl;
 
 
-	graph.update_vertex_position(v_center, { Vector3f(3,0,0) });
+	graph.move_and_scale(Vector3f(-1,0,0), 4.f);
 
-	std::cout << "graph after moving center : " << graph.to_string() << endl;
-
-
-}
-
-
-void modifiyGraphVertexPositions3Points() {
-
-	SkeletalGraph graph;
-
-	GRuint window_width(1);
-
-	Vector3f u1 = Vector3f(0, 0, 0);
-	Vector3f u2 = Vector3f(1, 0, 0);
-	Vector3f u3 = Vector3f(2, 0, 0);
-
-	VertexDescriptor v1 = graph.add_vertex({ u1 });
-
-	DiscreteCurve c1({ u1, u2, u3 });
-	EdgeProperties e1({ *c1.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
-
-	VertexDescriptor v3 = graph.add_vertex({ u3 });
-
-	graph.add_edge(v1, v3, e1);
-
-
-	std::cout << "graph at first : " << graph.to_string() << endl;
-
-	graph.update_vertex_position(v3, { Vector3f(4,0,0) });
-
-
-	std::cout << "graph after moving center : " << graph.to_string() << endl;
+	std::cout << "graph after moving and scaling : " << graph.to_string() << endl;
 
 
 }
+
 
 int main()
 {
-	
 	modifiyGraphVertexPositions();
 
-	while (true);
     return 0;
 }
 

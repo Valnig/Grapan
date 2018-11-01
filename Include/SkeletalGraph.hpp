@@ -176,6 +176,7 @@ namespace grapholon {
 				for (auto& point_tangent : internal_graph_[e].curve) {
 					point_tangent.first = (point_tangent.first + displacement)*scale_factor;
 				}
+				internal_graph_[e].curve.update_tangents();
 			}
 		}
 
