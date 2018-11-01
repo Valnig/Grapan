@@ -929,8 +929,10 @@ void modifiyGraphVertexPositions() {
 
 	std::cout << "graph at first : " << graph.to_string() << endl;
 
-	graph.update_vertex_position(v_center, { Vector3f(3,0,0) });
-
+	for (GRuint i(0); i < 10000; i++) {
+		std::cout << "iteration " << i << std::endl;
+		graph.update_vertex_position(v_center, { Vector3f(3,3,0) + Vector3f(1,1,0)*0.0001f*i });
+	}
 
 	std::cout << "graph after moving center : " << graph.to_string() << endl;
 

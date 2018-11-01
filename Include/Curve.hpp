@@ -71,7 +71,7 @@ namespace grapholon {
 		void update_tangents() {
 			front().second = (*this)[1].first - front().first;
 			for (GRuint i(1); i < size()-1; i++) {
-				(*this)[i].second *= ((*this)[i + 1].first - (*this)[i - 1].first).norm();
+				(*this)[i].second = ((*this)[i + 1].first - (*this)[i - 1].first);
 			}
 			back().second = back().first - (*this)[size() - 2].first;
 		}
@@ -82,13 +82,13 @@ namespace grapholon {
 			//GRfloat time_step(0.01f);
 			GRfloat mass(1.f);
 
-			std::cout << " size : " << size() << std::endl;
+			//std::cout << " size : " << size() << std::endl;
 
 			//length[i] = length from [i] to [i+1]
 			std::vector<GRfloat> original_lengths(size()-1);
 			for (GRuint i(0); i < size() - 1;i++) {
 				original_lengths[i] = ((*this)[i + 1].first - (*this)[i].first).norm();
-				std::cout << "original length " << i << " : " << original_lengths[i] << std::endl;
+				//std::cout << "original length " << i << " : " << original_lengths[i] << std::endl;
 			}
 
 			if (source) {
@@ -98,6 +98,7 @@ namespace grapholon {
 				back().first = new_position;
 			}
 			GRuint iteration_count(0);
+			GRfloat lambda(0.9f);
 
 			GRfloat max_displacement(-std::numeric_limits<GRfloat>::max());
 			do {
@@ -129,6 +130,7 @@ namespace grapholon {
 				}
 				//std::cout << "max displacement : "<< max_displacement << std::endl;
 
+				lambda *= 0.9f;
 				iteration_count++;
 			} while (max_displacement > max_max_displacement && iteration_count < 10);
 
