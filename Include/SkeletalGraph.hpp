@@ -141,6 +141,9 @@ namespace grapholon {
 			return true;
 		}
 
+		GRuint degree(VertexDescriptor vertex) {
+			return (GRuint) (boost::in_degree(vertex, internal_graph_) + boost::out_degree(vertex, internal_graph_));
+		}
 
 		/** Edge stuff*/
 
@@ -268,7 +271,14 @@ namespace grapholon {
 			std::vector<EdgeDescriptor> edges_to_collapse;
 			std::pair<EdgeIterator, EdgeIterator> e_it;
 			for (e_it = boost::edges(internal_graph_); e_it.first != e_it.second; ++e_it.first) {
-				if (get_edge(*e_it.first).curve.size() < n) {
+
+				GRuint source_degree
+					= degree(boost::source(*e_it.first, internal_graph_));
+
+				GRuint target_degree
+					= degree(boost::target(*e_it.first, internal_graph_));
+
+				if (get_edge(*e_it.first).curve.size() < n && source_degree != 1 && target_degree != 1) {
 					edges_to_collapse.push_back(*e_it.first);
 				}
 			}
@@ -490,7 +500,7 @@ namespace grapholon {
 		/** cleans the graph by :
 		- collapsing the simple edges*/
 		void clean() {
-			collapse_edges_of_length_less_than(3); 
+			collapse_simple_edges(); 
 			remove_vertices_of_degree_2_and_merge_edges();
 		}
 
