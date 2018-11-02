@@ -264,13 +264,11 @@ namespace grapholon {
 
 		/** General operations*/
 
-		/** collapse all edges that contain an empty curve (only the start and end points)*/
-		void collapse_simple_edges() {
-
+		void collapse_edges_of_length_less_than(GRuint n) {
 			std::vector<EdgeDescriptor> edges_to_collapse;
 			std::pair<EdgeIterator, EdgeIterator> e_it;
 			for (e_it = boost::edges(internal_graph_); e_it.first != e_it.second; ++e_it.first) {
-				if (is_simple_edge(*e_it.first)) {
+				if (get_edge(*e_it.first).curve.size() < n) {
 					edges_to_collapse.push_back(*e_it.first);
 				}
 			}
@@ -290,6 +288,11 @@ namespace grapholon {
 			for (auto vertex : vertices_to_remove) {
 				remove_vertex(vertex);
 			}
+		}
+
+		/** collapse all edges that contain an empty curve (only the start and end points)*/
+		void collapse_simple_edges() {
+			collapse_edges_of_length_less_than(3);
 		}
 
 		/** remove all edges of degree k*/
@@ -487,7 +490,7 @@ namespace grapholon {
 		/** cleans the graph by :
 		- collapsing the simple edges*/
 		void clean() {
-			collapse_simple_edges(); 
+			collapse_edges_of_length_less_than(3); 
 			remove_vertices_of_degree_2_and_merge_edges();
 		}
 
