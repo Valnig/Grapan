@@ -25,7 +25,7 @@
 
 #include "Curve.hpp"
 
-//TODO : add sizes on each edge and vertex
+//TODO : add sizes on each edge_to_collapse and vertex
 
 namespace grapholon {
 
@@ -89,6 +89,8 @@ namespace grapholon {
 		GRuint edge_spline_count() const {
 			return edge_spline_count_;
 		}
+
+
 
 		/** Vertex stuff */
 		VertexDescriptor add_vertex(VertexProperties properties) {
@@ -159,8 +161,36 @@ namespace grapholon {
 			return internal_graph_[boost::target(edge, internal_graph_)];
 		}
 
-		/** General operations*/
+		void collapse_edge(EdgeDescriptor edge_to_collapse) {
 
+			//first attach the edge_to_collapse's source's edges to the edge_to_collapse's target
+			VertexDescriptor source_to_remove = boost::source(edge_to_collapse, internal_graph_);
+			VertexDescriptor target_to_keep = boost::target(edge_to_collapse, internal_graph_);
+
+			//first the in-edges
+			std::pair<InEdgeIterator, InEdgeIterator> in_ep;
+			for (in_ep = boost::in_edges(source_to_remove, internal_graph_); in_ep.first != in_ep.second; ++in_ep.first) {
+				EdgeProperties new_props = internal_graph_[*in_ep.first];
+				new_props.curve.add_end_point(internal_graph_[boost::target(edge_to_collapse, internal_graph_)].position);
+				add_edge(boost::source(*in_ep.first, internal_graph_), target_to_keep, new_props);
+			}
+
+			/*for the out edges we don't add the removed vertex's position to the curve
+			because it would require to copy the whole curve for not much improvement*/
+			std::pair<OutEdgeIterator, OutEdgeIterator> out_ep;
+			for (out_ep = boost::out_edges(source_to_remove, internal_graph_); out_ep.first != out_ep.second; ++out_ep.first) {
+				if (*out_ep.first != edge_to_collapse) {
+					add_edge(target_to_keep, boost::target(*out_ep.first, internal_graph_), internal_graph_[*out_ep.first]);
+				}
+			}
+
+			boost::clear_vertex(source_to_remove, internal_graph_);
+			boost::remove_vertex(source_to_remove, internal_graph_);
+		}
+
+
+
+		/** General operations*/
 		void move_and_scale(Vector3f displacement, GRfloat scale_factor) {
 
 			std::pair<VertexIterator, VertexIterator> vp;

@@ -973,9 +973,70 @@ void modifiyGraphVertexPositions() {
 }
 
 
+void collapseEdge() {
+
+	SkeletalGraph graph;
+
+	GRuint window_width(1);
+
+	Vector3f u0 = Vector3f(0, 0, 0);
+	Vector3f u1 = Vector3f(0, 4, 0);
+	Vector3f u2 = Vector3f(2, 2, 0);
+	Vector3f u3 = Vector3f(4, 2, 0);
+	Vector3f u4 = Vector3f(6, 0, 0);
+	Vector3f u5 = Vector3f(6, 4, 0);
+
+	Vector3f u6 = Vector3f(1, 1, 0);
+	Vector3f u7 = Vector3f(1, 3, 0);
+	Vector3f u8 = Vector3f(5, 1, 0);
+	Vector3f u9 = Vector3f(5, 3, 0);
+
+	VertexDescriptor v0 = graph.add_vertex({ u0 });
+	VertexDescriptor v1 = graph.add_vertex({ u1 });
+	VertexDescriptor v2 = graph.add_vertex({ u2 });
+	VertexDescriptor v3 = graph.add_vertex({ u3 });
+	VertexDescriptor v4 = graph.add_vertex({ u4 });
+	VertexDescriptor v5 = graph.add_vertex({ u5 });
+
+
+	DiscreteCurve c0({ u0, u6, u2 });
+	EdgeProperties e0({ *c0.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	graph.add_edge(v0, v2, e0);
+
+	DiscreteCurve c1({ u2, u7, u1 });
+	EdgeProperties e1({ *c1.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	graph.add_edge(v2, v1, e1);
+
+	DiscreteCurve c2({ u2, u3 });
+	EdgeProperties e2({ *c2.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor to_collapse = graph.add_edge(v2, v3, e2).first;
+
+	DiscreteCurve c3({ u3, u8, u4 });
+	EdgeProperties e3({ *c3.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	graph.add_edge(v3, v4, e3);
+
+	DiscreteCurve c4({ u0, u6, u2 });
+	EdgeProperties e4({ *c4.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	graph.add_edge(v0, v2, e4);
+
+	DiscreteCurve c5({ u5, u9, u3 });
+	EdgeProperties e5({ *c5.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	graph.add_edge(v5, v3, e5);
+
+	std::cout << "graph at first : " << graph.to_string() << endl;
+
+
+	graph.collapse_edge(to_collapse);
+
+	std::cout << "graph after moving and scaling : " << graph.to_string() << endl;
+
+
+}
+
+
 int main()
 {
-	modifiyGraphVertexPositions();
+	collapseEdge();
 
     return 0;
 }

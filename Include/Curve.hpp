@@ -83,6 +83,19 @@ namespace grapholon {
 			}
 		}
 
+		/** Add a new end point and update the tangents at the curve's end*/
+		void add_end_point(Vector3f end_point) {
+			back().second = (end_point - (*this)[size() - 2].first).normalize();
+			push_back(PointTangent(end_point, (end_point - back().first).normalize()));
+		}
+
+		/** Add a new start point and update the tangents at the curve's start
+		NOTE : This requires to loop through the curve so it can be costly*/
+		/*void add_start_point(Vector3f start_point) {
+
+			back().second = (end_point - (*this)[size() - 2].first).normalize();
+			push_back(PointTangent(end_point, (end_point - back().first).normalize()));
+		}*/
 
 		//updates the tangents based on the points
 		void update_tangents(bool normalize = true) {
