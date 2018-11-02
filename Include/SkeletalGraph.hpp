@@ -292,7 +292,7 @@ namespace grapholon {
 			}
 		}
 
-		/** collapse all edges of degree k*/
+		/** remove all edges of degree k*/
 		void remove_vertices_of_degree(InternalBoostGraph::degree_size_type k) {
 			VertexIterator vi, vi_end, next;
 			boost::tie(vi, vi_end) = vertices();
@@ -302,6 +302,173 @@ namespace grapholon {
 				if(degree == k){
 				remove_vertex(*vi);
 				}
+			}
+		}
+
+
+		void remove_vertices_of_degree_2_and_merge_edges() {
+
+			std::vector<VertexDescriptor> new_sources;
+			std::vector<VertexDescriptor> new_targets;
+			std::vector<EdgeProperties> new_props;
+
+			VertexIterator vi, vi_end, next;
+			boost::tie(vi, vi_end) = vertices();
+			for (next = vi; vi != vi_end; vi = next) {
+				++next;
+				InternalBoostGraph::degree_size_type degree = boost::in_degree(*vi, internal_graph_) + boost::out_degree(*vi, internal_graph_);
+				if (degree == 2) {
+
+					//std::cout << " vertex at " << get_vertex(*vi).position.to_string() << " has degree 2" << std::endl;
+					//merge the two edges into a new one
+
+					//first we gather the two edges's curves
+
+					//those should vary in size between 0 and 2 only
+					std::vector<VertexDescriptor> sources;
+					std::vector<VertexDescriptor> targets;
+
+					//same
+					std::vector<EdgeProperties> in_curves;
+					std::vector<EdgeProperties> out_curves;
+
+					std::pair<InEdgeIterator, InEdgeIterator> in_edges = boost::in_edges(*vi, internal_graph_);
+					std::pair<OutEdgeIterator, OutEdgeIterator> out_edges = boost::out_edges(*vi, internal_graph_);
+
+					for (InEdgeIterator e_it(in_edges.first); e_it != in_edges.second; e_it++) {
+						in_curves.push_back(get_edge(*e_it));
+						sources.push_back(boost::source(*e_it, internal_graph_));
+					}
+					for (OutEdgeIterator e_it(out_edges.first); e_it != out_edges.second; e_it++) {
+						out_curves.push_back(get_edge(*e_it));
+						targets.push_back(boost::target(*e_it, internal_graph_));
+					}
+
+					/*std::cout << " sources : " << std::endl;
+					for (auto vertex : sources) {
+						std::cout << get_vertex(vertex).position.to_string() << " ";
+					}
+					std::cout << std::endl;
+
+					std::cout << " targets : " << std::endl;
+					for (auto vertex : targets) {
+						std::cout << get_vertex(vertex).position.to_string() << " ";
+					}
+					std::cout << std::endl;*/
+
+
+					//and merge them together in a way that depends on their direction (->*<- ,  <-*->, ->*-> or <-*<-)
+
+					//in case the directions are the same we add the out curve to the incident curve
+					if (in_curves.size() == 1 && out_curves.size() == 1) {
+						
+						//copy the in curve
+						EdgeProperties new_prop = in_curves[0];
+
+						//update the tangent (we don't take the first PointTangent since it's the same as 
+						//the last of the incident curve. i.e. the removed vertex' position)
+						new_prop.curve.back().second = (out_curves[0].curve[1].first - new_prop.curve.back().first).normalize();
+
+						//add the out curve (same comment)
+						for (GRuint i(1); i < out_curves[0].curve.size(); i++) {
+							new_prop.curve.push_back(out_curves[0].curve[i]);
+						}
+
+						//and add the new curve
+						new_props.push_back(new_prop);
+
+						//and add the new source and target
+						new_sources.push_back(sources[0]);
+						new_targets.push_back(targets[0]);
+
+					}
+					//and if the directions are not the same we further check if it's two out or two in edges
+					else if (in_curves.size() == 2 && out_curves.size() == 0) {//case ->*<-
+						//copy the first in curve
+						EdgeProperties new_prop = in_curves[0];
+
+						GRuint second_curve_size((GRuint)in_curves[1].curve.size());
+
+						//update the tangent
+						new_prop.curve.back().second = (in_curves[1].curve[second_curve_size-2].first - new_prop.curve.back().first).normalize();
+
+						//add the second in curve in reverse order (and with the tangents in opposite direction
+						for(GRuint i(1); i< second_curve_size; i++){
+							new_prop.curve.push_back(
+								PointTangent(
+									in_curves[1].curve[second_curve_size-1-i].first, 
+									in_curves[1].curve[second_curve_size-1-i].second * (-1.f)
+								)
+							);
+						}
+
+						//add the new curve
+						new_props.push_back(new_prop);
+
+						//and add the new source and target
+						new_sources.push_back(sources[0]);
+						new_targets.push_back(sources[1]);
+
+					}
+					else if (in_curves.size() == 0 && out_curves.size() == 2) {//case <-*->
+						GRuint first_curve_size((GRuint)out_curves[0].curve.size());
+
+						std::vector<PointTangent> first_half;
+						//add the first in curve in reverse order (and with the tangents in opposite direction
+						for (GRuint i(0); i < first_curve_size; i++) {
+							first_half.push_back(
+								PointTangent(
+									out_curves[0].curve[first_curve_size - 1 - i].first,
+									out_curves[0].curve[first_curve_size - 1 - i].second * (-1.f)
+								)
+							);
+						}
+
+						EdgeProperties new_prop;
+						new_prop.curve = first_half;
+
+						//update the tangent
+						new_prop.curve.back().second = (out_curves[1].curve[1].first - new_prop.curve.back().first).normalize();
+
+						GRuint second_curve_size((GRuint)out_curves[1].curve.size());
+
+						//add the second in curve in standard order (except the first element)
+						for (GRuint i(1); i < second_curve_size; i++) {
+							new_prop.curve.push_back(
+								PointTangent(
+									out_curves[1].curve[i].first,
+									out_curves[1].curve[i].second 
+								)
+							);
+						}
+
+						//add the new curve
+						new_props.push_back(new_prop);
+
+						//and add the new source and target
+						new_sources.push_back(targets[0]);
+						new_targets.push_back(targets[1]);
+
+					}else{
+						std::cerr << " THIS SHOULDN'T HAVE HAPPENED. EXITING" << std::endl;
+						exit(EXIT_FAILURE);
+
+					}
+
+					remove_vertex(*vi);
+				}
+			}
+
+			//std::cout << "adding " << new_sources.size() << " new edges " << std::endl;
+
+			//return;
+			if (new_sources.size() != new_targets.size() || new_sources.size() != new_props.size()) {
+				std::cerr << " THIS SHOULDN'T HAVE HAPPENED. EXITING" << std::endl;
+				exit(EXIT_FAILURE);
+			}
+
+			for (GRuint i(0); i < new_sources.size(); i++) {
+				add_edge(new_sources[i], new_targets[i], new_props[i]);
 			}
 		}
 
@@ -321,7 +488,7 @@ namespace grapholon {
 		- collapsing the simple edges*/
 		void clean() {
 			collapse_simple_edges(); 
-			remove_vertices_of_degree(2);
+			remove_vertices_of_degree_2_and_merge_edges();
 		}
 
 

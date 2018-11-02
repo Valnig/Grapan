@@ -1150,10 +1150,41 @@ void RemoveVerticesWithDegree() {
 }
 
 
+void mergeEdgesWhereDegree2() {
+	SkeletalGraph graph;
+
+	GRuint window_width(1);
+
+	Vector3f u0 = Vector3f(0, 0, 0);
+	Vector3f u1 = Vector3f(1, 1, 0);
+	Vector3f u2 = Vector3f(2, 1, 0);
+	Vector3f u3 = Vector3f(3, 1, 0);
+	Vector3f u4 = Vector3f(4, 0, 0);
+
+
+	VertexDescriptor v0 = graph.add_vertex({ u0 });
+	VertexDescriptor v2 = graph.add_vertex({ u2 });
+	VertexDescriptor v4 = graph.add_vertex({ u4 });
+
+	DiscreteCurve c0({ u2, u1, u0 });
+	EdgeProperties e0({ *c0.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor to_collapse0 = graph.add_edge(v2, v0, e0).first;
+
+	DiscreteCurve c1({ u2, u3, u4 });
+	EdgeProperties e1({ *c1.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor to_collapse1 = graph.add_edge(v2, v4, e1).first;
+
+	std::cout << "graph at first : " << graph.to_string() << endl;
+
+	graph.remove_vertices_of_degree_2_and_merge_edges();
+
+	std::cout << "graph after removing vertices of degree 2 : " << graph.to_string() << endl;
+}
+
 
 int main()
 {
-	RemoveVerticesWithDegree();
+	mergeEdgesWhereDegree2();
 
     return 0;
 }
