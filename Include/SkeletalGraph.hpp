@@ -161,26 +161,43 @@ namespace grapholon {
 			return internal_graph_[boost::target(edge, internal_graph_)];
 		}
 
+		
 		void collapse_edge(EdgeDescriptor edge_to_collapse) {
 
 			//first attach the edge_to_collapse's source's edges to the edge_to_collapse's target
 			VertexDescriptor source_to_remove = boost::source(edge_to_collapse, internal_graph_);
 			VertexDescriptor target_to_keep = boost::target(edge_to_collapse, internal_graph_);
 
+			//check if edge exists
+			if (!boost::edge(source_to_remove, target_to_keep, internal_graph_).second) {
+				return;
+			}
+
+			Vector3f target_position = internal_graph_[target_to_keep].position;
+
 			//first the in-edges
 			std::pair<InEdgeIterator, InEdgeIterator> in_ep;
 			for (in_ep = boost::in_edges(source_to_remove, internal_graph_); in_ep.first != in_ep.second; ++in_ep.first) {
-				EdgeProperties new_props = internal_graph_[*in_ep.first];
-				new_props.curve.add_end_point(internal_graph_[boost::target(edge_to_collapse, internal_graph_)].position);
-				add_edge(boost::source(*in_ep.first, internal_graph_), target_to_keep, new_props);
+				if (*in_ep.first != edge_to_collapse) {
+					VertexDescriptor new_source = boost::source(*in_ep.first, internal_graph_);
+					if (new_source != target_to_keep) {
+						EdgeProperties new_props = internal_graph_[*in_ep.first];
+						new_props.curve.back() = PointTangent(target_position, (target_position - new_props.curve[new_props.curve.size() - 2].first).normalize());
+						add_edge(new_source, target_to_keep, new_props);
+					}
+				}
 			}
 
-			/*for the out edges we don't add the removed vertex's position to the curve
-			because it would require to copy the whole curve for not much improvement*/
+			//and then the out-edges
 			std::pair<OutEdgeIterator, OutEdgeIterator> out_ep;
 			for (out_ep = boost::out_edges(source_to_remove, internal_graph_); out_ep.first != out_ep.second; ++out_ep.first) {
 				if (*out_ep.first != edge_to_collapse) {
-					add_edge(target_to_keep, boost::target(*out_ep.first, internal_graph_), internal_graph_[*out_ep.first]);
+					VertexDescriptor new_target = boost::target(*out_ep.first, internal_graph_);
+					if (new_target != target_to_keep) {
+						EdgeProperties new_props = internal_graph_[*out_ep.first];
+						new_props.curve.front() = PointTangent(target_position, (new_props.curve[0].first - target_position).normalize());
+						add_edge(target_to_keep, new_target, internal_graph_[*out_ep.first]);
+					}
 				}
 			}
 
@@ -191,6 +208,12 @@ namespace grapholon {
 
 
 		/** General operations*/
+
+		/** collapse all edges that contain an empty curve (only the start and end points)*/
+		void collapse_simple_edges() {
+			std::vector<EdgeDescriptor> edges_to_collapse;
+		}
+
 		void move_and_scale(Vector3f displacement, GRfloat scale_factor) {
 
 			std::pair<VertexIterator, VertexIterator> vp;
@@ -237,9 +260,14 @@ namespace grapholon {
 			iteration_count = 0;
 
 			msg << "------- edges -------" << std::endl;
+			msg << "note : the first and last point should be doubled" << std::endl;
 			for (ep = boost::edges(internal_graph_); ep.first != ep.second; ++ep.first) {
 				EdgeDescriptor e = *ep.first;
-				msg << iteration_count << " : " << std::endl << internal_graph_[e].curve.to_string() << std::endl;
+
+				msg << iteration_count << " : |"
+					<< internal_graph_[boost::source(e, internal_graph_)].position.to_string() << "| -> "
+					<< std::endl << internal_graph_[e].curve.to_string() << std::endl
+					<<" -> |"<<internal_graph_[boost::target(e, internal_graph_)].position.to_string()<<"| " << std::endl<<std::endl;
 
 				iteration_count++;
 			}

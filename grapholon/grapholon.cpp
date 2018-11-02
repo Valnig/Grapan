@@ -973,7 +973,7 @@ void modifiyGraphVertexPositions() {
 }
 
 
-void collapseEdge() {
+void collapseSingleEdge() {
 
 	SkeletalGraph graph;
 
@@ -1034,9 +1034,73 @@ void collapseEdge() {
 }
 
 
+void collapseEdgesInCycle() {
+
+	SkeletalGraph graph;
+
+	GRuint window_width(1);
+
+	Vector3f u0 = Vector3f(1, 0, 0);
+	Vector3f u1 = Vector3f(1, 1, 0);
+	Vector3f u2 = Vector3f(2, 0, 0);
+
+	Vector3f u3 = Vector3f(0, 0, 0);
+	Vector3f u4 = Vector3f(0, 1, 0);
+	Vector3f u5 = Vector3f(3, 0, 0);
+
+	VertexDescriptor v0 = graph.add_vertex({ u0 });
+	VertexDescriptor v1 = graph.add_vertex({ u1 });
+	VertexDescriptor v2 = graph.add_vertex({ u2 });
+	VertexDescriptor v3 = graph.add_vertex({ u3 });
+	VertexDescriptor v4 = graph.add_vertex({ u4 });
+	VertexDescriptor v5 = graph.add_vertex({ u5 });
+
+
+	DiscreteCurve c0({ u0, u1 });
+	EdgeProperties e0({ *c0.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor to_collapse0 = graph.add_edge(v0, v1, e0).first;
+
+	DiscreteCurve c1({ u1, u2 });
+	EdgeProperties e1({ *c1.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor to_collapse1 = graph.add_edge(v1, v2, e1).first;
+
+	DiscreteCurve c2({ u2, u0 });
+	EdgeProperties e2({ *c2.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor to_collapse2 = graph.add_edge(v2, v0, e2).first;
+
+	DiscreteCurve c3({ u3, u0 });
+	EdgeProperties e3({ *c3.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	graph.add_edge(v3, v0, e3);
+
+	DiscreteCurve c4({ u4, u1 });
+	EdgeProperties e4({ *c4.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	graph.add_edge(v4, v1, e4);
+
+	DiscreteCurve c5({ u2, u5});
+	EdgeProperties e5({ *c5.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	graph.add_edge(v2, v5, e5);
+
+	std::cout << "graph at first : " << graph.to_string() << endl;
+
+
+	graph.collapse_edge(to_collapse0);
+
+	std::cout << "graph after collapsing edge 0: " << graph.to_string() << endl;
+
+	graph.collapse_edge(to_collapse1);
+
+	std::cout << "graph after collapsing edge 1: " << graph.to_string() << endl;
+
+
+	graph.collapse_edge(to_collapse2);
+
+	std::cout << "graph after collapsing edge 2: " << graph.to_string() << endl;
+}
+
+
 int main()
 {
-	collapseEdge();
+	collapseEdgesInCycle();
 
     return 0;
 }
