@@ -106,6 +106,8 @@ namespace grapholon {
 			for (OutEdgeIterator e_it(out_edges.first); e_it != out_edges.second; e_it++) {
 				edge_spline_count_ -= (GRuint)internal_graph_[*e_it].curve.size();
 			}
+
+			boost::clear_vertex(vertex, internal_graph_);
 		}
 
 		const VertexProperties& get_vertex(VertexDescriptor vertex) const {
