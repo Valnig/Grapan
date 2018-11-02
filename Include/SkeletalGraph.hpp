@@ -95,6 +95,19 @@ namespace grapholon {
 			boost::remove_vertex(vertex, internal_graph_);
 		}
 
+		void clear_vertex(VertexDescriptor vertex) {
+			std::pair<InEdgeIterator, InEdgeIterator> in_edges = boost::in_edges(vertex, internal_graph_);
+			std::pair<OutEdgeIterator, OutEdgeIterator> out_edges = boost::out_edges(vertex, internal_graph_);
+
+			//in theory we only need to iterate through in_edges since it's an undirected graph
+			for (InEdgeIterator e_it(in_edges.first); e_it != in_edges.second; e_it++) {
+				edge_spline_count_ -= (GRuint)internal_graph_[*e_it].curve.size();
+			}
+			for (OutEdgeIterator e_it(out_edges.first); e_it != out_edges.second; e_it++) {
+				edge_spline_count_ -= (GRuint)internal_graph_[*e_it].curve.size();
+			}
+		}
+
 		const VertexProperties& get_vertex(VertexDescriptor vertex) const {
 			return internal_graph_[vertex];
 		}
@@ -226,7 +239,7 @@ namespace grapholon {
 			}
 
 			//remove the edges of the vertex to remove
-			boost::clear_vertex(to_remove, internal_graph_);
+			clear_vertex(to_remove);
 
 			//add the new edges
 			for (GRuint i(0); i < sources_to_add.size(); i++) {
