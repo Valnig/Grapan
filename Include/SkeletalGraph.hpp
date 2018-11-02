@@ -92,6 +92,7 @@ namespace grapholon {
 		}
 
 		void remove_vertex(VertexDescriptor vertex) {
+			clear_vertex(vertex);
 			boost::remove_vertex(vertex, internal_graph_);
 		}
 
@@ -291,7 +292,18 @@ namespace grapholon {
 			}
 		}
 
-
+		/** collapse all edges of degree k*/
+		void remove_vertices_of_degree(InternalBoostGraph::degree_size_type k) {
+			VertexIterator vi, vi_end, next;
+			boost::tie(vi, vi_end) = vertices();
+			for (next = vi; vi != vi_end; vi = next) {
+				++next;
+				InternalBoostGraph::degree_size_type degree = boost::in_degree(*vi, internal_graph_) + boost::out_degree(*vi, internal_graph_);
+				if(degree == k){
+				remove_vertex(*vi);
+				}
+			}
+		}
 
 
 		/** collapse all edges in to a single point (at the center) and	
@@ -309,6 +321,7 @@ namespace grapholon {
 		- collapsing the simple edges*/
 		void clean() {
 			collapse_simple_edges(); 
+			remove_vertices_of_degree(2);
 		}
 
 
