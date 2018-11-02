@@ -31,18 +31,14 @@ namespace grapholon {
 
 	struct VertexProperties {
 		Vector3f position;
+		bool visited = false;
 	};
-
-	typedef std::pair<GRuint, GRuint> Edge;
-
-	typedef std::vector<Edge> OutEdgeList;
 
 	struct EdgeProperties {
 		DeformableSplineCurve curve;
 	};
 
 	/** Boost Graph Library stuff*/
-
 	typedef boost::adjacency_list<
 		boost::listS, boost::listS, boost::bidirectionalS,
 		VertexProperties, EdgeProperties>
@@ -65,11 +61,9 @@ namespace grapholon {
 		/** Vertices and edges */
 
 	public:
-		SkeletalGraph(GRuint vertex_count, OutEdgeList out_edge_list) :
-			internal_graph_(out_edge_list.begin(), out_edge_list.end(), vertex_count) {
 
-			std::cout << "created SkeletalGraph with " << vertex_count << " vertices and " << out_edge_list.size() << " edges : " << std::endl;
-		}
+		typedef enum { SOURCE, TARGET, MIDPOINT } COLLAPSE_OPTION;
+
 
 		SkeletalGraph(GRuint vertex_count = 0) :internal_graph_(vertex_count) {
 			std::cout << "created SkeletalGraph with " << vertex_count << " vertices and no edges : " << std::endl;
@@ -161,49 +155,94 @@ namespace grapholon {
 			return internal_graph_[boost::target(edge, internal_graph_)];
 		}
 
+
+		bool is_simple_edge(EdgeDescriptor edge) const {
+			//the case where size < 2 shouldn't happen but better safe than sorry
+			return internal_graph_[edge].curve.size() <= 2;
+		}
 		
-		void collapse_edge(EdgeDescriptor edge_to_collapse) {
+		VertexDescriptor collapse_edge(EdgeDescriptor edge_to_collapse, COLLAPSE_OPTION option = SOURCE) {
 
 			//first attach the edge_to_collapse's source's edges to the edge_to_collapse's target
-			VertexDescriptor source_to_remove = boost::source(edge_to_collapse, internal_graph_);
-			VertexDescriptor target_to_keep = boost::target(edge_to_collapse, internal_graph_);
+			VertexDescriptor source = boost::source(edge_to_collapse, internal_graph_);
+			VertexDescriptor target = boost::target(edge_to_collapse, internal_graph_);
+
+			//std::cout << "collapsing edge from " << internal_graph_[source].position.to_string() << " to " << internal_graph_[target].position.to_string() << std::endl;
 
 			//check if edge exists
-			if (!boost::edge(source_to_remove, target_to_keep, internal_graph_).second) {
-				return;
+			if (source == InternalBoostGraph::null_vertex() 
+				|| target == InternalBoostGraph::null_vertex()
+				|| !boost::edge(source, target, internal_graph_).second) {
+				std::cout << "edge doesn't exist" << std::endl;
+				return InternalBoostGraph::null_vertex();
 			}
 
-			Vector3f target_position = internal_graph_[target_to_keep].position;
+			//by default we keep the source
+			VertexDescriptor to_keep = source;
+			VertexDescriptor to_remove = target;
+			Vector3f new_position = internal_graph_[to_keep].position;
+
+			if (option == TARGET) {
+				to_keep = target;
+				to_remove = source;
+				new_position = internal_graph_[to_keep].position;
+			}
+			else if (option == MIDPOINT) {
+				new_position = (internal_graph_[source].position + internal_graph_[target].position)*0.5f;
+			}
+
+			/** gather the list of edges to add */
+			std::vector<VertexDescriptor> sources_to_add;
+			std::vector<VertexDescriptor> targets_to_add;
+			std::vector<EdgeProperties> source_props_to_add;
+			std::vector<EdgeProperties> target_props_to_add;
 
 			//first the in-edges
 			std::pair<InEdgeIterator, InEdgeIterator> in_ep;
-			for (in_ep = boost::in_edges(source_to_remove, internal_graph_); in_ep.first != in_ep.second; ++in_ep.first) {
+			for (in_ep = boost::in_edges(to_remove, internal_graph_); in_ep.first != in_ep.second; ++in_ep.first) {
 				if (*in_ep.first != edge_to_collapse) {
 					VertexDescriptor new_source = boost::source(*in_ep.first, internal_graph_);
-					if (new_source != target_to_keep) {
+					if (new_source != to_keep) {
 						EdgeProperties new_props = internal_graph_[*in_ep.first];
-						new_props.curve.back() = PointTangent(target_position, (target_position - new_props.curve[new_props.curve.size() - 2].first).normalize());
-						add_edge(new_source, target_to_keep, new_props);
+						new_props.curve.back() = PointTangent(new_position, (new_position - new_props.curve[new_props.curve.size() - 2].first).normalize());
+						sources_to_add.push_back(new_source);
+						source_props_to_add.push_back(new_props);
 					}
 				}
 			}
 
 			//and then the out-edges
 			std::pair<OutEdgeIterator, OutEdgeIterator> out_ep;
-			for (out_ep = boost::out_edges(source_to_remove, internal_graph_); out_ep.first != out_ep.second; ++out_ep.first) {
+			for (out_ep = boost::out_edges(to_remove, internal_graph_); out_ep.first != out_ep.second; ++out_ep.first) {
 				if (*out_ep.first != edge_to_collapse) {
 					VertexDescriptor new_target = boost::target(*out_ep.first, internal_graph_);
-					if (new_target != target_to_keep) {
+					if (new_target != to_keep) {
 						EdgeProperties new_props = internal_graph_[*out_ep.first];
-						new_props.curve.front() = PointTangent(target_position, (new_props.curve[0].first - target_position).normalize());
-						add_edge(target_to_keep, new_target, internal_graph_[*out_ep.first]);
+						new_props.curve.front() = PointTangent(new_position, (new_props.curve[0].first - new_position).normalize());
+						targets_to_add.push_back(new_target);
+						target_props_to_add.push_back(new_props);
 					}
 				}
 			}
 
-			boost::clear_vertex(source_to_remove, internal_graph_);
-			boost::remove_vertex(source_to_remove, internal_graph_);
+			//remove the edges of the vertex to remove
+			boost::clear_vertex(to_remove, internal_graph_);
+
+			//add the new edges
+			for (GRuint i(0); i < sources_to_add.size(); i++) {
+				add_edge(sources_to_add[i], to_keep, source_props_to_add[i]);
+			}
+
+			for (GRuint i(0); i < targets_to_add.size(); i++) {
+				add_edge(to_keep, targets_to_add[i], target_props_to_add[i]);
+			}
+
+			//and update the vertex to keep's position
+			internal_graph_[to_keep].position = new_position;
+
+			return to_remove;
 		}
+
 
 
 
@@ -211,8 +250,52 @@ namespace grapholon {
 
 		/** collapse all edges that contain an empty curve (only the start and end points)*/
 		void collapse_simple_edges() {
+
 			std::vector<EdgeDescriptor> edges_to_collapse;
+			std::pair<EdgeIterator, EdgeIterator> e_it;
+			for (e_it = boost::edges(internal_graph_); e_it.first != e_it.second; ++e_it.first) {
+				if (is_simple_edge(*e_it.first)) {
+					edges_to_collapse.push_back(*e_it.first);
+				}
+			}
+
+			//collapse the edges at midpoints and gather the vertices to remove
+			std::vector<VertexDescriptor> vertices_to_remove;
+			std::cout << "found " << edges_to_collapse.size() << " edges to collapse " << std::endl;
+			for (auto edge : edges_to_collapse) {
+				VertexDescriptor vertex = collapse_edge(edge, MIDPOINT);
+				if (vertex != InternalBoostGraph::null_vertex()) {
+					vertices_to_remove.push_back(vertex);
+					std::cout << " will remove vertex at " << internal_graph_[vertex].position.to_string() << std::endl;
+				}
+			}
+
+			//and remove the now-alone vertices
+			for (auto vertex : vertices_to_remove) {
+				remove_vertex(vertex);
+			}
 		}
+
+
+
+
+		/** collapse all edges in to a single point (at the center) and	
+		creates an edge from this center to each vertices surrounding the edges*/
+		void collapse_edges_at_center(std::vector<EdgeDescriptor>& edges) {
+
+		}
+
+		//MAYBE TODO (goes allong with collapse_edges_at_center
+		void collapse_simple_edges_at_centers() {
+
+		}
+
+		/** cleans the graph by :
+		- collapsing the simple edges*/
+		void clean() {
+
+		}
+
 
 		void move_and_scale(Vector3f displacement, GRfloat scale_factor) {
 

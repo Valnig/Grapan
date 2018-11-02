@@ -1026,7 +1026,7 @@ void collapseSingleEdge() {
 	std::cout << "graph at first : " << graph.to_string() << endl;
 
 
-	graph.collapse_edge(to_collapse);
+	graph.collapse_edge(to_collapse, SkeletalGraph::TARGET);
 
 	std::cout << "graph after moving and scaling : " << graph.to_string() << endl;
 
@@ -1048,6 +1048,10 @@ void collapseEdgesInCycle() {
 	Vector3f u4 = Vector3f(0, 1, 0);
 	Vector3f u5 = Vector3f(3, 0, 0);
 
+	Vector3f u6 = Vector3f(0.5f, 0, 0);
+	Vector3f u7 = Vector3f(0.5, 1, 0);
+	Vector3f u8 = Vector3f(3.5, 0, 0);
+
 	VertexDescriptor v0 = graph.add_vertex({ u0 });
 	VertexDescriptor v1 = graph.add_vertex({ u1 });
 	VertexDescriptor v2 = graph.add_vertex({ u2 });
@@ -1068,34 +1072,25 @@ void collapseEdgesInCycle() {
 	EdgeProperties e2({ *c2.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
 	EdgeDescriptor to_collapse2 = graph.add_edge(v2, v0, e2).first;
 
-	DiscreteCurve c3({ u3, u0 });
+	DiscreteCurve c3({ u3, u6, u0 });
 	EdgeProperties e3({ *c3.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
 	graph.add_edge(v3, v0, e3);
 
-	DiscreteCurve c4({ u4, u1 });
+	DiscreteCurve c4({ u4, u7, u1 });
 	EdgeProperties e4({ *c4.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
 	graph.add_edge(v4, v1, e4);
 
-	DiscreteCurve c5({ u2, u5});
+	DiscreteCurve c5({ u2, u8, u5});
 	EdgeProperties e5({ *c5.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
 	graph.add_edge(v2, v5, e5);
 
 	std::cout << "graph at first : " << graph.to_string() << endl;
 
+	graph.collapse_simple_edges();
 
-	graph.collapse_edge(to_collapse0);
-
-	std::cout << "graph after collapsing edge 0: " << graph.to_string() << endl;
-
-	graph.collapse_edge(to_collapse1);
-
-	std::cout << "graph after collapsing edge 1: " << graph.to_string() << endl;
-
-
-	graph.collapse_edge(to_collapse2);
-
-	std::cout << "graph after collapsing edge 2: " << graph.to_string() << endl;
+	std::cout << "graph after collapse : " << graph.to_string() << endl;
 }
+
 
 
 int main()
