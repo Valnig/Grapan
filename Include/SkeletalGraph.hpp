@@ -308,7 +308,7 @@ namespace grapholon {
 		/** cleans the graph by :
 		- collapsing the simple edges*/
 		void clean() {
-
+			collapse_simple_edges(); 
 		}
 
 
