@@ -232,6 +232,7 @@ namespace grapholon {
 			//and remove the old one
 			remove_edge(edge_to_split);
 
+			return new_vertex;
 		}
 
 
