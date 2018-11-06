@@ -223,7 +223,6 @@ namespace grapholon {
 				second_half[1].second = (second_half[2].first - second_half[0].first).normalize();
 			}
 
-
 			//add the new edges
 			add_edge(boost::source(edge_to_split, internal_graph_), new_vertex, { first_half });
 			add_edge(new_vertex, boost::target(edge_to_split, internal_graph_), { second_half });
