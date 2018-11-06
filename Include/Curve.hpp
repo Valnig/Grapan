@@ -41,8 +41,9 @@ namespace grapholon {
 
 	};
 
-
+	//todo : add radius
 	typedef std::pair<Vector3f, Vector3f> PointTangent;
+
 
 	class SplineCurve : public Curve, public std::vector<PointTangent> {
 	private:

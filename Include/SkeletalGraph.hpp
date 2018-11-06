@@ -31,7 +31,6 @@ namespace grapholon {
 
 	struct VertexProperties {
 		Vector3f position;
-		bool visited = false;
 	};
 
 	struct EdgeProperties {
@@ -145,6 +144,9 @@ namespace grapholon {
 			return (GRuint) (boost::in_degree(vertex, internal_graph_) + boost::out_degree(vertex, internal_graph_));
 		}
 
+
+
+
 		/** Edge stuff*/
 
 		std::pair<EdgeDescriptor, bool> add_edge(VertexDescriptor from, VertexDescriptor to, EdgeProperties properties) {
@@ -180,6 +182,60 @@ namespace grapholon {
 			return internal_graph_[edge].curve.size() <= 2;
 		}
 		
+
+
+		/** Returns the descriptor of the vertex that is now in the middle of the split edge*/
+		VertexDescriptor split_edge_at(EdgeDescriptor edge_to_split, GRuint segment_index, Vector3f new_vertex_position) {
+
+			SplineCurve edge_curve(get_edge(edge_to_split).curve);
+			VertexDescriptor new_vertex = add_vertex({ new_vertex_position });
+
+			if (segment_index >= edge_curve.size() - 1) {
+				return new_vertex;
+			}
+
+
+			//compute the new end and start points
+			PointTangent source_pt = edge_curve.front();
+			PointTangent target_pt = edge_curve.back();
+
+			PointTangent new_target_pt = PointTangent(new_vertex_position, (new_vertex_position - edge_curve[segment_index].first).normalize());
+			PointTangent new_source_pt = PointTangent(new_vertex_position, (edge_curve[segment_index + 1].first - new_vertex_position).normalize());
+
+
+			//create the base of the new curves (with just the start and end positions)
+			SplineCurve first_half(source_pt, new_target_pt);
+			SplineCurve second_half(new_source_pt, target_pt);
+
+
+			//and fill those with the old PointTangents
+			for (GRuint i(1); i <= segment_index; i++) {
+				first_half.add_middle_point(edge_curve[i]);
+			}
+			if (first_half.size() >= 3) {
+				first_half[first_half.size() - 2].second = (first_half.back().first - first_half[first_half.size() - 3].first).normalize();
+			}
+
+			for (GRuint i(segment_index + 1); i < edge_curve.size() - 1; i++) {
+				second_half.add_middle_point(edge_curve[i]);
+			}
+			if (second_half.size() >= 3) {
+				second_half[1].second = (second_half[2].first - second_half[0].first).normalize();
+			}
+
+
+			//add the new edges
+			add_edge(boost::source(edge_to_split, internal_graph_), new_vertex, { first_half });
+			add_edge(new_vertex, boost::target(edge_to_split, internal_graph_), { second_half });
+
+
+			//and remove the old one
+			remove_edge(edge_to_split);
+
+		}
+
+
+		/** returns the vertexdescriptor of the vertex that replaced the collapsed edge*/
 		VertexDescriptor collapse_edge(EdgeDescriptor edge_to_collapse, COLLAPSE_OPTION option = SOURCE) {
 
 			//first attach the edge_to_collapse's source's edges to the edge_to_collapse's target
@@ -487,7 +543,7 @@ namespace grapholon {
 
 
 		/** collapse all edges in to a single point (at the center) and	
-		creates an edge from this center to each vertices surrounding the edges*/
+		create an edge from this center to each vertices surrounding the edges*/
 		void collapse_edges_at_center(std::vector<EdgeDescriptor>& edges) {
 
 		}
