@@ -62,7 +62,7 @@ namespace grapholon {
 	public:
 
 		typedef enum { SOURCE, TARGET, MIDPOINT } COLLAPSE_OPTION;
-
+#define MIN_SPLINE_LENGTH 1.f
 
 		SkeletalGraph(GRuint vertex_count = 0) :internal_graph_(vertex_count) {
 			std::cout << "created SkeletalGraph with " << vertex_count << " vertices and no edges : " << std::endl;
@@ -139,6 +139,33 @@ namespace grapholon {
 
 			return true;
 		}
+
+		bool extrude_tip_vertex(VertexDescriptor vertex, Vector3f new_position) {
+
+			//checking that this vertex is indeed a target and a tip (i.e. of in-degree 1 and out-degree 0)
+			if (boost::in_degree(vertex, internal_graph_) != 1 || boost::out_degree(vertex, internal_graph_) != 0) {
+				return false;
+			}
+
+
+			//update the vertex's position
+			internal_graph_[vertex] = { new_position };
+
+			std::pair<InEdgeIterator, InEdgeIterator> in_edges = boost::in_edges(vertex, internal_graph_);
+			DeformableSplineCurve& edge_curve = get_edge(*(in_edges.first)).curve;
+			
+			//update the curve's back
+
+			edge_curve.back() = PointTangent(new_position, (new_position - edge_curve[edge_curve.size() - 2].first).normalize());
+			//and add a new point at the same place if it's far enough from the point before the back
+			if (new_position.distance(edge_curve.before_back().first) >= MIN_SPLINE_LENGTH) {
+				edge_curve.add_middle_point(PointTangent(new_position, (new_position - edge_curve.before_back().first).normalize()));
+			}
+
+			return true;
+
+		}
+
 
 		GRuint degree(VertexDescriptor vertex) {
 			return (GRuint) (boost::in_degree(vertex, internal_graph_) + boost::out_degree(vertex, internal_graph_));

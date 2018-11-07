@@ -1209,9 +1209,38 @@ void splitEdge() {
 	std::cout << "graph after removing vertices of degree 2 : " << graph.to_string() << endl;
 }
 
+
+void extrudeDiagonal() {
+	SkeletalGraph graph;
+
+	GRuint window_width(1);
+
+	Vector3f u0 = Vector3f(0, 0, 0);
+	Vector3f u1 = Vector3f(1, 1, 0);
+	Vector3f u2 = Vector3f(2, 2, 0);
+	Vector3f u3 = Vector3f(3, 3, 0);
+
+
+	VertexDescriptor v0 = graph.add_vertex({ u0 });
+	VertexDescriptor v3 = graph.add_vertex({ u3 });
+
+	DiscreteCurve c0({ u0, u1, u2, u3 });
+	EdgeProperties e0({ *c0.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor to_split = graph.add_edge(v0, v3, e0).first;
+
+
+	std::cout << "graph at first : " << graph.to_string() << endl;
+
+	for (GRuint i(0); i < 30; i++) {
+		graph.extrude_tip_vertex(v3, Vector3f(2, 2, 0) + Vector3f(1,1,0)*0.1f*i);
+	}
+	std::cout << "graph after removing vertices of degree 2 : " << graph.to_string() << endl;
+
+}
+
 int main()
 {
-	splitEdge();
+	extrudeDiagonal();
 
     return 0;
 }

@@ -84,6 +84,21 @@ namespace grapholon {
 			}
 		}
 
+		PointTangent& after_front() {
+			return (*this)[1];
+		}
+
+		const PointTangent& after_front() const {
+			return (*this)[1];
+		}
+
+		PointTangent& before_back() {
+			return (*this)[size()-2];
+		}
+		const PointTangent& before_back() const{
+			return (*this)[size() - 2];
+		}
+
 		/** Add a new end point and update the tangents at the curve's end*/
 		void add_end_point(Vector3f end_point) {
 			back().second = (end_point - (*this)[size() - 2].first).normalize();
@@ -119,11 +134,17 @@ namespace grapholon {
 
 		void add_middle_point(PointTangent middle_point) {
 			PointTangent end = back();
+
 			pop_back();
 
 			push_back(middle_point);
 
 			push_back(end);
+		}
+
+		void remove_last_middle_point() {
+			before_back() = back();
+			pop_back();
 		}
 
 		void add_middle_points(std::vector<PointTangent> points_and_tangents) {
@@ -195,6 +216,7 @@ namespace grapholon {
 
 			original_points_.push_back(back().first);
 		}
+
 
 		bool pseudo_elastic_deform(bool source, Vector3f new_position) {
 
