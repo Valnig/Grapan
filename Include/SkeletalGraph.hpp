@@ -141,7 +141,6 @@ namespace grapholon {
 		}
 
 		bool extrude_tip_vertex(VertexDescriptor vertex, Vector3f new_position) {
-
 			//checking that this vertex is indeed a target and a tip (i.e. of in-degree 1 and out-degree 0)
 			if (boost::in_degree(vertex, internal_graph_) != 1 || boost::out_degree(vertex, internal_graph_) != 0) {
 				return false;
@@ -160,6 +159,7 @@ namespace grapholon {
 			//and add a new point at the same place if it's far enough from the point before the back
 			if (new_position.distance(edge_curve.before_back().first) >= MIN_SPLINE_LENGTH) {
 				edge_curve.add_middle_point(PointTangent(new_position, (new_position - edge_curve.before_back().first).normalize()));
+				edge_spline_count_++;
 			}
 
 			return true;
@@ -175,6 +175,21 @@ namespace grapholon {
 
 
 		/** Edge stuff*/
+		std::pair<EdgeDescriptor, bool> add_edge(VertexDescriptor from, VertexDescriptor to) {
+			edge_spline_count_ += 2;
+			Vector3f position_from = get_vertex(from).position;
+			Vector3f position_to = get_vertex(to).position;
+
+			EdgeProperties properties({
+				DeformableSplineCurve(
+					PointTangent(position_from, (position_to-position_from).normalize),
+					PointTangent(position_to, (position_to - position_from).normalize)
+				)
+			});
+
+			return boost::add_edge(from, to, properties, internal_graph_);
+
+		}
 
 		std::pair<EdgeDescriptor, bool> add_edge(VertexDescriptor from, VertexDescriptor to, EdgeProperties properties) {
 			edge_spline_count_ += (GRuint)properties.curve.size();
