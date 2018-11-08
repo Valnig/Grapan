@@ -498,6 +498,30 @@ namespace grapholon {
 			}
 		}
 
+		void add_middle_point(Vector3f point) {
+			if (size()) {
+				Vector3f end = back();
+				pop_back();
+				push_back(point);
+				push_back(end);
+			}
+		}
+
+		Vector3f& after_front() {
+			return (*this)[1];
+		}
+
+		const Vector3f& after_front() const {
+			return (*this)[1];
+		}
+
+		Vector3f& before_back() {
+			return (*this)[size() - 2];
+		}
+		const Vector3f& before_back() const {
+			return (*this)[size() - 2];
+		}
+
 		std::string to_string() const {
 			std::stringstream msg;
 

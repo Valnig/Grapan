@@ -62,7 +62,6 @@ namespace grapholon {
 	public:
 
 		typedef enum { SOURCE, TARGET, MIDPOINT } COLLAPSE_OPTION;
-#define MIN_SPLINE_LENGTH 1.f
 
 		SkeletalGraph(GRuint vertex_count = 0) :internal_graph_(vertex_count) {
 			std::cout << "created SkeletalGraph with " << vertex_count << " vertices and no edges : " << std::endl;
@@ -140,7 +139,7 @@ namespace grapholon {
 			return true;
 		}
 
-		bool extrude_tip_vertex(VertexDescriptor vertex, Vector3f new_position) {
+		bool extrude_tip_vertex(VertexDescriptor vertex, Vector3f new_position, GRfloat min_spline_length) {
 			//checking that this vertex is indeed a target and a tip (i.e. of in-degree 1 and out-degree 0)
 			if (boost::in_degree(vertex, internal_graph_) != 1 || boost::out_degree(vertex, internal_graph_) != 0) {
 				return false;
@@ -157,13 +156,12 @@ namespace grapholon {
 
 			edge_curve.back() = PointTangent(new_position, (new_position - edge_curve[edge_curve.size() - 2].first).normalize());
 			//and add a new point at the same place if it's far enough from the point before the back
-			if (new_position.distance(edge_curve.before_back().first) >= MIN_SPLINE_LENGTH) {
+			if (new_position.distance(edge_curve.before_back().first) >= min_spline_length) {
 				edge_curve.add_middle_point(PointTangent(new_position, (new_position - edge_curve.before_back().first).normalize()));
 				edge_spline_count_++;
+				return true;
 			}
-
-			return true;
-
+			return false;
 		}
 
 
@@ -182,8 +180,8 @@ namespace grapholon {
 
 			EdgeProperties properties({
 				DeformableSplineCurve(
-					PointTangent(position_from, (position_to-position_from).normalize),
-					PointTangent(position_to, (position_to - position_from).normalize)
+					PointTangent(position_from, (position_to-position_from).normalize()),
+					PointTangent(position_to, (position_to - position_from).normalize())
 				)
 			});
 
@@ -197,9 +195,32 @@ namespace grapholon {
 		}
 
 		void remove_edge(EdgeDescriptor edge) {
+
 			edge_spline_count_ -= (GRuint)internal_graph_[edge].curve.size();
+			
+			VertexDescriptor source = boost::source(edge, internal_graph_);
+			VertexDescriptor target = boost::target(edge, internal_graph_);
+
+			bool remove_source = false;
+			bool remove_target = false;
+
+			if (degree(source) == 1) {
+				remove_source = true;
+			}
+			if (degree(target) == 1) {
+				remove_target = true;
+			}
 
 			boost::remove_edge(edge, internal_graph_);
+
+			//we remove the vertices after the edge otherwise the edge would become invalid
+			if (remove_source && vertex_count() != 1) {
+				boost::remove_vertex(source, internal_graph_);
+			}
+
+			if (remove_target && vertex_count() != 1) {
+				boost::remove_vertex(target, internal_graph_);
+			}
 		}
 
 		EdgeProperties& get_edge(EdgeDescriptor edge) {
@@ -225,6 +246,37 @@ namespace grapholon {
 		}
 		
 
+		std::pair<VertexDescriptor, VertexDescriptor> cut_edge_at(EdgeDescriptor edge_to_cut, GRuint segment_index, Vector3f new_vertex_position) {
+			
+			//first split the edge
+			VertexDescriptor right_vertex = split_edge_at(edge_to_cut, segment_index, new_vertex_position);
+
+			//guard to avoid dereferencing an empty iterator
+			if (boost::in_degree(right_vertex, internal_graph_) != 1) {
+				return { right_vertex, right_vertex };
+			}
+
+			//find the new edge incident to the new vertex
+			EdgeDescriptor left_edge = *(boost::in_edges(right_vertex, internal_graph_).first);
+
+			GRuint last_segment_index = internal_graph_[left_edge].curve.size() - 2;
+			Vector3f last_segment_middle_position = (internal_graph_[left_edge].curve.back().first + internal_graph_[left_edge].curve.before_back().first)*0.5f;
+
+			//split the left edge at the last segment
+			VertexDescriptor left_vertex = split_edge_at(left_edge, last_segment_index, last_segment_middle_position);
+
+			//same guard as above
+			if (boost::in_degree(right_vertex, internal_graph_) != 1) {
+				return { left_vertex, right_vertex };
+			}
+
+			//and remove the the middle edge
+			EdgeDescriptor middle_edge = *(boost::in_edges(right_vertex, internal_graph_).first);
+			
+			remove_edge(middle_edge);
+
+			return { left_vertex, right_vertex };
+		}
 
 		/** Returns the descriptor of the vertex that is now in the middle of the split edge*/
 		VertexDescriptor split_edge_at(EdgeDescriptor edge_to_split, GRuint segment_index, Vector3f new_vertex_position) {

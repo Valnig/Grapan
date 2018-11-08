@@ -1232,15 +1232,43 @@ void extrudeDiagonal() {
 	std::cout << "graph at first : " << graph.to_string() << endl;
 
 	for (GRuint i(0); i < 30; i++) {
-		graph.extrude_tip_vertex(v3, Vector3f(2, 2, 0) + Vector3f(1,1,0)*0.1f*i);
+		graph.extrude_tip_vertex(v3, Vector3f(2, 2, 0) + Vector3f(1,1,0)*0.1f*i, 1.f);
 	}
 	std::cout << "graph after removing vertices of degree 2 : " << graph.to_string() << endl;
 
 }
 
+void cutEdge() {
+	SkeletalGraph graph;
+
+	GRuint window_width(1);
+
+	Vector3f u0 = Vector3f(0, 0, 0);
+	Vector3f u1 = Vector3f(1, 1, 0);
+	Vector3f u2 = Vector3f(2, 1, 0);
+	Vector3f u3 = Vector3f(3, 1, 0);
+	Vector3f u4 = Vector3f(4, 0, 0);
+
+
+	VertexDescriptor v0 = graph.add_vertex({ u0 });
+	VertexDescriptor v4 = graph.add_vertex({ u4 });
+
+	DiscreteCurve c0({ u0, u1, u2, u3, u4 });
+	EdgeProperties e0({ *c0.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor to_split = graph.add_edge(v0, v4, e0).first;
+
+
+	std::cout << "graph at first : " << graph.to_string() << endl;
+
+	graph.cut_edge_at(to_split, 2, Vector3f(2, 2, 0));
+
+	std::cout << "graph after removing vertices of degree 2 : " << graph.to_string() << endl;
+}
+
+
 int main()
 {
-	extrudeDiagonal();
+	cutEdge();
 
     return 0;
 }
