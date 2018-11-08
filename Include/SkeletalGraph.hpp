@@ -84,7 +84,7 @@ namespace grapholon {
 
 
 
-		/** Vertex stuff */
+		/**************************************************************************************************** Vertex stuff */
 		VertexDescriptor add_vertex(VertexProperties properties) {
 			return boost::add_vertex(properties, internal_graph_);
 		}
@@ -170,6 +170,28 @@ namespace grapholon {
 		}
 
 
+		VertexDescriptor merge_vertices(VertexDescriptor vertex_one, VertexDescriptor vertex_two, COLLAPSE_OPTION option = SOURCE) {
+			//add an edge from one vertex to the other
+			std::pair<EdgeDescriptor, bool> new_edge_to_collapse = add_edge(vertex_one, vertex_two);
+
+			VertexDescriptor to_keep = InternalBoostGraph::null_vertex();
+			//and collapse it 
+			if (!new_edge_to_collapse.second) {
+				return to_keep;
+			}
+			to_keep = collapse_edge(new_edge_to_collapse.first, option);
+
+			if (to_keep == vertex_one) {
+				remove_vertex(vertex_two);
+			}
+			else {
+				remove_vertex(vertex_two);
+			}
+
+			return to_keep;
+		}
+
+
 		GRuint degree(VertexDescriptor vertex) {
 			return (GRuint) (boost::in_degree(vertex, internal_graph_) + boost::out_degree(vertex, internal_graph_));
 		}
@@ -177,7 +199,7 @@ namespace grapholon {
 
 
 
-		/** Edge stuff*/
+		/****************************************************************************************************************************** Edge stuff*/
 		std::pair<EdgeDescriptor, bool> add_edge(VertexDescriptor from, VertexDescriptor to) {
 			edge_spline_count_ += 2;
 			Vector3f position_from = get_vertex(from).position;
@@ -413,7 +435,7 @@ namespace grapholon {
 			//and update the vertex to keep's position
 			internal_graph_[to_keep].position = new_position;
 
-			return to_remove;
+			return to_keep;
 		}
 
 
