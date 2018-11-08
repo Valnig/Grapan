@@ -336,7 +336,6 @@ namespace grapholon {
 			VertexDescriptor source = boost::source(edge_to_collapse, internal_graph_);
 			VertexDescriptor target = boost::target(edge_to_collapse, internal_graph_);
 
-			//std::cout << "collapsing edge from " << internal_graph_[source].position.to_string() << " to " << internal_graph_[target].position.to_string() << std::endl;
 
 			//check if edge exists
 			if (source == InternalBoostGraph::null_vertex() 
@@ -469,12 +468,47 @@ namespace grapholon {
 		}
 
 
+		//NOTE : only works if the vertex is of degree 2 and has one in-edge and one out-edge
+		bool remove_degree_2_vertex_and_merge_edges(VertexDescriptor vertex_to_remove) {
+			if (boost::in_degree(vertex_to_remove, internal_graph_) != 1 || boost::out_degree(vertex_to_remove, internal_graph_) != 1) {
+				return false;
+			}
+
+			EdgeDescriptor in_edge = *(boost::in_edges(vertex_to_remove, internal_graph_).first);
+			EdgeDescriptor out_edge = *(boost::out_edges(vertex_to_remove, internal_graph_).first);
+
+			//copy the in curve
+			DeformableSplineCurve new_curve = internal_graph_[in_edge].curve;
+			DeformableSplineCurve right_curve = internal_graph_[out_edge].curve;
+
+			//update the tangent (we don't take the first PointTangent since it's the same as 
+			//the last of the incident curve. i.e. the removed vertex' position)
+			new_curve.back().second = (right_curve.front().first - new_curve.before_back().first).normalize();
+
+			//add the out curve (start from 1 because the front() one is the same as new_curve.back()
+			for (GRuint i(1); i < right_curve.size(); i++) {
+				new_curve.push_back(right_curve[i]);
+			}
+
+			//add an edge from the in-edge's source to the out-edge's target
+			add_edge(boost::source(in_edge, internal_graph_), boost::target(out_edge, internal_graph_), { new_curve });
+
+			//remove the vertex (and both in and out-edges)
+			remove_vertex(vertex_to_remove);
+
+			return true;
+		}
+
+
+
 		void remove_vertices_of_degree_2_and_merge_edges() {
 
 			std::vector<VertexDescriptor> new_sources;
 			std::vector<VertexDescriptor> new_targets;
 			std::vector<EdgeProperties> new_props;
 
+			//NOTE : this is a two-step process because we can't remove vertices during the loop
+			//indeed this would invalidate the vertex iterator of the loop
 			VertexIterator vi, vi_end, next;
 			boost::tie(vi, vi_end) = vertices();
 			for (next = vi; vi != vi_end; vi = next) {
@@ -482,8 +516,6 @@ namespace grapholon {
 				InternalBoostGraph::degree_size_type degree = boost::in_degree(*vi, internal_graph_) + boost::out_degree(*vi, internal_graph_);
 				if (degree == 2) {
 
-					//std::cout << " vertex at " << get_vertex(*vi).position.to_string() << " has degree 2" << std::endl;
-					//merge the two edges into a new one
 
 					//first we gather the two edges's curves
 
@@ -506,19 +538,6 @@ namespace grapholon {
 						out_curves.push_back(get_edge(*e_it));
 						targets.push_back(boost::target(*e_it, internal_graph_));
 					}
-
-					/*std::cout << " sources : " << std::endl;
-					for (auto vertex : sources) {
-						std::cout << get_vertex(vertex).position.to_string() << " ";
-					}
-					std::cout << std::endl;
-
-					std::cout << " targets : " << std::endl;
-					for (auto vertex : targets) {
-						std::cout << get_vertex(vertex).position.to_string() << " ";
-					}
-					std::cout << std::endl;*/
-
 
 					//and merge them together in a way that depends on their direction (->*<- ,  <-*->, ->*-> or <-*<-)
 
