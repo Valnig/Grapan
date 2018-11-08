@@ -124,18 +124,23 @@ namespace grapholon {
 			std::pair<InEdgeIterator, InEdgeIterator> in_edges = boost::in_edges(vertex, internal_graph_);
 			std::pair<OutEdgeIterator, OutEdgeIterator> out_edges = boost::out_edges(vertex, internal_graph_);
 
-			//in theory we only need to iterate through in_edges since it's an undirected graph
+			std::cout << " vertex degree : " << degree(vertex) << std::endl;
+
+			std::cout << "what" << std::endl;
 			for (InEdgeIterator e_it(in_edges.first); e_it != in_edges.second; e_it++) {
+				std::cout << "the" << std::endl;
 				if (!internal_graph_[*e_it].curve.pseudo_elastic_deform(false, new_position)) {
 					return false;
 				}
 			}
+			std::cout << "hell" << std::endl;
 			for (OutEdgeIterator e_it(out_edges.first); e_it != out_edges.second; e_it++) {
 				if (!internal_graph_[*e_it].curve.pseudo_elastic_deform(true, new_position)) {
 					return false;
 				}
 			}
 
+			std::cout << "is" << std::endl;
 			return true;
 		}
 
@@ -477,24 +482,32 @@ namespace grapholon {
 			EdgeDescriptor in_edge = *(boost::in_edges(vertex_to_remove, internal_graph_).first);
 			EdgeDescriptor out_edge = *(boost::out_edges(vertex_to_remove, internal_graph_).first);
 
+			std::cout << "in edge curve : " << &(internal_graph_[in_edge].curve) << std::endl;
 			//copy the in curve
 			DeformableSplineCurve new_curve = internal_graph_[in_edge].curve;
 			DeformableSplineCurve right_curve = internal_graph_[out_edge].curve;
 
+			std::cout << " new curve : " << &new_curve << std::endl;
 			//update the tangent (we don't take the first PointTangent since it's the same as 
 			//the last of the incident curve. i.e. the removed vertex' position)
-			new_curve.back().second = (right_curve.front().first - new_curve.before_back().first).normalize();
+			new_curve.back().second = (right_curve.after_front().first - new_curve.before_back().first).normalize();
 
 			//add the out curve (start from 1 because the front() one is the same as new_curve.back()
 			for (GRuint i(1); i < right_curve.size(); i++) {
 				new_curve.push_back(right_curve[i]);
 			}
 
+			//set the original shape
+		//	new_curve.set_original_shape();
+
 			//add an edge from the in-edge's source to the out-edge's target
 			add_edge(boost::source(in_edge, internal_graph_), boost::target(out_edge, internal_graph_), { new_curve });
 
 			//remove the vertex (and both in and out-edges)
 			remove_vertex(vertex_to_remove);
+
+			std::cout << "edge count : " << edge_count() << std::endl;
+			std::cout << " new edge length : " << new_curve.size() << std::endl;
 
 			return true;
 		}

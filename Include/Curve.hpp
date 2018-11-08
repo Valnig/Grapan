@@ -195,6 +195,13 @@ namespace grapholon {
 		DeformableSplineCurve(std::vector<PointTangent> points_and_tangents)
 			: SplineCurve(points_and_tangents) {}
 
+		//this ensures that if a copy is made, the original shape is not valid anymore
+		DeformableSplineCurve(const DeformableSplineCurve& other) {
+			(*this) = other;
+			original_lengths_ = std::vector<GRfloat>();
+			original_points_ = std::vector<Vector3f>();
+			original_angles_ = std::vector<GRfloat>();
+		}
 
 		void set_original_shape() {
 			original_lengths_ = std::vector<GRfloat>();
@@ -215,6 +222,8 @@ namespace grapholon {
 			}
 
 			original_points_.push_back(back().first);
+
+			std::cout << "original shape is now : " << original_points_.size() << std::endl;
 		}
 
 

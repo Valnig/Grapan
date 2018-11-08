@@ -1265,7 +1265,7 @@ void cutEdge() {
 	std::cout << "graph after removing vertices of degree 2 : " << graph.to_string() << endl;
 }
 
-void mergeEdgeWithDegree2() {
+void move_merge_and_move_again() {
 	SkeletalGraph graph;
 
 	GRuint window_width(1);
@@ -1291,16 +1291,23 @@ void mergeEdgeWithDegree2() {
 
 	std::cout << "graph at first : " << graph.to_string() << endl;
 
+	graph.update_vertex_position(v2, Vector3f(2, 2, 0));
+	std::cout << "graph after moving middle vertex : " << graph.to_string() << endl;
+
 	if (!graph.remove_degree_2_vertex_and_merge_edges(v2)) {
 		std::cout << std::endl << " nope that didn't work ..." << std::endl << std::endl;
 	}
 
-	std::cout << "graph after removing vertices of degree 2 : " << graph.to_string() << endl;
+	std::cout << "graph after removing middle vertex : " << graph.to_string() << endl;
+
+
+	graph.update_vertex_position(v4, Vector3f(4, 2, 0));
+	std::cout << "graph after moving end vertex : " << graph.to_string() << endl;
 }
 
 int main()
 {
-	mergeEdgeWithDegree2();
+	move_merge_and_move_again();
 
     return 0;
 }
