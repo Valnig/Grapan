@@ -1365,9 +1365,46 @@ void collapseEdgesInCycle() {
 }
 
 
+
+void collapseEdgesShorterThan() {
+
+	SkeletalGraph graph;
+
+	GRuint window_width(1);
+
+	Vector3f u0 = Vector3f(0, 0, 0);
+	Vector3f u1 = Vector3f(2, 0, 0);
+	Vector3f u2 = Vector3f(3, 0, 0);
+	Vector3f u3 = Vector3f(5, 0, 0);
+
+	VertexDescriptor v0 = graph.add_vertex({ u0 });
+	VertexDescriptor v1 = graph.add_vertex({ u1 });
+	VertexDescriptor v2 = graph.add_vertex({ u2 });
+	VertexDescriptor v3 = graph.add_vertex({ u3 });
+
+
+	DiscreteCurve c0({ u0, u1 });
+	EdgeProperties e0({ *c0.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor to_collapse0 = graph.add_edge(v0, v1, e0).first;
+
+	DiscreteCurve c1({ u1, u2 });
+	EdgeProperties e1({ *c1.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor to_collapse1 = graph.add_edge(v1, v2, e1).first;
+
+	DiscreteCurve c2({ u2, u3 });
+	EdgeProperties e2({ *c2.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor to_collapse2 = graph.add_edge(v2, v3, e2).first;
+
+	std::cout << "graph at first : " << graph.to_string() << endl;
+
+	graph.collapse_edges_shorter_than(1.2f);
+
+	std::cout << "graph after removal of degree 2 vertices : " << graph.to_string() << endl;
+}
+
 int main()
 {
-	collapseEdgesInCycle();
+	collapseEdgesShorterThan();
 
     return 0;
 }

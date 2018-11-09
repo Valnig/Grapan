@@ -166,6 +166,7 @@ namespace grapholon {
 
 		/** Returns the vertex that wasn't removed */
 		VertexDescriptor merge_vertices(VertexDescriptor vertex_one, VertexDescriptor vertex_two, COLLAPSE_OPTION option = SOURCE) {
+
 			//add an edge from one vertex to the other
 			std::pair<EdgeDescriptor, bool> new_edge_to_collapse = add_edge(vertex_one, vertex_two);
 
@@ -438,8 +439,44 @@ namespace grapholon {
 
 
 		/** General operations*/
+		GRuint collapse_edges_shorter_than(GRfloat min_length) {
+			std::vector<EdgeDescriptor> edges_to_collapse;
+			std::pair<EdgeIterator, EdgeIterator> e_it;
 
-		void collapse_edges_of_length_less_than(GRuint n) {
+			for (e_it = boost::edges(internal_graph_); e_it.first != e_it.second; ++e_it.first) {
+
+				GRuint source_degree
+					= degree(boost::source(*e_it.first, internal_graph_));
+
+				GRuint target_degree
+					= degree(boost::target(*e_it.first, internal_graph_));
+
+				if (get_edge(*e_it.first).curve.length() < min_length && source_degree != 1 && target_degree != 1) {
+					edges_to_collapse.push_back(*e_it.first);
+				}
+			}
+
+
+			//collapse the edges at midpoints and gather the vertices to remove
+			std::vector<VertexDescriptor> vertices_to_remove;
+			//std::cout << "found " << edges_to_collapse.size() << " edges to collapse " << std::endl;
+			for (auto edge : edges_to_collapse) {
+				VertexDescriptor vertex = collapse_edge(edge, MIDPOINT);
+				if (vertex != InternalBoostGraph::null_vertex()) {
+					vertices_to_remove.push_back(vertex);
+			//		std::cout << " will remove vertex at " << internal_graph_[vertex].position.to_string() << std::endl;
+				}
+			}
+
+			//and remove the now-alone vertices
+			for (auto vertex : vertices_to_remove) {
+				remove_vertex(vertex);
+			}
+
+			return vertices_to_remove.size();
+		}
+
+		void collapse_edges_with_less_than_n_splines(GRuint n) {
 			std::vector<EdgeDescriptor> edges_to_collapse;
 			std::pair<EdgeIterator, EdgeIterator> e_it;
 			for (e_it = boost::edges(internal_graph_); e_it.first != e_it.second; ++e_it.first) {
@@ -459,7 +496,7 @@ namespace grapholon {
 			std::vector<VertexDescriptor> vertices_to_remove;
 			//std::cout << "found " << edges_to_collapse.size() << " edges to collapse " << std::endl;
 			for (auto edge : edges_to_collapse) {
-				VertexDescriptor vertex = collapse_edge(edge, MIDPOINT);
+				VertexDescriptor vertex = collapse_edge(edge, SOURCE);
 				if (vertex != InternalBoostGraph::null_vertex()) {
 					vertices_to_remove.push_back(vertex);
 					//std::cout << " will remove vertex at " << internal_graph_[vertex].position.to_string() << std::endl;
@@ -474,7 +511,7 @@ namespace grapholon {
 
 		/** collapse all edges that contain an empty curve (only the start and end points)*/
 		void collapse_simple_edges() {
-			collapse_edges_of_length_less_than(3);
+			collapse_edges_shorter_than(3);
 		}
 
 		/** remove all edges of degree k*/
@@ -530,13 +567,14 @@ namespace grapholon {
 			return true;
 		}
 
-
-
+		/** NOTE : this will crash for chained degree-2 vertices !*/
 		void remove_vertices_of_degree_2_and_merge_edges() {
 
 			std::vector<VertexDescriptor> new_sources;
 			std::vector<VertexDescriptor> new_targets;
 			std::vector<EdgeProperties> new_props;
+
+			GRuint iteration_count(0);
 
 			//NOTE : this is a two-step process because we can't remove vertices during the loop
 			//indeed this would invalidate the vertex iterator of the loop
@@ -544,7 +582,12 @@ namespace grapholon {
 			boost::tie(vi, vi_end) = vertices();
 			for (next = vi; vi != vi_end; vi = next) {
 				++next;
-				InternalBoostGraph::degree_size_type degree = boost::in_degree(*vi, internal_graph_) + boost::out_degree(*vi, internal_graph_);
+				InternalBoostGraph::degree_size_type degree = this->degree(*vi);
+				std::cout << " vertex " << iteration_count << std::endl;
+				std::cout << "in degree : " << boost::in_degree(*vi, internal_graph_) << std::endl;
+				std::cout << "out degree : " << boost::out_degree(*vi, internal_graph_) << std::endl;
+				std::cout << "degree : " << degree << std::endl << std::endl;;
+				iteration_count++;
 				if (degree == 2) {
 
 
@@ -686,23 +729,15 @@ namespace grapholon {
 		}
 
 
-		/** collapse all edges in to a single point (at the center) and	
-		create an edge from this center to each vertices surrounding the edges*/
-		void collapse_edges_at_center(std::vector<EdgeDescriptor>& edges) {
 
-		}
 
-		//MAYBE TODO (goes allong with collapse_edges_at_center
-		void collapse_simple_edges_at_centers() {
-
-		}
 
 		/** cleans the graph by :
 		- collapsing the simple edges*/
-		void clean() {
+		/*void clean() {
 			collapse_simple_edges(); 
 			remove_vertices_of_degree_2_and_merge_edges();
-		}
+		}*/
 
 
 		void move_and_scale(Vector3f displacement, GRfloat scale_factor) {

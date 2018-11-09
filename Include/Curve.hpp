@@ -84,6 +84,14 @@ namespace grapholon {
 			}
 		}
 
+		GRfloat length()const {
+			GRfloat len(0.f);
+			for (GRuint i(0); i < size()-1; i++) {
+				len += ((*this)[i + 1].first - (*this)[i].first).norm();
+			}
+			return len;
+		}
+
 		PointTangent& after_front() {
 			return (*this)[1];
 		}
