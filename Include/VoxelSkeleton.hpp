@@ -2261,6 +2261,68 @@ namespace grapholon {
 			}
 		}
 
+
+		void generate_artificial_simple_kissing(GRuint edges_length) {
+			if (width_ < 100 || height_ < 100) {
+				std::cerr << "can't generate that structure mate" << std::endl;
+				exit(EXIT_FAILURE);
+			}
+			memset(voxels_, 0, nb_voxels_ * sizeof(SkeletonVoxel));
+
+			GRuint x_start(10);
+			GRuint y_start(10);
+
+			//bottom left branch
+			for (GRuint i(0); i < edges_length; i++) {
+				set_voxel(0, x_start + i, y_start + i);
+			}
+
+			//bottom right branch
+			for (GRuint i(0); i < edges_length; i++) {
+				set_voxel(0, x_start + edges_length*2 - i, y_start + i);
+			}
+
+			//bottom vertical branch
+			for (GRuint i(0); i < edges_length*2; i++) {
+				set_voxel(0, x_start + edges_length, y_start + edges_length + i);
+			}
+
+			//bottom left loop branch
+			for (GRuint i(0); i < edges_length; i++) {
+				set_voxel(0, x_start + edges_length-i, y_start + edges_length*3 + i);
+			}
+
+			//bottom right loop branch
+			for (GRuint i(0); i < edges_length; i++) {
+				set_voxel(0, x_start + edges_length + i, y_start + edges_length * 3 + i);
+			}
+
+			//left vertical loop branch
+			for (GRuint i(0); i < edges_length; i++) {
+				set_voxel(0, x_start, y_start + edges_length * 4 + i);
+			}
+
+			//right vertical loop branch
+			for (GRuint i(0); i < edges_length; i++) {
+				set_voxel(0, x_start + edges_length*2, y_start + edges_length * 4 + i);
+			}
+
+			//upper left loop branch
+			for (GRuint i(0); i < edges_length; i++) {
+				set_voxel(0, x_start + i, y_start + edges_length * 5 + i);
+			}
+
+			//upper right loop branch
+			for (GRuint i(0); i < edges_length; i++) {
+				set_voxel(0, x_start + edges_length*2 - i, y_start + edges_length * 5 + i);
+			}
+
+			//upper vertical branch
+			for (GRuint i(0); i < edges_length*2; i++) {
+				set_voxel(0, x_start + edges_length, y_start + edges_length*6 + i);
+			}
+		}
+
 	};
 
 }
