@@ -223,7 +223,7 @@ namespace grapholon {
 
 			original_points_.push_back(back().first);
 
-			std::cout << "original shape is now : " << original_points_.size() << std::endl;
+			//std::cout << "original shape is now : " << original_points_.size() << std::endl;
 		}
 
 

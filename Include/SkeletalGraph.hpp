@@ -124,23 +124,18 @@ namespace grapholon {
 			std::pair<InEdgeIterator, InEdgeIterator> in_edges = boost::in_edges(vertex, internal_graph_);
 			std::pair<OutEdgeIterator, OutEdgeIterator> out_edges = boost::out_edges(vertex, internal_graph_);
 
-			std::cout << " vertex degree : " << degree(vertex) << std::endl;
 
-			std::cout << "what" << std::endl;
 			for (InEdgeIterator e_it(in_edges.first); e_it != in_edges.second; e_it++) {
-				std::cout << "the" << std::endl;
 				if (!internal_graph_[*e_it].curve.pseudo_elastic_deform(false, new_position)) {
 					return false;
 				}
 			}
-			std::cout << "hell" << std::endl;
 			for (OutEdgeIterator e_it(out_edges.first); e_it != out_edges.second; e_it++) {
 				if (!internal_graph_[*e_it].curve.pseudo_elastic_deform(true, new_position)) {
 					return false;
 				}
 			}
 
-			std::cout << "is" << std::endl;
 			return true;
 		}
 
@@ -169,26 +164,26 @@ namespace grapholon {
 			return false;
 		}
 
-
+		/** Returns the vertex that wasn't removed */
 		VertexDescriptor merge_vertices(VertexDescriptor vertex_one, VertexDescriptor vertex_two, COLLAPSE_OPTION option = SOURCE) {
 			//add an edge from one vertex to the other
 			std::pair<EdgeDescriptor, bool> new_edge_to_collapse = add_edge(vertex_one, vertex_two);
 
-			VertexDescriptor to_keep = InternalBoostGraph::null_vertex();
+			VertexDescriptor removed = InternalBoostGraph::null_vertex();
 			//and collapse it 
 			if (!new_edge_to_collapse.second) {
-				return to_keep;
+				return removed;
 			}
-			to_keep = collapse_edge(new_edge_to_collapse.first, option);
+			removed = collapse_edge(new_edge_to_collapse.first, option);
 
-			if (to_keep == vertex_one) {
-				remove_vertex(vertex_two);
+			if (removed == vertex_one) {
+				remove_vertex(removed);
+				return vertex_two;
 			}
 			else {
-				remove_vertex(vertex_two);
+				remove_vertex(removed);
+				return vertex_one;
 			}
-
-			return to_keep;
 		}
 
 
@@ -356,7 +351,7 @@ namespace grapholon {
 		}
 
 
-		/** returns the vertexdescriptor of the vertex that replaced the collapsed edge*/
+		/** returns the vertexdescriptor of the vertex that was removed*/
 		VertexDescriptor collapse_edge(EdgeDescriptor edge_to_collapse, COLLAPSE_OPTION option = SOURCE) {
 
 			//first attach the edge_to_collapse's source's edges to the edge_to_collapse's target
@@ -398,6 +393,7 @@ namespace grapholon {
 				if (*in_ep.first != edge_to_collapse) {
 					VertexDescriptor new_source = boost::source(*in_ep.first, internal_graph_);
 					if (new_source != to_keep) {
+
 						EdgeProperties new_props = internal_graph_[*in_ep.first];
 						new_props.curve.back() = PointTangent(new_position, (new_position - new_props.curve[new_props.curve.size() - 2].first).normalize());
 						sources_to_add.push_back(new_source);
@@ -435,7 +431,7 @@ namespace grapholon {
 			//and update the vertex to keep's position
 			internal_graph_[to_keep].position = new_position;
 
-			return to_keep;
+			return to_remove;
 		}
 
 
@@ -461,12 +457,12 @@ namespace grapholon {
 
 			//collapse the edges at midpoints and gather the vertices to remove
 			std::vector<VertexDescriptor> vertices_to_remove;
-			std::cout << "found " << edges_to_collapse.size() << " edges to collapse " << std::endl;
+			//std::cout << "found " << edges_to_collapse.size() << " edges to collapse " << std::endl;
 			for (auto edge : edges_to_collapse) {
 				VertexDescriptor vertex = collapse_edge(edge, MIDPOINT);
 				if (vertex != InternalBoostGraph::null_vertex()) {
 					vertices_to_remove.push_back(vertex);
-					std::cout << " will remove vertex at " << internal_graph_[vertex].position.to_string() << std::endl;
+					//std::cout << " will remove vertex at " << internal_graph_[vertex].position.to_string() << std::endl;
 				}
 			}
 
@@ -504,12 +500,12 @@ namespace grapholon {
 			EdgeDescriptor in_edge = *(boost::in_edges(vertex_to_remove, internal_graph_).first);
 			EdgeDescriptor out_edge = *(boost::out_edges(vertex_to_remove, internal_graph_).first);
 
-			std::cout << "in edge curve : " << &(internal_graph_[in_edge].curve) << std::endl;
+			//std::cout << "in edge curve : " << &(internal_graph_[in_edge].curve) << std::endl;
 			//copy the in curve
 			DeformableSplineCurve new_curve = internal_graph_[in_edge].curve;
 			DeformableSplineCurve right_curve = internal_graph_[out_edge].curve;
 
-			std::cout << " new curve : " << &new_curve << std::endl;
+			//std::cout << " new curve : " << &new_curve << std::endl;
 			//update the tangent (we don't take the first PointTangent since it's the same as 
 			//the last of the incident curve. i.e. the removed vertex' position)
 			new_curve.back().second = (right_curve.after_front().first - new_curve.before_back().first).normalize();
@@ -528,8 +524,8 @@ namespace grapholon {
 			//remove the vertex (and both in and out-edges)
 			remove_vertex(vertex_to_remove);
 
-			std::cout << "edge count : " << edge_count() << std::endl;
-			std::cout << " new edge length : " << new_curve.size() << std::endl;
+			//std::cout << "edge count : " << edge_count() << std::endl;
+			//std::cout << " new edge length : " << new_curve.size() << std::endl;
 
 			return true;
 		}
