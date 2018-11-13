@@ -1412,7 +1412,6 @@ void findCycles() {
 
 	DiscreteCurve c5({ u2, u8 });
 	EdgeProperties e5({ *c5.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
-	EdgeDescriptor to_collapse5 = graph.add_edge(v2, v8, e5).first;
 
 	DiscreteCurve c6({ u6, u8 });
 	EdgeProperties e6({ *c6.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
@@ -1421,8 +1420,33 @@ void findCycles() {
 	std::cout << "graph at first : " << graph.to_string() << endl;
 
 	graph.find_cycles();
-
 	graph.print_cycles();
+
+	graph.remove_edge(to_collapse3);
+
+	EdgeDescriptor to_collapse5 = graph.add_edge(v2, v8, e5).first;
+
+
+	graph.find_cycles();
+	graph.print_cycles();
+}
+
+
+
+void findCycleInSinusoidal() {
+	VoxelSkeleton skeleton(100, 100, 100);
+	skeleton.generate_sinusoidal_skeleton();
+
+	SkeletalGraph* graph = skeleton.extract_skeletal_graph(DiscreteCurve::START_AND_END, 1, 0);
+
+	std::cout << "graph at first : " << graph->to_string() << endl;
+
+	graph->find_cycles();
+
+	graph->print_cycles();
+
+	delete graph;
+
 }
 
 int main()

@@ -58,21 +58,7 @@ namespace grapholon {
 	typedef InternalBoostGraph::in_edge_iterator InEdgeIterator;
 	typedef InternalBoostGraph::out_edge_iterator OutEdgeIterator;
 
-	namespace MST {
-		struct TreeVertexProperties {
-			VertexDescriptor vertex_descriptor;
-		};
 
-		struct TreeEdgeProperties {
-			EdgeDescriptor edge_descriptor;
-		};
-
-		typedef boost::adjacency_list<
-			boost::listS, boost::listS, boost::bidirectionalS,
-			TreeVertexProperties, TreeEdgeProperties>
-			SpanningTree;
-
-	};
 
 	class SkeletalGraph {
 	private:
@@ -333,6 +319,8 @@ namespace grapholon {
 			return { left_vertex, right_vertex };
 		}
 
+
+
 		/** Returns the descriptor of the vertex that is now in the middle of the split edge*/
 		VertexDescriptor split_edge_at(EdgeDescriptor edge_to_split, GRuint segment_index, Vector3f new_vertex_position) {
 
@@ -373,9 +361,13 @@ namespace grapholon {
 			}
 
 			//add the new edges
-			add_edge(boost::source(edge_to_split, internal_graph_), new_vertex, { first_half });
-			add_edge(new_vertex, boost::target(edge_to_split, internal_graph_), { second_half });
+			EdgeDescriptor left_edge = add_edge(boost::source(edge_to_split, internal_graph_), new_vertex, { first_half }).first;
+			EdgeDescriptor right_edge = add_edge(new_vertex, boost::target(edge_to_split, internal_graph_), { second_half }).first;
 
+			if (get_edge(edge_to_split).is_part_of_cycle) {
+				get_edge(left_edge).is_part_of_cycle = true;
+				get_edge(right_edge).is_part_of_cycle = true;
+			}
 
 			//and remove the old one
 			remove_edge(edge_to_split);
@@ -485,10 +477,14 @@ namespace grapholon {
 			std::list<VertexDescriptor> path_two;
 			path_two.push_back(vertex_two);
 
+			const GRuint iteration_count_limit(vertex_count() + 1);
+
 			VertexDescriptor current_vertex = vertex_one;
 			VertexDescriptor parent_vertex = get_vertex(vertex_one).cycle_parent;
 			GRuint iteration_count(0);
-			while (iteration_count < 10 && parent_vertex != nullptr) {
+			while (iteration_count < iteration_count_limit 
+				&& parent_vertex != nullptr) {
+
 				path_one.push_front(parent_vertex);
 				current_vertex = parent_vertex;
 				parent_vertex = get_vertex(current_vertex).cycle_parent;
@@ -506,7 +502,10 @@ namespace grapholon {
 			current_vertex = vertex_two;
 			parent_vertex = get_vertex(vertex_two).cycle_parent;
 			iteration_count = 0;
-			while (iteration_count < 10 && parent_vertex != nullptr) {
+
+			while (iteration_count < iteration_count_limit 
+				&& parent_vertex != nullptr) {
+
 				path_two.push_front(parent_vertex);
 				current_vertex = parent_vertex;
 				parent_vertex = get_vertex(current_vertex).cycle_parent;
@@ -622,6 +621,9 @@ namespace grapholon {
 			//std::cout << std::endl << std::endl;
 		}
 
+
+
+
 		void print_cycles() {
 			VertexIterator vi, vi_end, next;
 			boost::tie(vi, vi_end) = vertices();
@@ -648,7 +650,25 @@ namespace grapholon {
 		}
 
 
+
+
 		void find_cycles() {
+
+			//reset
+			VertexIterator vi, vi_end, next;
+			boost::tie(vi, vi_end) = vertices();
+			for (next = vi; vi != vi_end; vi = next) {
+				++next;
+				get_vertex(*vi).is_part_of_cycle = false;
+			}
+
+			EdgeIterator ei, ei_end, e_next;
+			boost::tie(ei, ei_end) = edges();
+			for (e_next = ei; ei != ei_end; ei = e_next) {
+				++e_next;
+				get_edge(*ei).is_part_of_cycle = false;
+			}
+
 			VertexDescriptor start_vertex = *boost::vertices(internal_graph_).first;
 
 			GRuint iteration_count(0);
@@ -713,153 +733,16 @@ namespace grapholon {
 				iteration_count++;
 			}
 
-
+			//cleanup
+		//	VertexIterator vi, vi_end, next;
+			boost::tie(vi, vi_end) = vertices();
+			for (next = vi; vi != vi_end; vi = next) {
+				++next;
+				get_vertex(*vi).cycle_parent = nullptr;
+				get_vertex(*vi).is_in_spanning_tree = false;
+			}
 		}
 
-#if 0
-		void find_cycles2() {
-			//first create a spanning-tree for the graph
-			VertexDescriptor start_vertex = *boost::vertices(internal_graph_).first;
-
-			GRuint iteration_count(0);
-
-			std::queue<VertexDescriptor> vertex_queue;
-			vertex_queue.push(start_vertex);
-			std::cout << "starting with vertex at " << get_vertex(start_vertex).position.to_string() << std::endl;
-
-			std::vector<EdgeDescriptor> non_tree_edges;
-
-			while (iteration_count < vertex_count() * 2 && !vertex_queue.empty()) {
-				std::cout << std::endl << " at iteration " << iteration_count <<" queue is : "<< std::endl;
-				print(vertex_queue);
-
-				VertexDescriptor current_vertex = vertex_queue.front();
-				vertex_queue.pop();
-
-				std::cout << "current vertex is " << get_vertex(current_vertex).position.to_string() << std::endl;
-
-
-				if (get_vertex(current_vertex).is_visited) {
-
-				}else{
-					get_vertex(current_vertex).is_visited = true;
-
-					std::pair<InEdgeIterator, InEdgeIterator> in_edges = boost::in_edges(current_vertex, internal_graph_);
-					std::pair<OutEdgeIterator, OutEdgeIterator> out_edges = boost::out_edges(current_vertex, internal_graph_);
-
-					//std::cout << "in degree of current vertex : " << boost::in_degree(current_vertex, internal_graph_) << std::endl;
-					//std::cout << "out degree of current vertex : " << boost::out_degree(current_vertex, internal_graph_) << std::endl;
-
-					for (InEdgeIterator e_it(in_edges.first); e_it != in_edges.second; e_it++) {
-						VertexDescriptor source = boost::source(*e_it, internal_graph_);
-							std::cout << "checking vertex at " << get_vertex(source).position.to_string() << std::endl;
-						if (!get_vertex(source).is_visited) {
-								std::cout << "   added vertex" << std::endl;
-							vertex_queue.push(source);
-							get_edge(*e_it).is_in_spanning_tree = true;
-
-						}
-					}
-					for (OutEdgeIterator e_it(out_edges.first); e_it != out_edges.second; e_it++) {
-						VertexDescriptor target = boost::target(*e_it, internal_graph_);
-						std::cout << "checking vertex at " << get_vertex(target).position.to_string() << std::endl;
-						if (!get_vertex(target).is_visited) {
-								std::cout << "   added vertex " << std::endl;
-							vertex_queue.push(target);
-							get_edge(*e_it).is_in_spanning_tree = true;
-						}
-					}
-				}
-
-				iteration_count++;
-			}
-
-			std::cout << "found the following non-spanning tree edges after " << iteration_count << " iterations : " << std::endl;
-
-			iteration_count = 0;
-			std::pair<EdgeIterator, EdgeIterator> ep;
-			for (ep = boost::edges(internal_graph_); ep.first != ep.second; ++ep.first) {
-				EdgeDescriptor e = *ep.first;
-				if (!get_edge(e).is_in_spanning_tree) {
-					std::cout << iteration_count << " : |"
-						<< internal_graph_[boost::source(e, internal_graph_)].position.to_string() << "| -> "
-						<< std::endl << internal_graph_[e].curve.to_string() << std::endl
-						<< " -> |" << internal_graph_[boost::target(e, internal_graph_)].position.to_string() << "| " << std::endl << std::endl;
-
-					iteration_count++;
-				}
-			}
-
-
-		}
-
-		void find_cycles() {
-
-			VertexDescriptor start_vertex = *boost::vertices(internal_graph_).first;
-
-			GRuint iteration_count(0);
-
-			std::queue<VertexDescriptor> vertex_queue;
-			vertex_queue.push(start_vertex);
-			std::cout << "starting with vertex at "<<get_vertex(start_vertex).position.to_string() << std::endl;
-
-			std::vector<VertexDescriptor> cycle_root_vertices;
-
-
-			//first, find all cycles (one root vertex per cycle)
-			while (iteration_count < vertex_count()*2 && !vertex_queue.empty()) {
-				//std::cout << std::endl << " at iteration " << iteration_count <<" queue is : "<< std::endl;
-				//print(vertex_queue);
-
-				VertexDescriptor current_vertex = vertex_queue.front();
-				vertex_queue.pop();
-
-				//std::cout << "current vertex is " << get_vertex(current_vertex).position.to_string() << std::endl;
-
-				if (get_vertex(current_vertex).is_visited) {
-					cycle_root_vertices.push_back(current_vertex);
-				}
-				else {
-					get_vertex(current_vertex).is_visited = true;
-
-					std::pair<InEdgeIterator, InEdgeIterator> in_edges = boost::in_edges(current_vertex, internal_graph_);
-					std::pair<OutEdgeIterator, OutEdgeIterator> out_edges = boost::out_edges(current_vertex, internal_graph_);
-
-					//std::cout << "in degree of current vertex : " << boost::in_degree(current_vertex, internal_graph_) << std::endl;
-					//std::cout << "out degree of current vertex : " << boost::out_degree(current_vertex, internal_graph_) << std::endl;
-
-					for (InEdgeIterator e_it(in_edges.first); e_it != in_edges.second; e_it++) {
-						VertexDescriptor source = boost::source(*e_it, internal_graph_);
-					//	std::cout << "checking vertex at " << get_vertex(source).position.to_string() << std::endl;
-						if (!get_vertex(source).is_visited) {
-						//	std::cout << "   added vertex" << std::endl;
-							vertex_queue.push(source);
-
-						}
-					}
-					for (OutEdgeIterator e_it(out_edges.first); e_it != out_edges.second; e_it++) {
-						VertexDescriptor target = boost::target(*e_it, internal_graph_);
-						//std::cout << "checking vertex at " << get_vertex(target).position.to_string() << std::endl;
-						if (!get_vertex(target).is_visited) {
-						//	std::cout << "   added vertex " << std::endl;
-							vertex_queue.push(target);
-						}
-					}
-				}
-
-				iteration_count++;
-			}
-			
-			std::cout << "found " << cycle_root_vertices.size() << " cycle vertices after " << iteration_count << " iterations" << std::endl;
-
-			//then for each root cycle vertex,  we find the other cycle vertices
-			for (auto root_vertex : cycle_root_vertices) {
-
-			}
-
-		}
-
-#endif
 
 		GRuint collapse_edges_shorter_than(GRfloat min_length) {
 			std::vector<EdgeDescriptor> edges_to_collapse;
