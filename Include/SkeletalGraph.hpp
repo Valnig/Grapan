@@ -188,7 +188,8 @@ namespace grapholon {
 			//and collapse it 
 			if (!new_edge_to_collapse.second) {
 				return removed;
-			}
+			}				
+
 			removed = collapse_edge(new_edge_to_collapse.first, option);
 
 			if (removed == vertex_one) {
@@ -210,6 +211,18 @@ namespace grapholon {
 
 
 		/****************************************************************************************************************************** Edge stuff*/
+
+		std::pair<EdgeDescriptor, bool> add_edge(VertexDescriptor from, VertexDescriptor to, EdgeProperties properties) {
+			edge_spline_count_ += (GRuint)properties.curve.size();
+
+			std::pair<EdgeDescriptor, bool> new_edge = boost::add_edge(from, to, properties, internal_graph_);
+
+			get_edge(new_edge.first).is_part_of_cycle = (get_vertex(from).is_part_of_cycle && get_vertex(to).is_part_of_cycle);
+
+			return new_edge;
+		}
+
+
 		std::pair<EdgeDescriptor, bool> add_edge(VertexDescriptor from, VertexDescriptor to) {
 			edge_spline_count_ += 2;
 			Vector3f position_from = get_vertex(from).position;
@@ -222,14 +235,10 @@ namespace grapholon {
 				)
 			});
 
-			return boost::add_edge(from, to, properties, internal_graph_);
+			return add_edge(from, to, properties);
 
 		}
 
-		std::pair<EdgeDescriptor, bool> add_edge(VertexDescriptor from, VertexDescriptor to, EdgeProperties properties) {
-			edge_spline_count_ += (GRuint)properties.curve.size();
-			return boost::add_edge(from, to, properties, internal_graph_);
-		}
 
 		void remove_edge(EdgeDescriptor edge) {
 
@@ -364,10 +373,8 @@ namespace grapholon {
 			EdgeDescriptor left_edge = add_edge(boost::source(edge_to_split, internal_graph_), new_vertex, { first_half }).first;
 			EdgeDescriptor right_edge = add_edge(new_vertex, boost::target(edge_to_split, internal_graph_), { second_half }).first;
 
-			if (get_edge(edge_to_split).is_part_of_cycle) {
-				get_edge(left_edge).is_part_of_cycle = true;
-				get_edge(right_edge).is_part_of_cycle = true;
-			}
+			get_edge(left_edge).is_part_of_cycle = get_edge(edge_to_split).is_part_of_cycle;
+			get_edge(right_edge).is_part_of_cycle = get_edge(edge_to_split).is_part_of_cycle;
 
 			//and remove the old one
 			remove_edge(edge_to_split);
@@ -863,8 +870,9 @@ namespace grapholon {
 			//set the original shape
 		//	new_curve.set_original_shape();
 
+
 			//add an edge from the in-edge's source to the out-edge's target
-			add_edge(boost::source(in_edge, internal_graph_), boost::target(out_edge, internal_graph_), { new_curve });
+			add_edge(boost::source(in_edge, internal_graph_), boost::target(out_edge, internal_graph_), { new_curve }).first;
 
 			//remove the vertex (and both in and out-edges)
 			remove_vertex(vertex_to_remove);
