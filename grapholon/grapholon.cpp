@@ -877,33 +877,6 @@ void graphExtractionOnSkeletonLikeAndCurveFitting() {
 
 
 
-void modifiyGraphVertexPositions3Points() {
-
-	SkeletalGraph graph;
-
-	GRuint window_width(1);
-
-	Vector3f u1 = Vector3f(0, 0, 0);
-	Vector3f u2 = Vector3f(1, 1, 0);
-	Vector3f u3 = Vector3f(2, 0, 0);
-
-	VertexDescriptor v1 = graph.add_vertex({ u1 });
-
-	DiscreteCurve c1({ u1, u2, u3 });
-	EdgeProperties e1({ *c1.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
-
-	VertexDescriptor v3 = graph.add_vertex({ u3 });
-
-	graph.add_edge(v1, v3, e1);
-
-
-	std::cout << "graph at first : " << graph.to_string() << endl;
-
-	graph.update_vertex_position(v3, { Vector3f(2,1,0) });
-
-	std::cout << "graph after moving center : " << graph.to_string() << endl;
-}
-
 
 void CurveFittinSpline() {
 	DiscreteCurve discrete_curve;
@@ -1307,63 +1280,6 @@ void move_vertex_merge_and_move_again() {
 }
 
 
-void collapseEdgesInCycle() {
-
-	SkeletalGraph graph;
-
-	GRuint window_width(1);
-
-	Vector3f u0 = Vector3f(1, 0, 0);
-	Vector3f u1 = Vector3f(1, 1, 0);
-	Vector3f u2 = Vector3f(2, 0, 0);
-
-	Vector3f u3 = Vector3f(0, 0, 0);
-	Vector3f u4 = Vector3f(0, 1, 0);
-	Vector3f u5 = Vector3f(3, 0, 0);
-
-	Vector3f u6 = Vector3f(0.5f, 0, 0);
-	Vector3f u7 = Vector3f(0.5, 1, 0);
-	Vector3f u8 = Vector3f(2.5, 0, 0);
-
-	VertexDescriptor v0 = graph.add_vertex({ u0 });
-	VertexDescriptor v1 = graph.add_vertex({ u1 });
-	VertexDescriptor v2 = graph.add_vertex({ u2 });
-	VertexDescriptor v3 = graph.add_vertex({ u3 });
-	VertexDescriptor v4 = graph.add_vertex({ u4 });
-	VertexDescriptor v5 = graph.add_vertex({ u5 });
-
-
-	DiscreteCurve c0({ u0, u1 });
-	EdgeProperties e0({ *c0.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
-	EdgeDescriptor to_collapse0 = graph.add_edge(v0, v1, e0).first;
-
-	DiscreteCurve c1({ u1, u2 });
-	EdgeProperties e1({ *c1.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
-	EdgeDescriptor to_collapse1 = graph.add_edge(v1, v2, e1).first;
-
-	DiscreteCurve c2({ u2, u0 });
-	EdgeProperties e2({ *c2.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
-	EdgeDescriptor to_collapse2 = graph.add_edge(v2, v0, e2).first;
-
-	DiscreteCurve c3({ u3, u6, u0 });
-	EdgeProperties e3({ *c3.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
-	graph.add_edge(v3, v0, e3);
-
-	DiscreteCurve c4({ u4, u7, u1 });
-	EdgeProperties e4({ *c4.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
-	graph.add_edge(v4, v1, e4);
-
-	DiscreteCurve c5({ u2, u8, u5 });
-	EdgeProperties e5({ *c5.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
-	graph.add_edge(v2, v5, e5);
-
-	std::cout << "graph at first : " << graph.to_string() << endl;
-
-	graph.collapse_simple_edges();
-
-	std::cout << "graph after collapse : " << graph.to_string() << endl;
-}
-
 
 
 void collapseEdgesShorterThan() {
@@ -1402,9 +1318,116 @@ void collapseEdgesShorterThan() {
 	std::cout << "graph after removal of degree 2 vertices : " << graph.to_string() << endl;
 }
 
+
+void modifiyGraphVertexPositions3Points() {
+
+	SkeletalGraph graph;
+
+	GRuint window_width(1);
+
+	Vector3f u1 = Vector3f(0, 0, 0);
+	Vector3f u2 = Vector3f(1, 1, 0);
+	Vector3f u3 = Vector3f(2, 2, 0);
+	Vector3f u4 = Vector3f(3, 1, 0);
+	Vector3f u5 = Vector3f(4, 0, 0);
+
+	VertexDescriptor v1 = graph.add_vertex({ u1 });
+	VertexDescriptor v5 = graph.add_vertex({ u5 });
+
+	DiscreteCurve c1({ u1, u2, u3, u4, u5 });
+	EdgeProperties e1({ *c1.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+
+
+	graph.add_edge(v1, v5, e1);
+
+
+	std::cout << "graph at first : " << graph.to_string() << endl;
+
+	graph.update_vertex_position(v5, { Vector3f(4,2,0) });
+
+	std::cout << "graph after moving center : " << graph.to_string() << endl;
+}
+
+
+
+void findCycle() {
+
+	VoxelSkeleton skeleton(100, 100, 100);
+	skeleton.generate_artificial_simple_kissing(10);
+
+	SkeletalGraph* graph = skeleton.extract_skeletal_graph(DiscreteCurve::START_AND_END, 1, 0);
+
+	std::cout << "graph at first : " << graph->to_string() << endl;
+
+	graph->find_cycles();
+
+	graph->print_cycles();
+
+	delete graph;
+}
+
+void findCycles() {
+	SkeletalGraph graph;
+
+	GRuint window_width(1);
+
+	Vector3f u0 = Vector3f(0, 0, 0);
+	Vector3f u1 = Vector3f(1, 1, 0);
+	Vector3f u2 = Vector3f(2, 1, 0);
+	Vector3f u3 = Vector3f(3, 0, 0);
+	Vector3f u4 = Vector3f(4, 1, 0);
+	Vector3f u5 = Vector3f(1, 2, 0);
+	Vector3f u6 = Vector3f(2, 2, 0);
+	Vector3f u7 = Vector3f(4, 2, 0);
+	Vector3f u8 = Vector3f(3, 3, 0);
+
+	VertexDescriptor v0 = graph.add_vertex({ u0 });
+	VertexDescriptor v1 = graph.add_vertex({ u1 });
+	VertexDescriptor v2 = graph.add_vertex({ u2 });
+	VertexDescriptor v6 = graph.add_vertex({ u6 });
+	VertexDescriptor v8 = graph.add_vertex({ u8 });
+
+
+	DiscreteCurve c0({ u0, u1 });
+	EdgeProperties e0({ *c0.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor to_collapse0 = graph.add_edge(v0, v1, e0).first;
+
+	DiscreteCurve c1({ u1, u5, u6 });
+	EdgeProperties e1({ *c1.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor to_collapse1 = graph.add_edge(v1, v6, e1).first;
+
+	DiscreteCurve c2({ u2, u1 });
+	EdgeProperties e2({ *c2.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor to_collapse2 = graph.add_edge(v2, v1, e2).first;
+
+
+	DiscreteCurve c3({ u2, u6 });
+	EdgeProperties e3({ *c3.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor to_collapse3 = graph.add_edge(v2, v6, e3).first;
+
+	DiscreteCurve c4({ u2, u3, u4, u7, u8 });
+	EdgeProperties e4({ *c4.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor to_collapse4 = graph.add_edge(v2, v8, e4).first;
+
+
+	DiscreteCurve c5({ u2, u8 });
+	EdgeProperties e5({ *c5.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor to_collapse5 = graph.add_edge(v2, v8, e5).first;
+
+	DiscreteCurve c6({ u6, u8 });
+	EdgeProperties e6({ *c6.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	//EdgeDescriptor to_collapse6 = graph.add_edge(v2, v1, e6).first;
+
+	std::cout << "graph at first : " << graph.to_string() << endl;
+
+	graph.find_cycles();
+
+	graph.print_cycles();
+}
+
 int main()
 {
-	collapseEdgesShorterThan();
+	findCycles();
 
     return 0;
 }

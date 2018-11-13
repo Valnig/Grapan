@@ -45,6 +45,7 @@ namespace grapholon {
 	typedef std::pair<Vector3f, Vector3f> PointTangent;
 
 
+	//TODO : replace vector with std::list
 	class SplineCurve : public Curve, public std::vector<PointTangent> {
 	private:
 		/*std::vector<PointTangent> points_and_tangents_; single vector of pairs to ensure we have the same
@@ -234,8 +235,12 @@ namespace grapholon {
 			//std::cout << "original shape is now : " << original_points_.size() << std::endl;
 		}
 
+		//x should be in [0, 1]
+		GRfloat smoothing_function(GRfloat x) {
+			return sqrtf(x);
+		}
 
-		bool pseudo_elastic_deform(bool source, Vector3f new_position) {
+		bool pseudo_elastic_deform(bool source, Vector3f new_position, bool maintain_shape_around_tip = true) {
 
 			GRfloat max_max_displacement(0.1f);
 			GRfloat elastic_constant(0.5f);
@@ -246,10 +251,14 @@ namespace grapholon {
 				set_original_shape();
 			}
 
+			Vector3f tip_displacement;
+
 			if (source) {
+				tip_displacement = new_position - original_points_.front();
 				front().first = new_position;
 			}
 			else {
+				tip_displacement = new_position - original_points_.back();
 				back().first = new_position;
 			}
 			GRuint iteration_count(0);
@@ -287,20 +296,6 @@ namespace grapholon {
 
 					x_i += displacement;
 
-					//std::cout << "x_i after first pass : " << x_i.to_string() << std::endl;
-
-					//Vector3f t_i_prime = x_next - x_prev;
-
-					//std::cout << "updated tangent : " << t_i_prime.to_string() << std::endl;
-
-					//second force application to maintain somewhat the same tangent-direction angle
-					//GRfloat angle_difference = original_angles_[i] - t_i_prime.angular_distance(x_next - x_i);
-					//Vector3f tangent_correction = (left_direction.cross(right_direction)).cross(t_i_prime).normalize() * (angle_difference/M_PI_2);
-
-					//x_i += tangent_correction * lambda;
-
-					//std::cout << "x_i after second pass : " << x_i.to_string() << std::endl;
-
 					GRfloat displacement_norm = ((*this)[i].first - x_i).norm();
 
 					(*this)[i].first = x_i;
@@ -312,6 +307,25 @@ namespace grapholon {
 				lambda *= 0.9f;
 				iteration_count++;
 			} while (max_displacement > max_max_displacement && iteration_count < 10);
+
+			if (maintain_shape_around_tip) {
+				GRfloat alpha = 0.9f;
+
+				for (GRuint i(1); i < size() - 1; i++) {
+					Vector3f relative_direction_displacement = (original_points_[i] + tip_displacement - (*this)[i].first);
+					GRfloat beta = 0.f;
+					GRfloat beta_prime = smoothing_function(((GRfloat)i / ((GRfloat)size() - 2.f))*alpha);
+
+					if (source && i == 1) {
+						beta = beta_prime;
+					}
+					else if (!source && i == size() - 2) {
+						beta = 1.f - beta_prime;
+					}
+
+					(*this)[i].first += relative_direction_displacement * beta;
+				}
+			}
 
 			update_tangents();
 			return true;
