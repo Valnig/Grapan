@@ -133,7 +133,7 @@ namespace grapholon {
 
 		bool update_vertex_position(VertexDescriptor vertex, Vector3f new_position, bool maintain_shape_around_tip = true) {
 
-			internal_graph_[vertex] = { new_position };
+			internal_graph_[vertex].position = new_position;
 
 			std::pair<InEdgeIterator, InEdgeIterator> in_edges = boost::in_edges(vertex, internal_graph_);
 			std::pair<OutEdgeIterator, OutEdgeIterator> out_edges = boost::out_edges(vertex, internal_graph_);
