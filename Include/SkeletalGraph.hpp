@@ -59,7 +59,6 @@ namespace grapholon {
 	typedef InternalBoostGraph::out_edge_iterator OutEdgeIterator;
 
 
-
 	class SkeletalGraph {
 	private:
 
@@ -79,7 +78,6 @@ namespace grapholon {
 		}
 
 		/** size getters */
-
 		GRuint vertex_count() const {
 			return (GRuint)internal_graph_.m_vertices.size();
 		}
