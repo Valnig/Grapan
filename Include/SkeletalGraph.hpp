@@ -318,7 +318,9 @@ namespace grapholon {
 			try {
 				std::pair<VertexDescriptor, EdgePair> right_vertex_neighborhood = split_edge_at(edge_to_cut, segment_index, new_vertex_position);
 				VertexDescriptor right_vertex = right_vertex_neighborhood.first;
-				EdgeDescriptor right_edge = right_vertex_neighborhood.second.first;
+				EdgeDescriptor right_edge = right_vertex_neighborhood.second.second;
+				//std::cout << "new right vertex : " << right_vertex << std::endl;
+				//std::cout << "new right edge : " << right_edge << std::endl;
 
 				//find the new edge incident to the new vertex
 				EdgeDescriptor left_edge_temp = right_vertex_neighborhood.second.first;
@@ -349,12 +351,14 @@ namespace grapholon {
 		std::pair<VertexDescriptor, EdgePair> split_edge_at(EdgeDescriptor edge_to_split, GRuint segment_index, Vector3f new_vertex_position) {
 
 			SplineCurve edge_curve(get_edge(edge_to_split).curve);
-			VertexDescriptor new_vertex = add_vertex({ new_vertex_position });
 
 			if (segment_index >= edge_curve.size() - 1) {
 				throw std::invalid_argument("Cannot split edge at invalid segment index");
 			}
 
+			VertexDescriptor new_vertex = add_vertex({ new_vertex_position });
+
+			//std::cout << "new middle vertex is : " << new_vertex << std::endl;
 
 			//compute the new end and start points
 			PointTangent source_pt = edge_curve.front();
@@ -384,9 +388,14 @@ namespace grapholon {
 				second_half[1].second = (second_half[2].first - second_half[0].first).normalize();
 			}
 
+
 			//add the new edges
 			EdgeDescriptor left_edge = add_edge(boost::source(edge_to_split, internal_graph_), new_vertex, { first_half }).first;
 			EdgeDescriptor right_edge = add_edge(new_vertex, boost::target(edge_to_split, internal_graph_), { second_half }).first;
+
+			/*std::cout << "new left edge : " << left_edge << std::endl;
+			std::cout << "new right edge : " << right_edge << std::endl;
+			std::cout << "------" << std::endl;*/
 
 			get_edge(left_edge).is_part_of_cycle = get_edge(edge_to_split).is_part_of_cycle;
 			get_edge(right_edge).is_part_of_cycle = get_edge(edge_to_split).is_part_of_cycle;
@@ -790,10 +799,14 @@ namespace grapholon {
 			std::vector<VertexDescriptor> vertices_to_remove;
 			//std::cout << "found " << edges_to_collapse.size() << " edges to collapse " << std::endl;
 			for (auto edge : edges_to_collapse) {
-				VertexDescriptor vertex = collapse_edge(edge, MIDPOINT).first.first;
-				if (vertex != InternalBoostGraph::null_vertex()) {
-					vertices_to_remove.push_back(vertex);
-			//		std::cout << " will remove vertex at " << internal_graph_[vertex].position.to_string() << std::endl;
+				try {
+					VertexDescriptor vertex = collapse_edge(edge, MIDPOINT).first.first;
+					if (vertex != InternalBoostGraph::null_vertex()) {
+						vertices_to_remove.push_back(vertex);
+					}
+				}
+				catch (std::invalid_argument e) {
+					std::cerr << e.what() << std::endl;
 				}
 			}
 

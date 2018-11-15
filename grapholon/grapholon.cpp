@@ -1209,12 +1209,13 @@ void move_merge_and_move_again() {
 	graph.update_vertex_position(v2, Vector3f(2, 2, 0));
 	std::cout << "graph after moving middle vertex : " << graph.to_string() << endl;
 
-	if (!graph.remove_degree_2_vertex_and_merge_edges(v2)) {
-		std::cout << std::endl << " nope that didn't work ..." << std::endl << std::endl;
+	try {
+		graph.remove_degree_2_vertex_and_merge_edges(v2);
+	}catch(std::invalid_argument e){
+		std::cout << std::endl << e.what() << std::endl << std::endl;
 	}
 
 	std::cout << "graph after removing middle vertex : " << graph.to_string() << endl;
-
 
 	graph.update_vertex_position(v4, Vector3f(4, 2, 0));
 	std::cout << "graph after moving end vertex : " << graph.to_string() << endl;
@@ -1256,7 +1257,7 @@ void move_vertex_merge_and_move_again() {
 	graph.update_vertex_position(v2, Vector3f(2, 2, 0));
 	std::cout << "graph after moving v2: " << graph.to_string() << endl;
 
-	VertexDescriptor merged = graph.merge_vertices(v2, v5, SkeletalGraph::SOURCE);
+	VertexDescriptor merged = graph.merge_vertices(v2, v5, SkeletalGraph::SOURCE).first.first;
 	if (merged == InternalBoostGraph::null_vertex()) {
 		std::cout << std::endl << " nope that didn't work ..." << std::endl << std::endl;
 		return;
@@ -1449,9 +1450,56 @@ void findCycleInSinusoidal() {
 
 }
 
+
+void CutSimpleEdge() {
+
+	SkeletalGraph graph;
+
+	GRuint window_width(1);
+
+	Vector3f u1 = Vector3f(0, 0, 0);
+	Vector3f u2 = Vector3f(1, 1, 0);
+	Vector3f u3 = Vector3f(2, 2, 0);
+
+	VertexDescriptor v1 = graph.add_vertex({ u1 });
+	VertexDescriptor v3 = graph.add_vertex({ u3 });
+
+	std::cout << "v1 : " << v1 << std::endl;
+	std::cout << "v3 : " << v3 << std::endl;
+
+	DiscreteCurve c1({ u1, u2, u3 });
+	EdgeProperties e1({ *c1.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+
+	EdgeDescriptor edge_to_cut = graph.add_edge(v1, v3, e1).first;
+	std::cout << "edge to cut : " << edge_to_cut << std::endl;
+
+	std::cout << "graph at first : " << graph.to_string() << endl;
+
+	std::pair<VertexPair, EdgePair> result = graph.cut_edge_at(edge_to_cut, 1, Vector3f(1.5f, 1.5f, 0.f));
+	VertexDescriptor new_vertex_left = result.first.first;
+	VertexDescriptor new_vertex_right = result.first.second;
+
+	EdgeDescriptor new_edge_left = result.second.first;
+	EdgeDescriptor new_edge_right = result.second.second;
+
+
+	//graph.split_edge_at(edge_to_cut, 0, Vector3f())
+
+	std::cout << "graph after moving center : " << graph.to_string() << endl;
+
+	std::cout << "vertex one is " << v1 << std::endl;
+    std::cout << "vertex two is " << v3 << std::endl;
+	std::cout << "new vertex left is : " << new_vertex_left << std::endl;
+	std::cout << "new vertex right is : " << new_vertex_right << std::endl;
+
+	std::cout << "new edge left is : " << new_edge_left << std::endl;
+	std::cout << "new edge right is : " << new_edge_right << std::endl;
+}
+
+
 int main()
 {
-	findCycles();
+	CutSimpleEdge();
 
     return 0;
 }
