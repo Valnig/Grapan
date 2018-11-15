@@ -58,7 +58,11 @@ namespace grapholon {
 	typedef InternalBoostGraph::in_edge_iterator InEdgeIterator;
 	typedef InternalBoostGraph::out_edge_iterator OutEdgeIterator;
 
-
+	//handy aliases
+	typedef std::pair<VertexDescriptor, VertexDescriptor> VertexPair;
+	typedef std::pair<EdgeDescriptor, EdgeDescriptor> EdgePair;
+	typedef std::vector<EdgeDescriptor> EdgeVector;
+	typedef std::pair<VertexDescriptor, EdgeVector> VertexNeighborhood;
 
 	class SkeletalGraph {
 	private:
@@ -70,6 +74,10 @@ namespace grapholon {
 		/** Vertices and edges */
 
 	public:
+
+		static VertexDescriptor null_vertex() {
+			return InternalBoostGraph::null_vertex();
+		}
 
 		typedef enum { SOURCE, TARGET, MIDPOINT } COLLAPSE_OPTION;
 
@@ -99,24 +107,33 @@ namespace grapholon {
 			return boost::add_vertex(properties, internal_graph_);
 		}
 
-		void remove_vertex(VertexDescriptor vertex) {
-			clear_vertex(vertex);
-			boost::remove_vertex(vertex, internal_graph_);
+		EdgeVector remove_vertex(VertexDescriptor vertex) {
+			if (vertex != InternalBoostGraph::null_vertex()) {
+				std::vector<EdgeDescriptor> removed_edges = clear_vertex(vertex);
+				boost::remove_vertex(vertex, internal_graph_);
+				return removed_edges;
+			}
+			return std::vector<EdgeDescriptor>();
 		}
 
-		void clear_vertex(VertexDescriptor vertex) {
+		EdgeVector clear_vertex(VertexDescriptor vertex) {
+			EdgeVector removed_edges;
+
 			std::pair<InEdgeIterator, InEdgeIterator> in_edges = boost::in_edges(vertex, internal_graph_);
 			std::pair<OutEdgeIterator, OutEdgeIterator> out_edges = boost::out_edges(vertex, internal_graph_);
 
 			//in theory we only need to iterate through in_edges since it's an undirected graph
 			for (InEdgeIterator e_it(in_edges.first); e_it != in_edges.second; e_it++) {
 				edge_spline_count_ -= (GRuint)internal_graph_[*e_it].curve.size();
+				removed_edges.push_back(*e_it);
 			}
 			for (OutEdgeIterator e_it(out_edges.first); e_it != out_edges.second; e_it++) {
 				edge_spline_count_ -= (GRuint)internal_graph_[*e_it].curve.size();
+				removed_edges.push_back(*e_it);
 			}
 
 			boost::clear_vertex(vertex, internal_graph_);
+			return removed_edges;
 		}
 
 		VertexProperties& get_vertex(VertexDescriptor vertex) {
@@ -178,28 +195,23 @@ namespace grapholon {
 			return false;
 		}
 
-		/** Returns the vertex that wasn't removed */
-		VertexDescriptor merge_vertices(VertexDescriptor vertex_one, VertexDescriptor vertex_two, COLLAPSE_OPTION option = SOURCE) {
+		/** Returns the vertex that was removed and its surrounding removed edges*/
+		std::pair<VertexNeighborhood, EdgeVector> merge_vertices(VertexDescriptor vertex_one, VertexDescriptor vertex_two, COLLAPSE_OPTION option = SOURCE) {
 
 			//add an edge from one vertex to the other
 			std::pair<EdgeDescriptor, bool> new_edge_to_collapse = add_edge(vertex_one, vertex_two);
 
-			VertexDescriptor removed = InternalBoostGraph::null_vertex();
-			//and collapse it 
 			if (!new_edge_to_collapse.second) {
-				return removed;
+				throw std::invalid_argument("Could not merge vertices");
 			}				
 
-			removed = collapse_edge(new_edge_to_collapse.first, option);
+			//and collapse it 
+			std::pair<VertexNeighborhood, EdgeVector> removed_vertex_and_added_edges = collapse_edge(new_edge_to_collapse.first, option);
+			VertexDescriptor cleared_vertex = removed_vertex_and_added_edges.first.first;
+			remove_vertex(cleared_vertex);
 
-			if (removed == vertex_one) {
-				remove_vertex(removed);
-				return vertex_two;
-			}
-			else {
-				remove_vertex(removed);
-				return vertex_one;
-			}
+			return removed_vertex_and_added_edges;
+
 		}
 
 
@@ -240,7 +252,7 @@ namespace grapholon {
 		}
 
 
-		void remove_edge(EdgeDescriptor edge) {
+		VertexDescriptor remove_edge(EdgeDescriptor edge) {
 
 			edge_spline_count_ -= (GRuint)internal_graph_[edge].curve.size();
 			
@@ -262,11 +274,15 @@ namespace grapholon {
 			//we remove the vertices after the edge otherwise the edge would become invalid
 			if (remove_source && vertex_count() != 1) {
 				boost::remove_vertex(source, internal_graph_);
+				return source;
 			}
 
 			if (remove_target && vertex_count() != 1) {
 				boost::remove_vertex(target, internal_graph_);
+				return target;
 			}
+
+			return InternalBoostGraph::null_vertex();
 		}
 
 		const EdgeProperties& get_edge(EdgeDescriptor edge) const {
@@ -296,48 +312,47 @@ namespace grapholon {
 		}
 		
 
-		std::pair<VertexDescriptor, VertexDescriptor> cut_edge_at(EdgeDescriptor edge_to_cut, GRuint segment_index, Vector3f new_vertex_position) {
+		std::pair<VertexPair,EdgePair> cut_edge_at(EdgeDescriptor edge_to_cut, GRuint segment_index, Vector3f new_vertex_position) {
 			
 			//first split the edge
-			VertexDescriptor right_vertex = split_edge_at(edge_to_cut, segment_index, new_vertex_position);
+			try {
+				std::pair<VertexDescriptor, EdgePair> right_vertex_neighborhood = split_edge_at(edge_to_cut, segment_index, new_vertex_position);
+				VertexDescriptor right_vertex = right_vertex_neighborhood.first;
+				EdgeDescriptor right_edge = right_vertex_neighborhood.second.first;
 
-			//guard to avoid dereferencing an empty iterator
-			if (boost::in_degree(right_vertex, internal_graph_) != 1) {
-				return { right_vertex, right_vertex };
-			}
+				//find the new edge incident to the new vertex
+				EdgeDescriptor left_edge_temp = right_vertex_neighborhood.second.first;
 
-			//find the new edge incident to the new vertex
-			EdgeDescriptor left_edge = *(boost::in_edges(right_vertex, internal_graph_).first);
+				GRuint last_segment_index = internal_graph_[left_edge_temp].curve.size() - 2;
+				Vector3f last_segment_middle_position = (internal_graph_[left_edge_temp].curve.back().first + internal_graph_[left_edge_temp].curve.before_back().first)*0.5f;
 
-			GRuint last_segment_index = internal_graph_[left_edge].curve.size() - 2;
-			Vector3f last_segment_middle_position = (internal_graph_[left_edge].curve.back().first + internal_graph_[left_edge].curve.before_back().first)*0.5f;
+				//split the left edge at the last segment
+				std::pair<VertexDescriptor, EdgePair> left_vertex_neighborhood = split_edge_at(left_edge_temp, last_segment_index, last_segment_middle_position);
+				VertexDescriptor left_vertex = left_vertex_neighborhood.first;
+				EdgeDescriptor left_edge = left_vertex_neighborhood.second.first;
 
-			//split the left edge at the last segment
-			VertexDescriptor left_vertex = split_edge_at(left_edge, last_segment_index, last_segment_middle_position);
-
-			//same guard as above
-			if (boost::in_degree(right_vertex, internal_graph_) != 1) {
-				return { left_vertex, right_vertex };
-			}
-
-			//and remove the the middle edge
-			EdgeDescriptor middle_edge = *(boost::in_edges(right_vertex, internal_graph_).first);
+				//and remove the the middle edge
+				EdgeDescriptor middle_edge = *(boost::in_edges(right_vertex, internal_graph_).first);
 			
-			remove_edge(middle_edge);
+				remove_edge(middle_edge);
 
-			return { left_vertex, right_vertex };
+				return std::pair<VertexPair, EdgePair>( VertexPair(left_vertex, right_vertex), EdgePair(left_edge, right_edge));
+			}
+			catch (std::invalid_argument e) {
+				throw e;
+			}
 		}
 
 
 
 		/** Returns the descriptor of the vertex that is now in the middle of the split edge*/
-		VertexDescriptor split_edge_at(EdgeDescriptor edge_to_split, GRuint segment_index, Vector3f new_vertex_position) {
+		std::pair<VertexDescriptor, EdgePair> split_edge_at(EdgeDescriptor edge_to_split, GRuint segment_index, Vector3f new_vertex_position) {
 
 			SplineCurve edge_curve(get_edge(edge_to_split).curve);
 			VertexDescriptor new_vertex = add_vertex({ new_vertex_position });
 
 			if (segment_index >= edge_curve.size() - 1) {
-				return new_vertex;
+				throw std::invalid_argument("Cannot split edge at invalid segment index");
 			}
 
 
@@ -379,12 +394,12 @@ namespace grapholon {
 			//and remove the old one
 			remove_edge(edge_to_split);
 
-			return new_vertex;
+			return std::pair<VertexDescriptor, EdgePair>(new_vertex, EdgePair( left_edge, right_edge ));
 		}
 
 
-		/** returns the vertexdescriptor of the vertex that was removed*/
-		VertexDescriptor collapse_edge(EdgeDescriptor edge_to_collapse, COLLAPSE_OPTION option = SOURCE) {
+		/** returns the vertexdescriptor of the vertex that was removed, its edges (also removed) and the edges that were added */
+		std::pair<VertexNeighborhood, EdgeVector> collapse_edge(EdgeDescriptor edge_to_collapse, COLLAPSE_OPTION option = SOURCE) {
 
 			//first attach the edge_to_collapse's source's edges to the edge_to_collapse's target
 			VertexDescriptor source = boost::source(edge_to_collapse, internal_graph_);
@@ -395,8 +410,7 @@ namespace grapholon {
 			if (source == InternalBoostGraph::null_vertex() 
 				|| target == InternalBoostGraph::null_vertex()
 				|| !boost::edge(source, target, internal_graph_).second) {
-				std::cout << "edge doesn't exist" << std::endl;
-				return InternalBoostGraph::null_vertex();
+				throw std::invalid_argument("edge doesn't exist");
 			}
 
 			//by default we keep the source
@@ -440,6 +454,7 @@ namespace grapholon {
 				if (*out_ep.first != edge_to_collapse) {
 					VertexDescriptor new_target = boost::target(*out_ep.first, internal_graph_);
 					if (new_target != to_keep) {
+
 						EdgeProperties new_props = internal_graph_[*out_ep.first];
 						new_props.curve.front() = PointTangent(new_position, (new_props.curve[0].first - new_position).normalize());
 						targets_to_add.push_back(new_target);
@@ -449,21 +464,23 @@ namespace grapholon {
 			}
 
 			//remove the edges of the vertex to remove
-			clear_vertex(to_remove);
+			VertexNeighborhood removed_neighborhood = { to_remove, clear_vertex(to_remove) };
+
+			EdgeVector new_edges;
 
 			//add the new edges
 			for (GRuint i(0); i < sources_to_add.size(); i++) {
-				add_edge(sources_to_add[i], to_keep, source_props_to_add[i]);
+				new_edges.push_back(add_edge(sources_to_add[i], to_keep, source_props_to_add[i]).first);
 			}
 
 			for (GRuint i(0); i < targets_to_add.size(); i++) {
-				add_edge(to_keep, targets_to_add[i], target_props_to_add[i]);
+				new_edges.push_back(add_edge(to_keep, targets_to_add[i], target_props_to_add[i]).first);
 			}
 
 			//and update the vertex to keep's position
 			internal_graph_[to_keep].position = new_position;
 
-			return to_remove;
+			return {removed_neighborhood, new_edges};
 		}
 
 
@@ -773,7 +790,7 @@ namespace grapholon {
 			std::vector<VertexDescriptor> vertices_to_remove;
 			//std::cout << "found " << edges_to_collapse.size() << " edges to collapse " << std::endl;
 			for (auto edge : edges_to_collapse) {
-				VertexDescriptor vertex = collapse_edge(edge, MIDPOINT);
+				VertexDescriptor vertex = collapse_edge(edge, MIDPOINT).first.first;
 				if (vertex != InternalBoostGraph::null_vertex()) {
 					vertices_to_remove.push_back(vertex);
 			//		std::cout << " will remove vertex at " << internal_graph_[vertex].position.to_string() << std::endl;
@@ -809,7 +826,8 @@ namespace grapholon {
 			std::vector<VertexDescriptor> vertices_to_remove;
 			//std::cout << "found " << edges_to_collapse.size() << " edges to collapse " << std::endl;
 			for (auto edge : edges_to_collapse) {
-				VertexDescriptor vertex = collapse_edge(edge, SOURCE);
+				VertexDescriptor vertex = collapse_edge(edge, MIDPOINT).first.first;
+
 				if (vertex != InternalBoostGraph::null_vertex()) {
 					vertices_to_remove.push_back(vertex);
 					//std::cout << " will remove vertex at " << internal_graph_[vertex].position.to_string() << std::endl;
@@ -842,11 +860,11 @@ namespace grapholon {
 			}
 		}
 
-
+		//returns the merged edge and the pair of removed edges
 		//NOTE : only works if the vertex is of degree 2 and has one in-edge and one out-edge
-		bool remove_degree_2_vertex_and_merge_edges(VertexDescriptor vertex_to_remove) {
+		std::pair<EdgeDescriptor, EdgePair> remove_degree_2_vertex_and_merge_edges(VertexDescriptor vertex_to_remove) {
 			if (boost::in_degree(vertex_to_remove, internal_graph_) != 1 || boost::out_degree(vertex_to_remove, internal_graph_) != 1) {
-				return false;
+				throw std::invalid_argument("Cannot remove vertex of degree 2");
 			}
 
 			EdgeDescriptor in_edge = *(boost::in_edges(vertex_to_remove, internal_graph_).first);
@@ -872,15 +890,19 @@ namespace grapholon {
 
 
 			//add an edge from the in-edge's source to the out-edge's target
-			add_edge(boost::source(in_edge, internal_graph_), boost::target(out_edge, internal_graph_), { new_curve }).first;
+			std::pair<EdgeDescriptor, bool> new_edge = add_edge(boost::source(in_edge, internal_graph_), boost::target(out_edge, internal_graph_), { new_curve });
 
 			//remove the vertex (and both in and out-edges)
-			remove_vertex(vertex_to_remove);
+			std::vector<EdgeDescriptor> removed_edges = remove_vertex(vertex_to_remove);
 
 			//std::cout << "edge count : " << edge_count() << std::endl;
 			//std::cout << " new edge length : " << new_curve.size() << std::endl;
-
-			return true;
+			if (new_edge.second && removed_edges.size() == 2) {
+				return std::pair<EdgeDescriptor, EdgePair> (new_edge.first, EdgePair(removed_edges[0], removed_edges[1]));
+			}
+			else {
+				throw std::invalid_argument("Could not create new edge to replace vertex of degree 2");
+			}
 		}
 
 
