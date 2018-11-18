@@ -73,6 +73,9 @@ namespace grapholon {
 			Z() = z;
 		}
 
+		template <typename _OTHER_TYPE>
+		Vector3(_OTHER_TYPE x, _OTHER_TYPE y, _OTHER_TYPE z) : Vector3((_TYPE)x, (_TYPE)y, (_TYPE)z) {}
+
 		Vector3(_TYPE value) : Vector3(value, value, value) {}
 
 		/**Copy constructor to avoid the side effect of copying the member reference X(),Y()& Z()*/

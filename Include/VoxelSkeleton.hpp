@@ -152,12 +152,19 @@ namespace grapholon {
 			return nb_voxels_;
 		}
 
+
+		bool same_dimensions_as(VoxelSkeleton* other_voxel_set)const {
+			return width() == other_voxel_set->width() 
+				&& height() == other_voxel_set->height() 
+				&& slice() == other_voxel_set->slice();
+		}
+
 		GRuint set_voxel_count() const {
 			return (GRuint)true_voxels_.size();
 		}
 
-		SkeletonVoxel voxel(GRint id) {
-			if (id < 0 || id >= (GRint)nb_voxels_) {
+		SkeletonVoxel voxel(GRuint id) const {
+			if (id >= (GRint)nb_voxels_) {
 				return SkeletonVoxel(false, false, UNCLASSIFIED);
 			}
 			else {
@@ -165,7 +172,7 @@ namespace grapholon {
 			}
 		}
 
-		SkeletonVoxel voxel(GRint x, GRint y, GRint z) {
+		SkeletonVoxel voxel(GRint x, GRint y, GRint z) const {
 			return voxel(voxel_coordinates_to_id(x, y, z));
 		}
 
@@ -329,13 +336,98 @@ namespace grapholon {
 			}
 		}
 		
+		/***********************************************************************************************/
+		/************************************************************************* VOXEL COMPUTATIONS **/
+		/***********************************************************************************************/
+
+		/** Return the euclidian distance between two voxels*/
+		GRfloat voxel_distance(GRuint voxel_id, GRuint other_voxel_id) const{
+			GRuint x1, y1, z1;
+			GRuint x2, y2, z2;
+
+			voxel_id_to_coordinates(voxel_id, x1, y1, z1);
+			voxel_id_to_coordinates(other_voxel_id, x2, y2, z2);
+
+			return Vector3f(x1, y1, z1).distance(Vector3f(x2, y2, z2));
+		}
+
+
+		GRfloat min_voxel_radius(GRuint voxel_id) const {
+
+			std::vector<bool> checked_voxel(voxel_count());
+			checked_voxel[voxel_id] = true;
+
+			IndexVector voxels_to_check;
+
+			GRuint x, y, z;
+			voxel_id_to_coordinates(voxel_id, x, y, z);
+
+			GRuint iteration_count(0);
+			GRuint distance_to_boundary(MIN(MIN(MIN(width_ - x, x), MIN(height_ - y, y)), MIN(slice_ - z, z)));
+
+			//initialization (2-neighborhood)
+			voxels_to_check.push_back(voxel_coordinates_to_id(x - 1, y, z));
+			voxels_to_check.push_back(voxel_coordinates_to_id(x + 1, y, z));
+			voxels_to_check.push_back(voxel_coordinates_to_id(x, y - 1, z));
+			voxels_to_check.push_back(voxel_coordinates_to_id(x, y + 1, z));
+			voxels_to_check.push_back(voxel_coordinates_to_id(x, y, z - 1));
+			voxels_to_check.push_back(voxel_coordinates_to_id(x, y, z + 1));
+
+			bool found_unset_voxel(false);
+			GRfloat min_distance(std::numeric_limits<GRfloat>::max());
+
+			while (!found_unset_voxel && iteration_count <= distance_to_boundary) {
+				//std::cout << "iteration count : " << iteration_count << std::endl;
+				IndexVector next_voxels_to_check;
+				for (auto other_voxel_id : voxels_to_check) {
+					checked_voxel[other_voxel_id] = true;
+				}
+
+				for (auto other_voxel_id : voxels_to_check) {
+
+					if (!voxel(other_voxel_id).value_) {
+						GRfloat distance(voxel_distance(voxel_id, other_voxel_id));
+				//		std::cout << "found unset voxel  at distance : " << distance << std::endl;
+
+						min_distance = MIN(min_distance, distance);
+						found_unset_voxel = true;
+					}
+					else {
+
+						//add neighborhood to next voxels to check
+
+						GRuint x2, y2, z2;
+						voxel_id_to_coordinates(other_voxel_id, x2, y2, z2);
+						IndexVector two_neighborhood;
+						two_neighborhood.push_back(voxel_coordinates_to_id(x2-1, y2, z2));
+						two_neighborhood.push_back(voxel_coordinates_to_id(x2+1, y2, z2));
+						two_neighborhood.push_back(voxel_coordinates_to_id(x2, y2-1, z2));
+						two_neighborhood.push_back(voxel_coordinates_to_id(x2, y2+1, z2));
+						two_neighborhood.push_back(voxel_coordinates_to_id(x2, y2, z2-1));
+						two_neighborhood.push_back(voxel_coordinates_to_id(x2, y2, z2+1));
+
+						for (auto neighbor_id : two_neighborhood) {
+							if (!checked_voxel[neighbor_id]) {
+								next_voxels_to_check.push_back(neighbor_id);
+							}
+						}
+					}
+				}
+
+				voxels_to_check = next_voxels_to_check;
+				iteration_count++;
+			}
+
+			return min_distance;
+		}
+
 
 		/***********************************************************************************************/
 		/*********************************************************************** VOXEL CLASSIFICATION **/
 		/***********************************************************************************************/
 
 
-		/************************************************************************************ ADJENCY **/
+		/********************************************************************************** ADJACENCY **/
 
 
 		/**This checks if the two ids correspond to 0-adjacent voxels
@@ -1293,8 +1385,9 @@ namespace grapholon {
 		/***************************************************************************** THINNING ALGOS **/
 
 
-		void AsymmetricThinning(SelectionFunction Select, SkelFunction Skel, bool print_debug = false) {
-			
+		void AsymmetricThinning(SelectionFunction Select, SkelFunction Skel) {
+		
+
 			/** description of the voxel sets :
 			 - K : the set of voxels that must be kept no matter what (defined by the Skel function)
 			 - Y : the set of voxels to keep. At the end of each iteration it will become the new true_voxels set
@@ -1337,14 +1430,6 @@ namespace grapholon {
 					std::vector<GRuint> voxel_set_Z;
 					for (GRuint i(0); i < critical_cliques[d].size(); i++) {
 						voxels_in_d_cliques_count += (GRuint)critical_cliques[d][i].size();
-
-						/*IF_DEBUG_DO(std::cout << "			checking clique " << i << std::endl;)
-						for (GRuint j(0); j < critical_cliques[d][i].size(); j++) {
-							GRuint x2, y2, z2;
-							voxel_id_to_coordinates(critical_cliques[d][i][j], x2, y2, z2);
-							IF_DEBUG_DO(std::cout << "			" << x2 << " " << y2 << " "<<z2 << std::endl;)
-						}
-						IF_DEBUG_DO(std::cout << std::endl;)*/
 
 						GRuint voxel_id_from_critical_clique = (this->*Select)(critical_cliques[d][i]);
 
@@ -1642,12 +1727,21 @@ namespace grapholon {
 
 
 		SkeletalGraph* extract_skeletal_graph(
+			VoxelSkeleton* original_voxel_set = nullptr,
 			DiscreteCurve::CONVERSION_METHOD spline_extraction_method = DiscreteCurve::CURVE_FITTING,
 			GRuint smoothing_window_width = 5,
 			GRfloat curve_fitting_max_error = 0.1f) {
+
 			bool debug_log(false);
 
 			typedef enum{ISOLATED, TERMINAL, BRANCH, JUNCTION, UNCLASSIFIED} VOXEL_CLASS;
+
+			bool original_voxel_set_is_correct(false);
+
+			if (original_voxel_set != nullptr 
+				&& this->same_dimensions_as(original_voxel_set)) {
+				original_voxel_set_is_correct = true;
+			}
 
 			//create a new graph
 			SkeletalGraph* graph = new SkeletalGraph();
@@ -1744,6 +1838,12 @@ namespace grapholon {
 
 					VertexProperties vertex_properties;
 					vertex_properties.position = vertex_point;
+					if (original_voxel_set_is_correct) {
+						vertex_properties.radius = original_voxel_set->min_voxel_radius(voxel_id);
+					}
+					else {
+						vertex_properties.radius = DEFAULT_VERTEX_RADIUS;
+					}
 
 					vertices[voxel_id] = graph->add_vertex(vertex_properties);
 					is_vertex[voxel_id] = true;
@@ -1785,6 +1885,7 @@ namespace grapholon {
 
 					VertexProperties vertex_properties;
 					vertex_properties.position = vertex_point;
+					vertex_properties.radius = DEFAULT_VERTEX_RADIUS;
 
 					vertices[first_voxel_id] = graph->add_vertex(vertex_properties);
 					is_vertex[first_voxel_id] = true;

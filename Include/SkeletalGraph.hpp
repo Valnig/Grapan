@@ -32,9 +32,11 @@
 
 namespace grapholon {
 
+#define DEFAULT_VERTEX_RADIUS 1.f
 
 	struct VertexProperties {
 		Vector3f position;
+		GRfloat radius = 0.f;
 		bool is_part_of_cycle = false;
 		bool is_in_spanning_tree = false;
 		void* cycle_parent = nullptr;
@@ -195,7 +197,7 @@ namespace grapholon {
 			return false;
 		}
 
-		/** Returns the vertex that was removed and its surrounding removed edges*/
+		/** Returns the vertex that was removed, its surrounding removed edges and the new added edges*/
 		std::pair<VertexNeighborhood, EdgeVector> merge_vertices(VertexDescriptor vertex_one, VertexDescriptor vertex_two, COLLAPSE_OPTION option = SOURCE) {
 
 			//add an edge from one vertex to the other
@@ -219,7 +221,9 @@ namespace grapholon {
 			return (GRuint) (boost::in_degree(vertex, internal_graph_) + boost::out_degree(vertex, internal_graph_));
 		}
 
-
+		bool is_edge_source_or_target(EdgeDescriptor edge, VertexDescriptor vertex) const {
+			return boost::source(edge, internal_graph_) == vertex || boost::target(edge, internal_graph_) == vertex;
+		}
 
 
 		/****************************************************************************************************************************** Edge stuff*/
@@ -1129,7 +1133,7 @@ namespace grapholon {
 			msg << "------ vertices ------" << std::endl;
 			for (vp = boost::vertices(internal_graph_); vp.first != vp.second; ++vp.first) {
 				VertexDescriptor v = *vp.first;
-				msg << iteration_count << " : " << std::endl << internal_graph_[v].position.to_string() << std::endl;
+				msg << iteration_count << " : " << std::endl << internal_graph_[v].position.to_string()<<", radius : "<<internal_graph_[v].radius << std::endl;
 
 				iteration_count++;
 			}

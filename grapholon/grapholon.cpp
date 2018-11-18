@@ -500,7 +500,7 @@ void DoubleThinningTest() {
 	VoxelSkeleton* skeleton = new VoxelSkeleton(98, 98, 98);
 
 	skeleton->generate_random(400, 1234);
-	skeleton->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::OneIsthmusSkel, true);
+	skeleton->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::OneIsthmusSkel);
 
 	std::cout << " size after first thinning : " << skeleton->true_voxels().size() << std::endl;
 	std::cout << "	connectedness : " << skeleton->is_k_connected(skeleton->true_voxels(), 0u) << std::endl;;
@@ -511,7 +511,7 @@ void DoubleThinningTest() {
 		//cout << "skeleton->set_voxel( " << x << "," << y << "," << z << ");" << endl;
 	}
 
-	skeleton->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::OneIsthmusSkel, true);
+	skeleton->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::OneIsthmusSkel);
 
 
 
@@ -738,7 +738,7 @@ void ExtractGraphFromDoubleLoop() {
 void ExtractGraphFromRandomSructure() {
 	VoxelSkeleton* skeleton = new VoxelSkeleton(100, 100, 100);
 	skeleton->generate_random(400,1234);
-	skeleton->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::OneIsthmusSkel, false);
+	skeleton->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::OneIsthmusSkel);
 
 	std::cout << " voxel count after thinning : " << skeleton->set_voxel_count() << std::endl;
 
@@ -864,7 +864,7 @@ void graphExtractionOnSkeletonLikeAndCurveFitting() {
 	smoothed->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::OneIsthmusSkel);
 	cout << "skeleton voxel count : " << smoothed->set_voxel_count() << endl;
 
-	SkeletalGraph* graph = smoothed->extract_skeletal_graph(DiscreteCurve::CURVE_FITTING, 5, 1.f);
+	SkeletalGraph* graph = smoothed->extract_skeletal_graph(nullptr, DiscreteCurve::CURVE_FITTING, 5, 1.f);
 	cout << "resulting graph : " << graph->vertex_count()<<" vertices, "<<graph->edge_count()<<" edges and "<<graph->edge_spline_count()<<" splines" << endl;
 	cout << graph->to_string() << endl;
 
@@ -1356,7 +1356,7 @@ void findCycle() {
 	VoxelSkeleton skeleton(100, 100, 100);
 	skeleton.generate_artificial_simple_kissing(10);
 
-	SkeletalGraph* graph = skeleton.extract_skeletal_graph(DiscreteCurve::START_AND_END, 1, 0);
+	SkeletalGraph* graph = skeleton.extract_skeletal_graph(nullptr,DiscreteCurve::START_AND_END, 1, 0);
 
 	std::cout << "graph at first : " << graph->to_string() << endl;
 
@@ -1438,7 +1438,7 @@ void findCycleInSinusoidal() {
 	VoxelSkeleton skeleton(100, 100, 100);
 	skeleton.generate_sinusoidal_skeleton();
 
-	SkeletalGraph* graph = skeleton.extract_skeletal_graph(DiscreteCurve::START_AND_END, 1, 0);
+	SkeletalGraph* graph = skeleton.extract_skeletal_graph(nullptr,DiscreteCurve::START_AND_END, 1, 0);
 
 	std::cout << "graph at first : " << graph->to_string() << endl;
 
@@ -1497,9 +1497,38 @@ void CutSimpleEdge() {
 }
 
 
+void SkeletonLikeThinningAndGraphExtraction() {
+	VoxelSkeleton* original_skeleton = new VoxelSkeleton(100, 100, 100);
+	original_skeleton->generate_random(200);
+
+	VoxelSkeleton* skeleton = original_skeleton->copy();
+
+	skeleton->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::AlwaysFalseSkel);
+
+	cout << "voxel count before thinning : " << original_skeleton->set_voxel_count() << endl;
+	cout << "voxel count after thinning  : " << skeleton->set_voxel_count() << endl;
+
+	/*cout << "voxels after thinning : " << skeleton->true_voxels().size() << std::endl;
+
+	for (auto voxel_id : skeleton->true_voxels()) {
+		GRuint x, y, z;
+		skeleton->voxel_id_to_coordinates(voxel_id, x, y, z);
+		std::cout << "	( " << x << " " << y << " " << z << " )" << std::endl;
+	}*/
+
+	SkeletalGraph* graph = skeleton->extract_skeletal_graph(original_skeleton);
+
+	cout << "resulting graph : " << graph->to_string() << std::endl;
+
+
+	delete original_skeleton;
+	delete skeleton;
+	delete graph;
+}
+
 int main()
 {
-	CutSimpleEdge();
+	SkeletonLikeThinningAndGraphExtraction();
 
     return 0;
 }
