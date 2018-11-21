@@ -284,10 +284,18 @@ namespace grapholon {
 					//std::cout << " t_i : " << t_i.to_string() << std::endl;
 
 					Vector3f left_direction = x_prev - x_i;
-					Vector3f left_force = left_direction * (1.f - original_lengths_[i - 1] / left_direction.norm());
+					GRfloat left_direction_norm = left_direction.norm();
+					Vector3f left_force = left_direction * (1.f - original_lengths_[i - 1] / left_direction_norm);
+					if (left_direction_norm < FLT_EPSILON) {
+						left_force = Vector3f(0.f);
+					}
 
 					Vector3f right_direction = x_next - x_i;
-					Vector3f right_force = right_direction * (1.f - original_lengths_[i] / right_direction.norm());
+					GRfloat right_direction_norm = right_direction.norm();
+					Vector3f right_force = right_direction * (1.f - original_lengths_[i] / right_direction_norm);
+					if (right_direction_norm < FLT_EPSILON) {
+						right_force = Vector3f(0.f);
+					}
 
 					Vector3f original_force = (original_points_[i] - x_i).normalized();
 					

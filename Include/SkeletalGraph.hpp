@@ -36,7 +36,7 @@ namespace grapholon {
 
 	struct VertexProperties {
 		Vector3f position;
-		GRfloat radius = 0.f;
+		GRfloat radius = 1.f;
 		bool is_part_of_cycle = false;
 		bool is_in_spanning_tree = false;
 		void* cycle_parent = nullptr;
@@ -297,6 +297,24 @@ namespace grapholon {
 			return internal_graph_[edge];
 		}
 
+		//TODO : maybe better
+		GRfloat get_edge_radius(EdgeDescriptor edge, GRuint segment_index) const {
+
+			GRfloat r1 = get_vertex(boost::source(edge, internal_graph_)).radius;
+			GRfloat r2 = get_vertex(boost::target(edge, internal_graph_)).radius;
+			GRfloat r_start = (2.f * r1*r2) / (r1 + r2);
+			GRfloat r_end = r2;
+			/*if (r1 < r2) {
+				r_end = r_start;
+				r_start = r2;
+			}*/
+
+			GRfloat length = (GRfloat)get_edge(edge).curve.size();
+			segment_index = MIN(segment_index, length-1);
+
+			return (1.f - (GRfloat)segment_index / (length - 1))*(r_start - r_end) + r_end;
+		}
+
 		std::pair<EdgeIterator, EdgeIterator> edges() {
 			return boost::edges(internal_graph_);
 		}
@@ -332,6 +350,12 @@ namespace grapholon {
 				GRuint last_segment_index = internal_graph_[left_edge_temp].curve.size() - 2;
 				Vector3f last_segment_middle_position = (internal_graph_[left_edge_temp].curve.back().first + internal_graph_[left_edge_temp].curve.before_back().first)*0.5f;
 
+				GRfloat mid_pos_norm = last_segment_middle_position.norm();
+				if (mid_pos_norm != mid_pos_norm) {
+					throw std::runtime_error("ERROR : middle position was nan when cutting edge");
+				}
+				
+
 				//split the left edge at the last segment
 				std::pair<VertexDescriptor, EdgePair> left_vertex_neighborhood = split_edge_at(left_edge_temp, last_segment_index, last_segment_middle_position);
 				VertexDescriptor left_vertex = left_vertex_neighborhood.first;
@@ -360,7 +384,7 @@ namespace grapholon {
 				throw std::invalid_argument("Cannot split edge at invalid segment index");
 			}
 
-			VertexDescriptor new_vertex = add_vertex({ new_vertex_position });
+			VertexDescriptor new_vertex = add_vertex({ new_vertex_position, get_edge_radius(edge_to_split, segment_index) });
 
 			//std::cout << "new middle vertex is : " << new_vertex << std::endl;
 
@@ -370,7 +394,6 @@ namespace grapholon {
 
 			PointTangent new_target_pt = PointTangent(new_vertex_position, (new_vertex_position - edge_curve[segment_index].first).normalize());
 			PointTangent new_source_pt = PointTangent(new_vertex_position, (edge_curve[segment_index + 1].first - new_vertex_position).normalize());
-
 
 			//create the base of the new curves (with just the start and end positions)
 			SplineCurve first_half(source_pt, new_target_pt);
