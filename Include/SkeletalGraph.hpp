@@ -256,7 +256,7 @@ namespace grapholon {
 		}
 
 
-		VertexDescriptor remove_edge(EdgeDescriptor edge) {
+		VertexPair remove_edge(EdgeDescriptor edge) {
 
 			edge_spline_count_ -= (GRuint)internal_graph_[edge].curve.size();
 			
@@ -275,18 +275,20 @@ namespace grapholon {
 
 			boost::remove_edge(edge, internal_graph_);
 
+			VertexPair vertices(InternalBoostGraph::null_vertex(), InternalBoostGraph::null_vertex());
+
 			//we remove the vertices after the edge otherwise the edge would become invalid
 			if (remove_source && vertex_count() != 1) {
 				boost::remove_vertex(source, internal_graph_);
-				return source;
+				vertices.first = source;
 			}
 
 			if (remove_target && vertex_count() != 1) {
 				boost::remove_vertex(target, internal_graph_);
-				return target;
+				vertices.second = target;
 			}
 
-			return InternalBoostGraph::null_vertex();
+			return vertices;
 		}
 
 		const EdgeProperties& get_edge(EdgeDescriptor edge) const {
@@ -335,10 +337,22 @@ namespace grapholon {
 		
 
 		std::pair<VertexPair,EdgePair> cut_edge_at(EdgeDescriptor edge_to_cut, GRuint segment_index, Vector3f new_vertex_position) {
-			
-			//first split the edge
+			DeformableSplineCurve original_curve = internal_graph_[edge_to_cut].curve;
+			if (segment_index >= original_curve.size()-1) {
+				throw std::invalid_argument("Cannot split edge at invalid segment index");
+			}
 			try {
-				std::pair<VertexDescriptor, EdgePair> right_vertex_neighborhood = split_edge_at(edge_to_cut, segment_index, new_vertex_position);
+				//first get the direction from the cut position to the previous and next segment
+				Vector3f direction_to_previous_segment = (original_curve[segment_index].first - new_vertex_position).normalize();
+				Vector3f direction_to_next_segment     = (original_curve[segment_index + 1].first - new_vertex_position).normalize();
+				
+				GRfloat displacement_factor = 1.f;
+
+				Vector3f left_vertex_final_position = new_vertex_position +  direction_to_previous_segment * displacement_factor;
+				Vector3f right_vertex_final_position = new_vertex_position + direction_to_next_segment * displacement_factor;
+
+				//first split the edge
+				std::pair<VertexDescriptor, EdgePair> right_vertex_neighborhood = split_edge_at(edge_to_cut, segment_index, right_vertex_final_position);
 				VertexDescriptor right_vertex = right_vertex_neighborhood.first;
 				EdgeDescriptor right_edge = right_vertex_neighborhood.second.second;
 				//std::cout << "new right vertex : " << right_vertex << std::endl;
@@ -348,16 +362,11 @@ namespace grapholon {
 				EdgeDescriptor left_edge_temp = right_vertex_neighborhood.second.first;
 
 				GRuint last_segment_index = internal_graph_[left_edge_temp].curve.size() - 2;
-				Vector3f last_segment_middle_position = (internal_graph_[left_edge_temp].curve.back().first + internal_graph_[left_edge_temp].curve.before_back().first)*0.5f;
-
-				GRfloat mid_pos_norm = last_segment_middle_position.norm();
-				if (mid_pos_norm != mid_pos_norm) {
-					throw std::runtime_error("ERROR : middle position was nan when cutting edge");
-				}
 				
-
+				//Vector3f last_segment_middle_position = (internal_graph_[left_edge_temp].curve.back().first + internal_graph_[left_edge_temp].curve.before_back().first)*0.5f;
+				
 				//split the left edge at the last segment
-				std::pair<VertexDescriptor, EdgePair> left_vertex_neighborhood = split_edge_at(left_edge_temp, last_segment_index, last_segment_middle_position);
+				std::pair<VertexDescriptor, EdgePair> left_vertex_neighborhood = split_edge_at(left_edge_temp, last_segment_index, left_vertex_final_position);
 				VertexDescriptor left_vertex = left_vertex_neighborhood.first;
 				EdgeDescriptor left_edge = left_vertex_neighborhood.second.first;
 
@@ -365,6 +374,7 @@ namespace grapholon {
 				EdgeDescriptor middle_edge = *(boost::in_edges(right_vertex, internal_graph_).first);
 			
 				remove_edge(middle_edge);
+
 
 				return std::pair<VertexPair, EdgePair>( VertexPair(left_vertex, right_vertex), EdgePair(left_edge, right_edge));
 			}
