@@ -1808,6 +1808,7 @@ namespace grapholon {
 
 
 			//first step : label voxels depending on their neighborhood
+			//TODO : parallelize
 			for (auto voxel_id : true_voxels_) {
 				IndexVector neighborhood;
 

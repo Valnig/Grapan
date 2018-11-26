@@ -37,9 +37,10 @@ namespace grapholon {
 	struct VertexProperties {
 		Vector3f position;
 		GRfloat radius = 1.f;
-		bool is_part_of_cycle = false;
-		bool is_in_spanning_tree = false;
-		void* cycle_parent = nullptr;
+		bool is_orphaned = true;///<used for splitting edges along their curve
+		bool is_part_of_cycle = false;///<used for cycle detection
+		bool is_in_spanning_tree = false;///<used for cycle detection
+		void* cycle_parent = nullptr;///<used for cycle detection
 	};
 
 	struct EdgeProperties {
@@ -63,8 +64,12 @@ namespace grapholon {
 	//handy aliases
 	typedef std::pair<VertexDescriptor, VertexDescriptor> VertexPair;
 	typedef std::pair<EdgeDescriptor, EdgeDescriptor> EdgePair;
+
+	typedef std::vector<VertexDescriptor> VertexVector;
 	typedef std::vector<EdgeDescriptor> EdgeVector;
+
 	typedef std::pair<VertexDescriptor, EdgeVector> VertexNeighborhood;
+
 
 	class SkeletalGraph {
 	private:
@@ -336,6 +341,173 @@ namespace grapholon {
 		}
 		
 
+		/** returns the neighborhoods of both the source and target vertices that have been removed and the list of vertices and edges that were added*/
+		std::pair<std::pair<VertexNeighborhood, VertexNeighborhood>, std::pair<VertexVector, EdgeVector>> split_edge_along_curve(
+			EdgeDescriptor edge_to_split, 
+			std::vector<std::pair<VertexDescriptor,VertexDescriptor>> new_edges_sources_and_targets) {
+
+			VertexVector new_vertices;
+			EdgeVector new_edges;
+
+			DeformableSplineCurve removed_edge_curve = get_edge(edge_to_split).curve;
+
+			VertexDescriptor edge_to_split_source = boost::source(edge_to_split, internal_graph_);
+			VertexDescriptor edge_to_split_target = boost::target(edge_to_split, internal_graph_);
+
+			//find edges of all sources and targets and gather their curve 
+			/*std::vector<std::pair<VertexDescriptor, DeformableSplineCurve>> source_curves;//the curves going from the source vertices adjacent to the split edge
+			std::vector<std::pair<VertexDescriptor, DeformableSplineCurve>> target_curves;
+			*/
+
+			std::vector<std::pair<VertexDescriptor, DeformableSplineCurve>> orphan_vertices_and_curves; //vertices adjacent to the split edge that are not among the list of vertices to connect
+			
+			bool first_iteration = true;
+
+			for (auto source_target : new_edges_sources_and_targets) {
+				VertexDescriptor new_source_vertex = source_target.first;
+				VertexDescriptor new_target_vertex = source_target.second;
+				DeformableSplineCurve new_curve_start;
+				DeformableSplineCurve new_curve_middle;
+				DeformableSplineCurve new_curve_end;
+
+				bool reverse_middle = false;
+
+				//first the in-edges of the source
+				std::pair<InEdgeIterator, InEdgeIterator> in_ep;
+				for (in_ep = boost::in_edges(edge_to_split_source, internal_graph_); in_ep.first != in_ep.second; ++in_ep.first) {
+
+					EdgeDescriptor in_edge = *in_ep.first;
+					VertexDescriptor in_edge_source = boost::source(in_edge, internal_graph_);
+					if (in_edge_source == source_target.first) {
+						new_curve_start =  get_edge(in_edge).curve;
+						reverse_middle = false;
+					}
+					else if (in_edge_source == source_target.second) {
+						new_curve_end = DeformableSplineCurve(get_edge(in_edge).curve, true);
+						reverse_middle = true;
+					}
+					else {
+						//add new vertex and edge and add them to the result holder
+						if (first_iteration) {
+							DeformableSplineCurve new_edge_curve = get_edge(in_edge).curve;
+							new_edge_curve.pop_back();
+							VertexDescriptor new_vertex = add_vertex({ new_edge_curve.back().first, false });
+							EdgeDescriptor new_edge = add_edge(in_edge_source, new_vertex, { new_edge_curve }).first;
+
+							new_vertices.push_back(new_vertex);
+							new_edges.push_back(new_edge);
+						}
+					}
+				}
+				//and then its out-edges
+				std::pair<OutEdgeIterator, OutEdgeIterator> out_ep;
+				for (out_ep = boost::out_edges(edge_to_split_source, internal_graph_); out_ep.first != out_ep.second; ++out_ep.first) {
+					EdgeDescriptor out_edge = *in_ep.first;
+					VertexDescriptor out_edge_target = boost::target(out_edge, internal_graph_);
+					if (out_edge_target == source_target.first) {
+						new_curve_start = DeformableSplineCurve(get_edge(out_edge).curve, true);
+						reverse_middle = false;
+					}
+					else if (out_edge_target == source_target.second) {
+						new_curve_end = get_edge(out_edge).curve;
+						reverse_middle = true;
+					}
+					else {
+						//add new vertex and edge and add them to the result holder
+						if (first_iteration) {
+							DeformableSplineCurve new_edge_curve(get_edge(out_edge).curve, false);
+							new_edge_curve.pop_back();
+							VertexDescriptor new_vertex = add_vertex({ new_edge_curve.back().first, false });
+							EdgeDescriptor new_edge = add_edge(out_edge_target, new_vertex, { new_edge_curve }).first;
+
+							new_vertices.push_back(new_vertex);
+							new_edges.push_back(new_edge);
+						}
+					}
+				}
+
+
+				//the the in-edges of the target
+			//	std::pair<InEdgeIterator, InEdgeIterator> in_ep;
+				for (in_ep = boost::in_edges(edge_to_split_target, internal_graph_); in_ep.first != in_ep.second; ++in_ep.first) {
+					EdgeDescriptor in_edge = *in_ep.first;
+					VertexDescriptor in_edge_source = boost::source(in_edge, internal_graph_);
+					if (in_edge_source == source_target.first) {
+						new_curve_end = get_edge(in_edge).curve;
+						reverse_middle = true;
+					}
+					else if (in_edge_source == source_target.second) {
+						new_curve_end = DeformableSplineCurve(get_edge(in_edge).curve, true);
+						reverse_middle = false;
+					}
+					else {
+						//add new vertex and edge and add them to the result holder
+						if (first_iteration) {
+							DeformableSplineCurve new_edge_curve = get_edge(in_edge).curve;
+							new_edge_curve.pop_back();
+							VertexDescriptor new_vertex = add_vertex({ new_edge_curve.back().first, false });
+							EdgeDescriptor new_edge = add_edge(in_edge_source, new_vertex, { new_edge_curve }).first;
+
+							new_vertices.push_back(new_vertex);
+							new_edges.push_back(new_edge);
+						}
+					}
+				}
+				//and its out-edges
+				//std::pair<OutEdgeIterator, OutEdgeIterator> out_ep;
+				for (out_ep = boost::out_edges(edge_to_split_target, internal_graph_); out_ep.first != out_ep.second; ++out_ep.first) {
+					EdgeDescriptor out_edge = *in_ep.first;
+					VertexDescriptor out_edge_target = boost::target(out_edge, internal_graph_);
+					if (out_edge_target == source_target.first) {
+						new_curve_end = DeformableSplineCurve(get_edge(out_edge).curve, true);
+						reverse_middle = true;
+					}
+					else if (out_edge_target == source_target.second) {
+						new_curve_end = get_edge(out_edge).curve;
+						reverse_middle = false;
+					}
+					else {
+						//add new vertex and edge and add them to the result holder
+						if (first_iteration) {
+							DeformableSplineCurve new_edge_curve(get_edge(out_edge).curve, false);
+							new_edge_curve.pop_back();
+							VertexDescriptor new_vertex = add_vertex({ new_edge_curve.back().first, false });
+							EdgeDescriptor new_edge = add_edge(out_edge_target, new_vertex, { new_edge_curve }).first;
+
+							new_vertices.push_back(new_vertex);
+							new_edges.push_back(new_edge);
+						}
+					}
+				}
+
+				//remove the last segment the start curve
+				new_curve_start.pop_back();
+				
+				//append the middle curve
+				new_curve_start.append(new_curve_middle, 0, reverse_middle);
+
+				//and append the end curve without its first element
+				new_curve_start.append(new_curve_end, 1);
+
+				//and finally add the new edge tying the source and target vertex together
+				EdgeDescriptor new_edge = add_edge(source_target.first, source_target.second, { new_curve_start}).first;
+
+				new_edges.push_back(new_edge);
+
+				first_iteration = false;
+			}
+	
+			//and finally remove the split edge and its two vertices
+			VertexNeighborhood source_neighborhood = { edge_to_split_source, remove_vertex(edge_to_split_source) };
+			VertexNeighborhood target_neighborhood = { edge_to_split_target, remove_vertex(edge_to_split_target) };
+
+
+
+			return { {source_neighborhood, target_neighborhood}, {new_vertices, new_edges} };
+		}
+
+
+
 		std::pair<VertexPair,EdgePair> cut_edge_at(EdgeDescriptor edge_to_cut, GRuint segment_index, Vector3f new_vertex_position) {
 			DeformableSplineCurve original_curve = internal_graph_[edge_to_cut].curve;
 			if (segment_index >= original_curve.size()-1) {
@@ -346,7 +518,7 @@ namespace grapholon {
 				Vector3f direction_to_previous_segment = (original_curve[segment_index].first - new_vertex_position).normalize();
 				Vector3f direction_to_next_segment     = (original_curve[segment_index + 1].first - new_vertex_position).normalize();
 				
-				GRfloat displacement_factor = 1.f;
+				GRfloat displacement_factor = 2.f;
 
 				Vector3f left_vertex_final_position = new_vertex_position +  direction_to_previous_segment * displacement_factor;
 				Vector3f right_vertex_final_position = new_vertex_position + direction_to_next_segment * displacement_factor;

@@ -78,10 +78,19 @@ namespace grapholon {
 			update_tangents();
 		}
 
-		SplineCurve(std::vector<PointTangent> points_and_tangents)
-			: std::vector<PointTangent >(points_and_tangents) {
+		SplineCurve(std::vector<PointTangent> points_and_tangents, bool reverse = false) {
 			if (points_and_tangents.size() < 2) {
 				throw std::invalid_argument("Cannot create spine curve with less than two points and tangents");
+			}
+
+			if (reverse) {
+				GRuint pts_size = points_and_tangents.size();
+				for (GRuint i(0); i < pts_size; i++) {
+					push_back(points_and_tangents[pts_size - i - 1]);
+				}
+			}
+			else {
+				(*this) = points_and_tangents;
 			}
 		}
 
@@ -168,6 +177,7 @@ namespace grapholon {
 		}
 
 
+
 		std::string to_string() const {
 			std::stringstream msg;
 			std::stringstream points_line;
@@ -205,17 +215,25 @@ namespace grapholon {
 			: SplineCurve(points_and_tangents) {}
 
 		//this ensures that if a copy is made, the original shape is not valid anymore
-		DeformableSplineCurve(const DeformableSplineCurve& other) {
-			(*this) = other;
+		DeformableSplineCurve(const DeformableSplineCurve& other, bool reverse = false) {
+			if (reverse) {
+				GRuint pts_size = other.size();
+				for (GRuint i(0); i < pts_size; i++) {
+					push_back(other[pts_size - i - 1]);
+				}
+			}
+			else {
+				(*this) = other;
+			}
 			original_lengths_ = std::vector<GRfloat>();
-			original_points_ = std::vector<Vector3f>();
-			original_angles_ = std::vector<GRfloat>();
+			original_points_  = std::vector<Vector3f>();
+			original_angles_  = std::vector<GRfloat>();
 		}
 
 		void set_original_shape() {
 			original_lengths_ = std::vector<GRfloat>();
-			original_points_ = std::vector<Vector3f>();
-			original_angles_ = std::vector<GRfloat>();
+			original_points_  = std::vector<Vector3f>();
+			original_angles_  = std::vector<GRfloat>();
 			
 			for (GRuint i(0); i < size() - 1; i++) {
 				original_lengths_.push_back(((*this)[i + 1].first - (*this)[i].first).norm());
@@ -240,6 +258,28 @@ namespace grapholon {
 			return sqrtf(x);
 		}
 
+		/**NOTE : start_index is counted before inversion. 
+		e.g.  append({0,1,2,3,4}, 1, reverse) will give {4,3,2,1} and not {3,2,1,0}*/
+		void append(const DeformableSplineCurve& other, GRuint start_index = 0, bool reverse = false) {
+			GRuint pts_size = other.size();
+			
+			if (start_index >= pts_size) {
+				return;
+			}
+			if (reverse) {
+				for (GRuint i(start_index); i < pts_size; i++) {
+					push_back(other[i]);
+				}
+			}
+			else {
+				for (GRuint i(0); i < pts_size-start_index; i++) {
+					push_back(other[pts_size - i - 1]);
+				}
+			}
+
+			set_original_shape();
+		}
+
 		bool pseudo_elastic_deform(bool source, Vector3f new_position, bool maintain_shape_around_tip = true) {
 
 			GRfloat max_max_displacement(0.1f);
@@ -247,6 +287,7 @@ namespace grapholon {
 			//GRfloat time_step(0.01f);
 			GRfloat mass(1.f);
 
+			//TODO : make safer
 			if (!original_lengths_.size()) {
 				set_original_shape();
 			}
