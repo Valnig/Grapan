@@ -229,6 +229,32 @@ namespace grapholon {
 			return boost::source(edge, internal_graph_) == vertex || boost::target(edge, internal_graph_) == vertex;
 		}
 
+		/** Returns the vertex of edge that is not also a vertex of adjacent edge.
+		If the edges are not adjacent or something else is wrong it returns a null_vertex*/
+		VertexDescriptor find_vertex_not_connected_to_adjacent_edge(EdgeDescriptor edge, EdgeDescriptor adjacent_edge) {
+			VertexDescriptor edge_source = boost::source(edge, internal_graph_);
+			VertexDescriptor edge_target = boost::target(edge, internal_graph_);
+
+			VertexDescriptor adjacent_edge_source = boost::source(adjacent_edge, internal_graph_);
+			VertexDescriptor adjacent_edge_target = boost::target(adjacent_edge, internal_graph_);
+
+			if (edge_source == adjacent_edge_source) {
+				return edge_target;
+			}
+			else if (edge_source == adjacent_edge_target) {
+				return edge_target;
+			}
+			else if (edge_target == adjacent_edge_source) {
+				return edge_source;
+			}
+			else if (edge_target == adjacent_edge_target) {
+				return edge_source;
+			}
+			else {
+				return InternalBoostGraph::null_vertex();
+			}
+
+		}
 
 		/****************************************************************************************************************************** Edge stuff*/
 

@@ -83,10 +83,13 @@ namespace grapholon {
 				throw std::invalid_argument("Cannot create spine curve with less than two points and tangents");
 			}
 
+			GRfloat factor = reverse ? -1.f : 1.f;
+
 			size_t pts_size = points_and_tangents.size();
 			for (size_t i(0); i < pts_size; i++) {
 				size_t idx = reverse ? pts_size - i - 1 : i;
 				push_back(points_and_tangents[idx]);
+				this->back().second *= factor;
 			}
 		}
 
@@ -217,6 +220,7 @@ namespace grapholon {
 				size_t pts_size = other.size();
 				for (size_t i(0); i < pts_size; i++) {
 					push_back(other[pts_size - i - 1]);
+					this->back().second *= -1.f;
 				}
 			}
 			else {
@@ -268,6 +272,7 @@ namespace grapholon {
 			if (reverse) {
 				for (GRuint i(0); i < pts_size - start_index; i++) {
 					push_back(other[pts_size - i - 1]);
+					this->back().second *= -1.f;
 				}
 			}
 			else {
