@@ -37,7 +37,6 @@ namespace grapholon {
 	struct VertexProperties {
 		Vector3f position;
 		GRfloat radius = 1.f;
-		bool is_orphaned = true;///<used for splitting edges along their curve
 		bool is_part_of_cycle = false;///<used for cycle detection
 		bool is_in_spanning_tree = false;///<used for cycle detection
 		void* cycle_parent = nullptr;///<used for cycle detection
@@ -316,10 +315,10 @@ namespace grapholon {
 				r_start = r2;
 			}*/
 
-			GRfloat length = (GRfloat)get_edge(edge).curve.size();
+			GRuint length = (GRuint)get_edge(edge).curve.size();
 			segment_index = MIN(segment_index, length-1);
 
-			return (1.f - (GRfloat)segment_index / (length - 1))*(r_start - r_end) + r_end;
+			return (1.f - (GRfloat)segment_index / ((GRfloat)length - 1))*(r_start - r_end) + r_end;
 		}
 
 		std::pair<EdgeIterator, EdgeIterator> edges() {
@@ -354,14 +353,14 @@ namespace grapholon {
 			VertexDescriptor edge_to_split_source = boost::source(edge_to_split, internal_graph_);
 			VertexDescriptor edge_to_split_target = boost::target(edge_to_split, internal_graph_);
 
-			//find edges of all sources and targets and gather their curve 
-			/*std::vector<std::pair<VertexDescriptor, DeformableSplineCurve>> source_curves;//the curves going from the source vertices adjacent to the split edge
-			std::vector<std::pair<VertexDescriptor, DeformableSplineCurve>> target_curves;
-			*/
+			std::cout << "removed edge curve : " << removed_edge_curve.to_string() << std::endl << std::endl;
+			std::cout << "removed edge  : " << edge_to_split << std::endl;
 
 			std::vector<std::pair<VertexDescriptor, DeformableSplineCurve>> orphan_vertices_and_curves; //vertices adjacent to the split edge that are not among the list of vertices to connect
 			
-			bool first_iteration = true;
+			bool first_iteration = false;
+
+			GRuint iteration_count(0);
 
 			for (auto source_target : new_edges_sources_and_targets) {
 				VertexDescriptor new_source_vertex = source_target.first;
@@ -369,6 +368,9 @@ namespace grapholon {
 				DeformableSplineCurve new_curve_start;
 				DeformableSplineCurve new_curve_middle;
 				DeformableSplineCurve new_curve_end;
+
+				std::cout << std::endl << " iteration " << iteration_count << " : " << std::endl;
+				std::cout << "source : " << new_source_vertex << ", target : " << new_target_vertex << std::endl;
 
 				bool reverse_middle = false;
 
@@ -378,12 +380,15 @@ namespace grapholon {
 
 					EdgeDescriptor in_edge = *in_ep.first;
 					VertexDescriptor in_edge_source = boost::source(in_edge, internal_graph_);
-					if (in_edge_source == source_target.first) {
+					if (in_edge_source == new_source_vertex) {
+						std::cout << "new source is source of in edge of source" << std::endl;
 						new_curve_start =  get_edge(in_edge).curve;
 						reverse_middle = false;
 					}
-					else if (in_edge_source == source_target.second) {
+					else if (in_edge_source == new_target_vertex) {
+						std::cout << "new target is source of in edge of source" << std::endl;
 						new_curve_end = DeformableSplineCurve(get_edge(in_edge).curve, true);
+						std::cout << "new curve end : " << new_curve_end.to_string() << std::endl;
 						reverse_middle = true;
 					}
 					else {
@@ -402,13 +407,18 @@ namespace grapholon {
 				//and then its out-edges
 				std::pair<OutEdgeIterator, OutEdgeIterator> out_ep;
 				for (out_ep = boost::out_edges(edge_to_split_source, internal_graph_); out_ep.first != out_ep.second; ++out_ep.first) {
-					EdgeDescriptor out_edge = *in_ep.first;
+
+					EdgeDescriptor out_edge = *(out_ep.first);
 					VertexDescriptor out_edge_target = boost::target(out_edge, internal_graph_);
-					if (out_edge_target == source_target.first) {
+
+					if (out_edge_target == new_source_vertex) {
+						std::cout << "new source is target of out edge of source" << std::endl;
 						new_curve_start = DeformableSplineCurve(get_edge(out_edge).curve, true);
+						std::cout << "new curve start : " << new_curve_start.to_string() << std::endl;
 						reverse_middle = false;
 					}
-					else if (out_edge_target == source_target.second) {
+					else if (out_edge_target == new_target_vertex) {
+						std::cout << "new target is target of in edge of source" << std::endl;
 						new_curve_end = get_edge(out_edge).curve;
 						reverse_middle = true;
 					}
@@ -427,17 +437,23 @@ namespace grapholon {
 				}
 
 
-				//the the in-edges of the target
+				//then the in-edges of the target
 			//	std::pair<InEdgeIterator, InEdgeIterator> in_ep;
 				for (in_ep = boost::in_edges(edge_to_split_target, internal_graph_); in_ep.first != in_ep.second; ++in_ep.first) {
+
 					EdgeDescriptor in_edge = *in_ep.first;
 					VertexDescriptor in_edge_source = boost::source(in_edge, internal_graph_);
-					if (in_edge_source == source_target.first) {
-						new_curve_end = get_edge(in_edge).curve;
+
+					if (in_edge_source == new_source_vertex) {
+						std::cout << "new source is source of in edge of target" << std::endl;
+						new_curve_start = get_edge(in_edge).curve;
+						std::cout << "new curve start : " << new_curve_start.to_string() << std::endl;
 						reverse_middle = true;
 					}
-					else if (in_edge_source == source_target.second) {
+					else if (in_edge_source == new_target_vertex) {
+						std::cout << "new target is target of in edge of target" << std::endl;
 						new_curve_end = DeformableSplineCurve(get_edge(in_edge).curve, true);
+						std::cout << "new curve end : " << new_curve_end.to_string() << std::endl;
 						reverse_middle = false;
 					}
 					else {
@@ -456,13 +472,18 @@ namespace grapholon {
 				//and its out-edges
 				//std::pair<OutEdgeIterator, OutEdgeIterator> out_ep;
 				for (out_ep = boost::out_edges(edge_to_split_target, internal_graph_); out_ep.first != out_ep.second; ++out_ep.first) {
-					EdgeDescriptor out_edge = *in_ep.first;
+
+					EdgeDescriptor out_edge = *out_ep.first;
 					VertexDescriptor out_edge_target = boost::target(out_edge, internal_graph_);
-					if (out_edge_target == source_target.first) {
-						new_curve_end = DeformableSplineCurve(get_edge(out_edge).curve, true);
+
+					if (out_edge_target == new_source_vertex) {
+						std::cout << "new source is target of out edge of target" << std::endl;
+						new_curve_start = DeformableSplineCurve(get_edge(out_edge).curve, true);
+						std::cout << "new curve start : " << new_curve_start.to_string() << std::endl;
 						reverse_middle = true;
 					}
-					else if (out_edge_target == source_target.second) {
+					else if (out_edge_target == new_target_vertex) {
+						std::cout << "new target is target of out edge of target" << std::endl;
 						new_curve_end = get_edge(out_edge).curve;
 						reverse_middle = false;
 					}
@@ -480,21 +501,34 @@ namespace grapholon {
 					}
 				}
 
+
 				//remove the last segment the start curve
 				new_curve_start.pop_back();
+				std::cout << " start curve : " << std::endl << new_curve_start.to_string() << std::endl;
 				
+				//prepare the middle curve by reversing it if necessary, deforming it and removing its back
+				new_curve_middle = DeformableSplineCurve(removed_edge_curve, reverse_middle);
+				new_curve_middle.pseudo_elastic_deform(true, new_curve_start.back().first);
+				new_curve_middle.pseudo_elastic_deform(false, new_curve_end[1].first);
+
+				new_curve_middle.pop_back();
+
 				//append the middle curve
-				new_curve_start.append(new_curve_middle, 0, reverse_middle);
+				new_curve_start.append(new_curve_middle, 1);
+				std::cout << " middle appended : " << std::endl << new_curve_start.to_string() << std::endl;
 
 				//and append the end curve without its first element
 				new_curve_start.append(new_curve_end, 1);
+				std::cout << " end appended : " << std::endl << new_curve_start.to_string() << std::endl;
 
 				//and finally add the new edge tying the source and target vertex together
-				EdgeDescriptor new_edge = add_edge(source_target.first, source_target.second, { new_curve_start}).first;
+				EdgeDescriptor new_edge = add_edge(new_source_vertex, new_target_vertex, { new_curve_start}).first;
 
 				new_edges.push_back(new_edge);
 
 				first_iteration = false;
+				iteration_count++;
+				std::cout << std::endl << std::endl;
 			}
 	
 			//and finally remove the split edge and its two vertices
@@ -533,7 +567,7 @@ namespace grapholon {
 				//find the new edge incident to the new vertex
 				EdgeDescriptor left_edge_temp = right_vertex_neighborhood.second.first;
 
-				GRuint last_segment_index = internal_graph_[left_edge_temp].curve.size() - 2;
+				GRuint last_segment_index = (GRuint)internal_graph_[left_edge_temp].curve.size() - 2;
 				
 				//Vector3f last_segment_middle_position = (internal_graph_[left_edge_temp].curve.back().first + internal_graph_[left_edge_temp].curve.before_back().first)*0.5f;
 				
@@ -1338,7 +1372,7 @@ namespace grapholon {
 			msg << "------ vertices ------" << std::endl;
 			for (vp = boost::vertices(internal_graph_); vp.first != vp.second; ++vp.first) {
 				VertexDescriptor v = *vp.first;
-				msg << iteration_count << " : " << std::endl << internal_graph_[v].position.to_string()<<", radius : "<<internal_graph_[v].radius << std::endl;
+				msg << iteration_count << " : " << std::endl <<v<<" : "<< internal_graph_[v].position.to_string()<<", radius : "<<internal_graph_[v].radius << std::endl;
 
 				iteration_count++;
 			}
@@ -1353,8 +1387,8 @@ namespace grapholon {
 			for (ep = boost::edges(internal_graph_); ep.first != ep.second; ++ep.first) {
 				EdgeDescriptor e = *ep.first;
 
-				msg << iteration_count << " : |"
-					<< internal_graph_[boost::source(e, internal_graph_)].position.to_string() << "| -> "
+				msg << iteration_count << " : "<<e<<std::endl
+					<< " |" << internal_graph_[boost::source(e, internal_graph_)].position.to_string() << "| -> "
 					<< std::endl << internal_graph_[e].curve.to_string() << std::endl
 					<<" -> |"<<internal_graph_[boost::target(e, internal_graph_)].position.to_string()<<"| " << std::endl<<std::endl;
 
@@ -1366,7 +1400,7 @@ namespace grapholon {
 		}
 
 		void print(std::queue<VertexDescriptor> q) {
-			GRuint size = q.size();
+			GRuint size = (GRuint)q.size();
 			for (GRuint i(0); i < size; i++) {
 				std::cout<<" " << get_vertex(q.front()).position.to_string();
 				q.pop();

@@ -83,14 +83,10 @@ namespace grapholon {
 				throw std::invalid_argument("Cannot create spine curve with less than two points and tangents");
 			}
 
-			if (reverse) {
-				GRuint pts_size = points_and_tangents.size();
-				for (GRuint i(0); i < pts_size; i++) {
-					push_back(points_and_tangents[pts_size - i - 1]);
-				}
-			}
-			else {
-				(*this) = points_and_tangents;
+			size_t pts_size = points_and_tangents.size();
+			for (size_t i(0); i < pts_size; i++) {
+				size_t idx = reverse ? pts_size - i - 1 : i;
+				push_back(points_and_tangents[idx]);
 			}
 		}
 
@@ -217,8 +213,9 @@ namespace grapholon {
 		//this ensures that if a copy is made, the original shape is not valid anymore
 		DeformableSplineCurve(const DeformableSplineCurve& other, bool reverse = false) {
 			if (reverse) {
-				GRuint pts_size = other.size();
-				for (GRuint i(0); i < pts_size; i++) {
+				this->clear();
+				size_t pts_size = other.size();
+				for (size_t i(0); i < pts_size; i++) {
 					push_back(other[pts_size - i - 1]);
 				}
 			}
@@ -261,20 +258,29 @@ namespace grapholon {
 		/**NOTE : start_index is counted before inversion. 
 		e.g.  append({0,1,2,3,4}, 1, reverse) will give {4,3,2,1} and not {3,2,1,0}*/
 		void append(const DeformableSplineCurve& other, GRuint start_index = 0, bool reverse = false) {
-			GRuint pts_size = other.size();
+			GRuint pts_size = (GRuint)other.size();
+			GRuint first_junction_index = (GRuint)this->size() - 1;
+			GRuint second_junction_index = first_junction_index + 1;
 			
 			if (start_index >= pts_size) {
 				return;
 			}
 			if (reverse) {
+				for (GRuint i(0); i < pts_size - start_index; i++) {
+					push_back(other[pts_size - i - 1]);
+				}
+			}
+			else {
 				for (GRuint i(start_index); i < pts_size; i++) {
 					push_back(other[i]);
 				}
 			}
-			else {
-				for (GRuint i(0); i < pts_size-start_index; i++) {
-					push_back(other[pts_size - i - 1]);
-				}
+
+			//update the tangents at the junctions
+			(*this)[first_junction_index].second = ((*this)[first_junction_index + 1].first - (*this)[first_junction_index - 1].first).normalize();
+
+			if (second_junction_index < this->size() - 1) {
+				(*this)[second_junction_index].second = ((*this)[second_junction_index + 1].first - (*this)[second_junction_index - 1].first).normalize();
 			}
 
 			set_original_shape();

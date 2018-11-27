@@ -1642,7 +1642,7 @@ namespace grapholon {
 				voxel_id_to_coordinates(voxel_id, x, y, z);
 
 				GRfloat average(0.f);
-				GRfloat neighbors_count(0);
+				GRuint neighbors_count(0);
 
 				for (GRuint i(0); i <= max_distance*2; i++) {
 					for (GRuint j(0); j <= max_distance*2; j++) {
@@ -1654,7 +1654,7 @@ namespace grapholon {
 				}
 				count = neighbors_count;
 
-				average /= neighbors_count;
+				average /= (GRfloat)neighbors_count;
 
 				if (average >= threshold) {
 					to_set.push_back(voxel_id);
