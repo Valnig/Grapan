@@ -262,7 +262,7 @@ namespace grapholon {
 			GRuint first_junction_index = (GRuint)this->size() - 1;
 			GRuint second_junction_index = first_junction_index + 1;
 			
-			if (start_index >= pts_size) {
+			if (start_index >= pts_size || pts_size < 2) {
 				return;
 			}
 			if (reverse) {
@@ -276,11 +276,13 @@ namespace grapholon {
 				}
 			}
 
+			GRuint new_size = (GRuint)this->size();
 			//update the tangents at the junctions
-			(*this)[first_junction_index].second = ((*this)[first_junction_index + 1].first - (*this)[first_junction_index - 1].first).normalize();
-
-			if (second_junction_index < this->size() - 1) {
-				(*this)[second_junction_index].second = ((*this)[second_junction_index + 1].first - (*this)[second_junction_index - 1].first).normalize();
+			if (first_junction_index > 0 && second_junction_index < new_size - 1) {
+				(*this)[first_junction_index].second = ((*this)[first_junction_index + 1].first - (*this)[first_junction_index - 1].first).normalize();
+			}
+			if (second_junction_index < new_size - 2) {
+				(*this)[second_junction_index + 1].second = ((*this)[second_junction_index + 2].first - (*this)[second_junction_index].first).normalize();
 			}
 
 			set_original_shape();

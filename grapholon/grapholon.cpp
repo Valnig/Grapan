@@ -1582,7 +1582,59 @@ void splitEdgeAlongCurve() {
 
 	std::cout << "graph at first : " << graph.to_string() << endl;
 
-	std::pair<std::pair<VertexVector, EdgeVector>, std::pair<VertexVector, EdgeVector>> result = graph.split_edge_along_curve(to_split, { {v3,v10},{v8,v0} });
+	std::pair<std::pair<VertexVector, EdgeVector>, std::pair<VertexVector, EdgeVector>> result = graph.split_edge_along_curve(to_split, { {v0,v10},{v3,v10}, {v8,v10}, {v11,v10} });
+
+	std::cout << "graph after split : " << graph.to_string() << endl;
+
+	std::cout << "removed stuff : " << std::endl;
+	std::cout << " vertices : " << std::endl;
+	for (auto vertex : result.first.first) {
+		std::cout << vertex << std::endl;
+	}
+	std::cout << " edges : " << std::endl;
+	for (auto edge : result.first.second) {
+		std::cout << edge << std::endl;
+	}
+
+	std::cout << "added stuff : " << std::endl;
+	std::cout << " vertices : " << std::endl;
+	for (auto vertex : result.second.first) {
+		std::cout << vertex << std::endl;
+	}
+	std::cout << " edges : " << std::endl;
+	for (auto edge : result.second.second) {
+		std::cout << edge << std::endl;
+	}
+}
+
+void splitSingleEdgeAlongCurve() {
+	SkeletalGraph graph;
+
+	GRuint window_width(1);
+
+	Vector3f u0 = Vector3f(0, 0, 0);
+	Vector3f u1 = Vector3f(0, 1, 0);
+	Vector3f u2 = Vector3f(1, 0, 0);
+	Vector3f u3 = Vector3f(1, 1, 0);
+	
+
+	VertexDescriptor v0 = graph.add_vertex({ u0 });
+	VertexDescriptor v1 = graph.add_vertex({ u1 });
+	VertexDescriptor v2 = graph.add_vertex({ u2 });
+	VertexDescriptor v3 = graph.add_vertex({ u3 });
+
+
+	DiscreteCurve c0({ u0, u1});
+	EdgeProperties e0({ *c0.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor to_split = graph.add_edge(v0, v1, e0).first;
+
+	DiscreteCurve c1({ u2, u3});
+	EdgeProperties e1({ *c1.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	//EdgeDescriptor to_leave = graph.add_edge(v2, v3, e1).first;
+
+	std::cout << "graph at first : " << graph.to_string() << endl;
+
+	std::pair<std::pair<VertexVector, EdgeVector>, std::pair<VertexVector, EdgeVector>> result = graph.split_edge_along_curve(to_split, {});
 
 	std::cout << "graph after split : " << graph.to_string() << endl;
 
