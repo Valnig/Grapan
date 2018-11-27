@@ -340,8 +340,8 @@ namespace grapholon {
 		}
 		
 
-		/** returns the neighborhoods of both the source and target vertices that have been removed and the list of vertices and edges that were added*/
-		std::pair<std::pair<VertexNeighborhood, VertexNeighborhood>, std::pair<VertexVector, EdgeVector>> split_edge_along_curve(
+		/** returns the list of vertices and edges that were removed and the list of vertices and edges that were added*/
+		std::pair<std::pair<VertexVector, EdgeVector>, std::pair<VertexVector, EdgeVector>> split_edge_along_curve(
 			EdgeDescriptor edge_to_split, 
 			std::vector<std::pair<VertexDescriptor,VertexDescriptor>> new_edges_sources_and_targets) {
 
@@ -353,14 +353,14 @@ namespace grapholon {
 			VertexDescriptor edge_to_split_source = boost::source(edge_to_split, internal_graph_);
 			VertexDescriptor edge_to_split_target = boost::target(edge_to_split, internal_graph_);
 
-			std::cout << "removed edge curve : " << removed_edge_curve.to_string() << std::endl << std::endl;
-			std::cout << "removed edge  : " << edge_to_split << std::endl;
+			//std::cout << "removed edge curve : " << removed_edge_curve.to_string() << std::endl << std::endl;
+			//std::cout << "removed edge  : " << edge_to_split << std::endl;
 
 			std::vector<std::pair<VertexDescriptor, DeformableSplineCurve>> orphan_vertices_and_curves; //vertices adjacent to the split edge that are not among the list of vertices to connect
 			
-			bool first_iteration = false;
-
 			GRuint iteration_count(0);
+
+			EdgeVector edges_to_remove;
 
 			for (auto source_target : new_edges_sources_and_targets) {
 				VertexDescriptor new_source_vertex = source_target.first;
@@ -369,8 +369,8 @@ namespace grapholon {
 				DeformableSplineCurve new_curve_middle;
 				DeformableSplineCurve new_curve_end;
 
-				std::cout << std::endl << " iteration " << iteration_count << " : " << std::endl;
-				std::cout << "source : " << new_source_vertex << ", target : " << new_target_vertex << std::endl;
+				//std::cout << std::endl << " iteration " << iteration_count << " : " << std::endl;
+				//std::cout << "source : " << new_source_vertex << ", target : " << new_target_vertex << std::endl;
 
 				bool reverse_middle = false;
 
@@ -381,27 +381,17 @@ namespace grapholon {
 					EdgeDescriptor in_edge = *in_ep.first;
 					VertexDescriptor in_edge_source = boost::source(in_edge, internal_graph_);
 					if (in_edge_source == new_source_vertex) {
-						std::cout << "new source is source of in edge of source" << std::endl;
+						//std::cout << "new source is source of in edge of source" << std::endl;
 						new_curve_start =  get_edge(in_edge).curve;
 						reverse_middle = false;
+						edges_to_remove.push_back(in_edge);
 					}
 					else if (in_edge_source == new_target_vertex) {
-						std::cout << "new target is source of in edge of source" << std::endl;
+						//std::cout << "new target is source of in edge of source" << std::endl;
 						new_curve_end = DeformableSplineCurve(get_edge(in_edge).curve, true);
-						std::cout << "new curve end : " << new_curve_end.to_string() << std::endl;
+						//std::cout << "new curve end : " << new_curve_end.to_string() << std::endl;
 						reverse_middle = true;
-					}
-					else {
-						//add new vertex and edge and add them to the result holder
-						if (first_iteration) {
-							DeformableSplineCurve new_edge_curve = get_edge(in_edge).curve;
-							new_edge_curve.pop_back();
-							VertexDescriptor new_vertex = add_vertex({ new_edge_curve.back().first, false });
-							EdgeDescriptor new_edge = add_edge(in_edge_source, new_vertex, { new_edge_curve }).first;
-
-							new_vertices.push_back(new_vertex);
-							new_edges.push_back(new_edge);
-						}
+						edges_to_remove.push_back(in_edge);
 					}
 				}
 				//and then its out-edges
@@ -412,27 +402,17 @@ namespace grapholon {
 					VertexDescriptor out_edge_target = boost::target(out_edge, internal_graph_);
 
 					if (out_edge_target == new_source_vertex) {
-						std::cout << "new source is target of out edge of source" << std::endl;
+						//std::cout << "new source is target of out edge of source" << std::endl;
 						new_curve_start = DeformableSplineCurve(get_edge(out_edge).curve, true);
-						std::cout << "new curve start : " << new_curve_start.to_string() << std::endl;
+						//std::cout << "new curve start : " << new_curve_start.to_string() << std::endl;
 						reverse_middle = false;
+						edges_to_remove.push_back(out_edge);
 					}
 					else if (out_edge_target == new_target_vertex) {
-						std::cout << "new target is target of in edge of source" << std::endl;
+						//std::cout << "new target is target of in edge of source" << std::endl;
 						new_curve_end = get_edge(out_edge).curve;
 						reverse_middle = true;
-					}
-					else {
-						//add new vertex and edge and add them to the result holder
-						if (first_iteration) {
-							DeformableSplineCurve new_edge_curve(get_edge(out_edge).curve, false);
-							new_edge_curve.pop_back();
-							VertexDescriptor new_vertex = add_vertex({ new_edge_curve.back().first, false });
-							EdgeDescriptor new_edge = add_edge(out_edge_target, new_vertex, { new_edge_curve }).first;
-
-							new_vertices.push_back(new_vertex);
-							new_edges.push_back(new_edge);
-						}
+						edges_to_remove.push_back(out_edge);
 					}
 				}
 
@@ -445,28 +425,18 @@ namespace grapholon {
 					VertexDescriptor in_edge_source = boost::source(in_edge, internal_graph_);
 
 					if (in_edge_source == new_source_vertex) {
-						std::cout << "new source is source of in edge of target" << std::endl;
+						//std::cout << "new source is source of in edge of target" << std::endl;
 						new_curve_start = get_edge(in_edge).curve;
-						std::cout << "new curve start : " << new_curve_start.to_string() << std::endl;
+						//std::cout << "new curve start : " << new_curve_start.to_string() << std::endl;
 						reverse_middle = true;
+						edges_to_remove.push_back(in_edge);
 					}
 					else if (in_edge_source == new_target_vertex) {
-						std::cout << "new target is target of in edge of target" << std::endl;
+						//std::cout << "new target is target of in edge of target" << std::endl;
 						new_curve_end = DeformableSplineCurve(get_edge(in_edge).curve, true);
-						std::cout << "new curve end : " << new_curve_end.to_string() << std::endl;
+						//std::cout << "new curve end : " << new_curve_end.to_string() << std::endl;
 						reverse_middle = false;
-					}
-					else {
-						//add new vertex and edge and add them to the result holder
-						if (first_iteration) {
-							DeformableSplineCurve new_edge_curve = get_edge(in_edge).curve;
-							new_edge_curve.pop_back();
-							VertexDescriptor new_vertex = add_vertex({ new_edge_curve.back().first, false });
-							EdgeDescriptor new_edge = add_edge(in_edge_source, new_vertex, { new_edge_curve }).first;
-
-							new_vertices.push_back(new_vertex);
-							new_edges.push_back(new_edge);
-						}
+						edges_to_remove.push_back(in_edge);
 					}
 				}
 				//and its out-edges
@@ -477,34 +447,24 @@ namespace grapholon {
 					VertexDescriptor out_edge_target = boost::target(out_edge, internal_graph_);
 
 					if (out_edge_target == new_source_vertex) {
-						std::cout << "new source is target of out edge of target" << std::endl;
+						//std::cout << "new source is target of out edge of target" << std::endl;
 						new_curve_start = DeformableSplineCurve(get_edge(out_edge).curve, true);
-						std::cout << "new curve start : " << new_curve_start.to_string() << std::endl;
+						//std::cout << "new curve start : " << new_curve_start.to_string() << std::endl;
 						reverse_middle = true;
+						edges_to_remove.push_back(out_edge);
 					}
 					else if (out_edge_target == new_target_vertex) {
-						std::cout << "new target is target of out edge of target" << std::endl;
+						//std::cout << "new target is target of out edge of target" << std::endl;
 						new_curve_end = get_edge(out_edge).curve;
 						reverse_middle = false;
-					}
-					else {
-						//add new vertex and edge and add them to the result holder
-						if (first_iteration) {
-							DeformableSplineCurve new_edge_curve(get_edge(out_edge).curve, false);
-							new_edge_curve.pop_back();
-							VertexDescriptor new_vertex = add_vertex({ new_edge_curve.back().first, false });
-							EdgeDescriptor new_edge = add_edge(out_edge_target, new_vertex, { new_edge_curve }).first;
-
-							new_vertices.push_back(new_vertex);
-							new_edges.push_back(new_edge);
-						}
+						edges_to_remove.push_back(out_edge);
 					}
 				}
 
 
 				//remove the last segment the start curve
 				new_curve_start.pop_back();
-				std::cout << " start curve : " << std::endl << new_curve_start.to_string() << std::endl;
+				//std::cout << " start curve : " << std::endl << new_curve_start.to_string() << std::endl;
 				
 				//prepare the middle curve by reversing it if necessary, deforming it and removing its back
 				new_curve_middle = DeformableSplineCurve(removed_edge_curve, reverse_middle);
@@ -515,29 +475,44 @@ namespace grapholon {
 
 				//append the middle curve
 				new_curve_start.append(new_curve_middle, 1);
-				std::cout << " middle appended : " << std::endl << new_curve_start.to_string() << std::endl;
+				//std::cout << " middle appended : " << std::endl << new_curve_start.to_string() << std::endl;
 
 				//and append the end curve without its first element
 				new_curve_start.append(new_curve_end, 1);
-				std::cout << " end appended : " << std::endl << new_curve_start.to_string() << std::endl;
+				//std::cout << " end appended : " << std::endl << new_curve_start.to_string() << std::endl;
 
 				//and finally add the new edge tying the source and target vertex together
 				EdgeDescriptor new_edge = add_edge(new_source_vertex, new_target_vertex, { new_curve_start}).first;
 
 				new_edges.push_back(new_edge);
 
-				first_iteration = false;
 				iteration_count++;
 				std::cout << std::endl << std::endl;
 			}
+
+			VertexVector removed_vertices;
 	
-			//and finally remove the split edge and its two vertices
-			VertexNeighborhood source_neighborhood = { edge_to_split_source, remove_vertex(edge_to_split_source) };
-			VertexNeighborhood target_neighborhood = { edge_to_split_target, remove_vertex(edge_to_split_target) };
+			//remove the split edge and the edges that have been handled
 
+			VertexPair vertices = remove_edge(edge_to_split);
+			if (vertices.first != InternalBoostGraph::null_vertex()) {
+				removed_vertices.push_back(vertices.first);
+			}
+			if (vertices.second != InternalBoostGraph::null_vertex()) {
+				removed_vertices.push_back(vertices.second);
+			}
 
+			for (auto edge : edges_to_remove) {
+				vertices = remove_edge(edge);
+				if (vertices.first != InternalBoostGraph::null_vertex()) {
+					removed_vertices.push_back(vertices.first);
+				}
+				if (vertices.second != InternalBoostGraph::null_vertex()) {
+					removed_vertices.push_back(vertices.second);
+				}
+			}
 
-			return { {source_neighborhood, target_neighborhood}, {new_vertices, new_edges} };
+			return { {removed_vertices, edges_to_remove}, {new_vertices, new_edges} };
 		}
 
 

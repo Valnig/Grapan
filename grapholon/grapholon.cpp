@@ -1544,6 +1544,7 @@ void splitEdgeAlongCurve() {
 	Vector3f u8 = Vector3f(6, 0, 0);
 	Vector3f u9 = Vector3f(5, 3, 0);
 	Vector3f u10 = Vector3f(6, 4, 0);
+	Vector3f u11 = Vector3f(6, 2, 0);
 
 	VertexDescriptor v0 = graph.add_vertex({ u0 });
 	VertexDescriptor v2 = graph.add_vertex({ u2 });
@@ -1551,6 +1552,7 @@ void splitEdgeAlongCurve() {
 	VertexDescriptor v6 = graph.add_vertex({ u6 });
 	VertexDescriptor v8 = graph.add_vertex({ u8 });
 	VertexDescriptor v10 = graph.add_vertex({ u10 });
+	VertexDescriptor v11 = graph.add_vertex({ u11 });
 
 
 	DiscreteCurve c0({ u0, u1, u2 });
@@ -1574,12 +1576,35 @@ void splitEdgeAlongCurve() {
 	EdgeProperties e4({ *c4.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
 	EdgeDescriptor to_collapse3 = graph.add_edge(v10, v6, e4).first;
 
+	DiscreteCurve c5({ u6, u11 });
+	EdgeProperties e5({ *c5.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor to_remain = graph.add_edge(v6, v11, e5).first;
+
 	std::cout << "graph at first : " << graph.to_string() << endl;
 
-	graph.split_edge_along_curve(to_split, { {v3,v10},{v8,v0} });
+	std::pair<std::pair<VertexVector, EdgeVector>, std::pair<VertexVector, EdgeVector>> result = graph.split_edge_along_curve(to_split, { {v3,v10},{v8,v0} });
 
-	std::cout << "graph after splitt : " << graph.to_string() << endl;
+	std::cout << "graph after split : " << graph.to_string() << endl;
 
+	std::cout << "removed stuff : " << std::endl;
+	std::cout << " vertices : " << std::endl;
+	for (auto vertex : result.first.first) {
+		std::cout << vertex << std::endl;
+	}
+	std::cout << " edges : " << std::endl;
+	for (auto edge : result.first.second) {
+		std::cout << edge << std::endl;
+	}
+
+	std::cout << "added stuff : " << std::endl;
+	std::cout << " vertices : " << std::endl;
+	for (auto vertex : result.second.first) {
+		std::cout << vertex << std::endl;
+	}
+	std::cout << " edges : " << std::endl;
+	for (auto edge : result.second.second) {
+		std::cout << edge << std::endl;
+	}
 }
 
 int main()
