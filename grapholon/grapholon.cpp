@@ -1582,7 +1582,7 @@ void splitEdgeAlongCurve() {
 
 	std::cout << "graph at first : " << graph.to_string() << endl;
 
-	std::pair<std::pair<VertexVector, EdgeVector>, std::pair<VertexVector, EdgeVector>> result = graph.split_edge_along_curve(to_split, { {v0,v10},{v3,v10}, {v8,v10}, {v11,v10} });
+	std::pair<std::pair<VertexVector, EdgeVector>, std::pair<VertexVector, EdgeVector>> result = graph.split_edge_along_curve(to_split, { });
 
 	std::cout << "graph after split : " << graph.to_string() << endl;
 
