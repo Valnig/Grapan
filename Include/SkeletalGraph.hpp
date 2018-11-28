@@ -40,6 +40,9 @@ namespace grapholon {
 		bool is_part_of_cycle = false;///<used for cycle detection
 		bool is_in_spanning_tree = false;///<used for cycle detection
 		void* cycle_parent = nullptr;///<used for cycle detection
+
+		void* BFS_parent = nullptr;
+		GRuint BFS_path_cost = (GRuint)-1;
 	};
 
 	struct EdgeProperties {
@@ -256,6 +259,111 @@ namespace grapholon {
 
 		}
 
+
+		VertexVector shortest_path(VertexDescriptor from, VertexDescriptor to) {
+			//reset
+			VertexIterator vi, vi_end, next;
+			boost::tie(vi, vi_end) = vertices();
+			for (next = vi; vi != vi_end; vi = next) {
+				++next;
+				get_vertex(*vi).BFS_path_cost = (GRuint)-1;
+				get_vertex(*vi).BFS_parent = nullptr;
+
+			}
+
+			//we start from the target vertex so that we can fill the path in the right order when back-tracking
+			VertexDescriptor start_vertex = to;
+
+			GRuint iteration_count(0);
+
+			std::queue<VertexDescriptor> vertex_queue;
+			vertex_queue.push(start_vertex);
+
+			//get_vertex(start_vertex).is_in_spanning_tree = true;
+			get_vertex(start_vertex).BFS_path_cost = 0;
+
+			bool found_target = false;
+
+			while (iteration_count < vertex_count() * 2 && !vertex_queue.empty()) {
+
+				//std::cout << std::endl << " at iteration " << iteration_count << " queue is : " << std::endl;
+				//print(vertex_queue);
+
+				VertexDescriptor current_vertex = vertex_queue.front();
+				vertex_queue.pop();
+
+				GRuint current_cost = get_vertex(current_vertex).BFS_path_cost;
+
+				//std::cout << "current vertex is " << get_vertex(current_vertex).position.to_string() << std::endl;
+
+				std::pair<InEdgeIterator, InEdgeIterator> in_edges = boost::in_edges(current_vertex, internal_graph_);
+				std::pair<OutEdgeIterator, OutEdgeIterator> out_edges = boost::out_edges(current_vertex, internal_graph_);
+				for (InEdgeIterator e_it(in_edges.first); e_it != in_edges.second; e_it++) {
+					VertexDescriptor source = boost::source(*e_it, internal_graph_);
+					if (get_vertex(current_vertex).BFS_parent != source) {
+						//std::cout << "checking vertex at " << get_vertex(source).position.to_string() << std::endl;
+						if (get_vertex(source).BFS_parent == nullptr) {
+							vertex_queue.push(source);
+						}
+						if (get_vertex(source).BFS_path_cost > current_cost + 1) {
+
+							get_vertex(source).BFS_path_cost = current_cost + 1;
+							get_vertex(source).BFS_parent = current_vertex;
+							//	std::cout << "set parent of " << get_vertex(source).position.to_string() << " as " << get_vertex(current_vertex).position.to_string() << std::endl;
+
+							if (source == from) {
+								found_target = true;
+							}
+						}
+					}
+				}
+				for (OutEdgeIterator e_it(out_edges.first); e_it != out_edges.second; e_it++) {
+					VertexDescriptor target = boost::target(*e_it, internal_graph_);
+					//std::cout << "checking vertex at " << get_vertex(target).position.to_string() << std::endl;
+					if (get_vertex(current_vertex).BFS_parent != target) {
+						if (get_vertex(target).BFS_parent == nullptr) {
+							vertex_queue.push(target);
+						}
+						if (get_vertex(target).BFS_path_cost > current_cost + 1) {
+							get_vertex(target).BFS_path_cost = current_cost + 1;
+							get_vertex(target).BFS_parent = current_vertex;
+
+							if (target == from) {
+								found_target = true;
+							}
+						}
+					}
+				}
+				iteration_count++;
+			}
+
+			if (!found_target) {
+				return {};
+			}
+
+			VertexVector path = { from };
+			VertexDescriptor next_parent = get_vertex(from).BFS_parent;
+
+
+			while (next_parent != nullptr) {
+				path.push_back(next_parent);
+				next_parent = get_vertex(next_parent).BFS_parent;
+			}
+
+			std::cout << "path length : " << path.size() << std::endl;
+
+			//cleanup
+			boost::tie(vi, vi_end) = vertices();
+			for (next = vi; vi != vi_end; vi = next) {
+				++next;
+				get_vertex(*vi).BFS_path_cost = (GRuint)-1;
+				get_vertex(*vi).BFS_parent = nullptr;
+
+			}
+
+			return path;
+		}
+
 		/****************************************************************************************************************************** Edge stuff*/
 
 		std::pair<EdgeDescriptor, bool> add_edge(VertexDescriptor from, VertexDescriptor to, EdgeProperties properties) {
@@ -368,20 +476,23 @@ namespace grapholon {
 			//the case where size < 2 shouldn't happen but better safe than sorry
 			return internal_graph_[edge].curve.size() <= 2;
 		}
-		
+
 
 		/** returns the list of vertices and edges that were removed and the list of vertices and edges that were added*/
 		std::pair<std::pair<VertexVector, EdgeVector>, std::pair<VertexVector, EdgeVector>> split_edge_along_curve(
 			EdgeDescriptor edge_to_split, 
 			std::vector<std::pair<VertexDescriptor,VertexDescriptor>> new_edges_sources_and_targets) {
 
+			VertexDescriptor edge_to_split_source = boost::source(edge_to_split, internal_graph_);
+			VertexDescriptor edge_to_split_target = boost::target(edge_to_split, internal_graph_);
+			if (!boost::edge(edge_to_split_source, edge_to_split_target, internal_graph_).second) {
+				return { {{},{}},{{},{}} };
+			}
 			VertexVector new_vertices;
 			EdgeVector new_edges;
 
 			DeformableSplineCurve removed_edge_curve = get_edge(edge_to_split).curve;
 
-			VertexDescriptor edge_to_split_source = boost::source(edge_to_split, internal_graph_);
-			VertexDescriptor edge_to_split_target = boost::target(edge_to_split, internal_graph_);
 
 			//std::cout << "removed edge curve : " << removed_edge_curve.to_string() << std::endl << std::endl;
 			//std::cout << "removed edge  : " << edge_to_split << std::endl;
@@ -741,6 +852,105 @@ namespace grapholon {
 			return {removed_neighborhood, new_edges};
 		}
 
+
+		//concatenates all the curves from the edges joined by the succession of vertices (path)
+		DeformableSplineCurve convert_to_curve(VertexVector path) {
+			DeformableSplineCurve new_curve;
+
+			if (!boost::edge(path[0], path[1], internal_graph_).second
+				&& !boost::edge(path[1], path[0], internal_graph_).second) {
+				return DeformableSplineCurve();
+			}
+			EdgeDescriptor first_edge = boost::edge(path[0], path[1], internal_graph_).first;
+			new_curve = DeformableSplineCurve(get_edge(first_edge).curve, path[0] == boost::target(first_edge, internal_graph_));
+
+			std::cout << "curve start : " << new_curve.to_string()<<std::endl;
+
+			for (size_t i(1); i < path.size()-1; i++) {
+				if (!boost::edge(path[i], path[i + 1], internal_graph_).second
+					&& !boost::edge(path[i + 1], path[i], internal_graph_).second) {
+					return DeformableSplineCurve();
+				}
+				EdgeDescriptor edge = boost::edge(path[i], path[i + 1], internal_graph_).first;
+				new_curve.append(get_edge(edge).curve, 1,  path[i] == boost::target(edge, internal_graph_));
+			}
+
+			return new_curve;
+		}
+
+		std::pair<EdgePair, EdgeDescriptor> link_edges(EdgeDescriptor source_edge, EdgeDescriptor target_edge) {
+
+			VertexDescriptor source_edge_source = boost::source(source_edge, internal_graph_);
+			VertexDescriptor source_edge_target = boost::target(source_edge, internal_graph_);
+
+			VertexDescriptor target_edge_source = boost::source(target_edge, internal_graph_);
+			VertexDescriptor target_edge_target = boost::target(target_edge, internal_graph_);
+
+
+			VertexVector source_to_source_path = shortest_path(source_edge_source, target_edge_source);
+			VertexVector source_to_target_path = shortest_path(source_edge_source, target_edge_target);
+			VertexVector target_to_source_path = shortest_path(source_edge_target, target_edge_source);
+			VertexVector target_to_target_path = shortest_path(source_edge_target, target_edge_target);
+
+			DeformableSplineCurve new_edge_curve;
+			VertexDescriptor new_source;
+			VertexDescriptor new_target;
+
+			std::vector<size_t> sizes = { source_to_source_path.size(),source_to_target_path.size(),  target_to_source_path.size(), target_to_target_path.size()};
+			size_t min_size_index = 0;
+			size_t min_size = (size_t)-1;
+			for (GRuint i(0); i < sizes.size(); i++) {
+				if (sizes[i] < min_size) {
+					min_size = sizes[i];
+					min_size_index = i;
+				}
+			}
+			switch (min_size_index) {
+			default: 
+			case(0): {
+				new_edge_curve = DeformableSplineCurve(get_edge(source_edge).curve, true);
+				new_edge_curve.append(convert_to_curve(source_to_source_path),1);
+				new_edge_curve.append(DeformableSplineCurve(get_edge(target_edge).curve, false), 1);
+				new_source = source_edge_target;
+				new_target = target_edge_target;
+				break;
+			}
+			case(1): {
+				new_edge_curve = DeformableSplineCurve(get_edge(source_edge).curve, true);
+				new_edge_curve.append(convert_to_curve(source_to_target_path), 1);
+				new_edge_curve.append(DeformableSplineCurve(get_edge(target_edge).curve,true), 1);
+				new_source = source_edge_target;
+				new_target = target_edge_source;
+				break;
+			}
+			case(2): {
+				new_edge_curve = DeformableSplineCurve(get_edge(source_edge).curve, false);
+				new_edge_curve.append(convert_to_curve(target_to_source_path), 1);
+				new_edge_curve.append(DeformableSplineCurve(get_edge(target_edge).curve, false), 1);
+				new_source = source_edge_source;
+				new_target = target_edge_target;
+				break;
+			}
+			case(3): {
+				new_edge_curve = DeformableSplineCurve(get_edge(source_edge).curve, false);
+				new_edge_curve.append(convert_to_curve(target_to_target_path), 1);
+				new_edge_curve.append(DeformableSplineCurve(get_edge(target_edge).curve, true), 1);
+				new_source = source_edge_source;
+				new_target = target_edge_source;
+				break;
+			}
+			}
+
+			//add the new edge
+			EdgeDescriptor new_edge = add_edge(new_source, new_target, { new_edge_curve }).first;
+
+			//remove the old edges
+			remove_edge(source_edge);
+			remove_edge(target_edge);
+
+			return {{source_edge, target_edge }, new_edge };
+
+		}
 
 
 

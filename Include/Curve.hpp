@@ -259,27 +259,31 @@ namespace grapholon {
 			return sqrtf(x);
 		}
 
-		/**NOTE : start_index is counted before inversion. 
-		e.g.  append({0,1,2,3,4}, 1, reverse) will give {4,3,2,1} and not {3,2,1,0}*/
+		/**NOTE : start_index is counted after inversion. 
+		e.g.  append({0,1,2,3,4}, 1, reverse) will give {3,2,1,0} and not {4,3,2,1}*/
 		void append(const DeformableSplineCurve& other, GRuint start_index = 0, bool reverse = false) {
 			GRuint pts_size = (GRuint)other.size();
 			GRuint first_junction_index = (GRuint)this->size() - 1;
 			GRuint second_junction_index = first_junction_index + 1;
-			
+			GRfloat reverse_factor = reverse ? -1.f : 1.f;
+
+			std::cout << "this : " << std::endl;
+			std::cout<<this->to_string() << std::endl;
+
+			std::cout << "other : " << std::endl;
+			std::cout << other.to_string() << std::endl;
+			std::cout << "start index : " << start_index << std::endl;
+
+
 			if (start_index >= pts_size || pts_size < 2) {
 				return;
 			}
-			if (reverse) {
-				for (GRuint i(0); i < pts_size - start_index; i++) {
-					push_back(other[pts_size - i - 1]);
-					this->back().second *= -1.f;
-				}
+			for (GRuint i(start_index); i < pts_size ; i++) {
+				GRuint idx = reverse ? pts_size - i - 1 : i;
+				push_back(other[idx]);
+				this->back().second *= reverse_factor;
 			}
-			else {
-				for (GRuint i(start_index); i < pts_size; i++) {
-					push_back(other[i]);
-				}
-			}
+			
 
 			GRuint new_size = (GRuint)this->size();
 			//update the tangents at the junctions

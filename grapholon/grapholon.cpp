@@ -1659,9 +1659,133 @@ void splitSingleEdgeAlongCurve() {
 	}
 }
 
+
+void shortestPath() {
+	SkeletalGraph graph;
+
+	GRuint window_width(1);
+
+	Vector3f u0 = Vector3f(0, 0, 0);
+	Vector3f u1 = Vector3f(1, 1, 0);
+	Vector3f u2 = Vector3f(2, 2, 0);
+	Vector3f u3 = Vector3f(0, 4, 0);
+	Vector3f u4 = Vector3f(1, 3, 0);
+	Vector3f u5 = Vector3f(3, 2, 0);
+	Vector3f u6 = Vector3f(4, 2, 0);
+	Vector3f u7 = Vector3f(5, 1, 0);
+	Vector3f u8 = Vector3f(6, 0, 0);
+	Vector3f u9 = Vector3f(5, 3, 0);
+	Vector3f u10 = Vector3f(6, 4, 0);
+	Vector3f u11 = Vector3f(6, 2, 0);
+
+	VertexDescriptor v0 = graph.add_vertex({ u0 });
+	VertexDescriptor v2 = graph.add_vertex({ u2 });
+	VertexDescriptor v3 = graph.add_vertex({ u3 });
+	VertexDescriptor v6 = graph.add_vertex({ u6 });
+	VertexDescriptor v8 = graph.add_vertex({ u8 });
+	VertexDescriptor v10 = graph.add_vertex({ u10 });
+	VertexDescriptor v11 = graph.add_vertex({ u11 });
+
+
+	DiscreteCurve c0({ u0, u1, u2 });
+	EdgeProperties e0({ *c0.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor to_collapse0 = graph.add_edge(v0, v2, e0).first;
+
+	DiscreteCurve c1({ u2, u4, u3 });
+	EdgeProperties e1({ *c1.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor to_collapse1 = graph.add_edge(v2, v3, e1).first;
+
+	DiscreteCurve c2({ u2, u5, u6 });
+	EdgeProperties e2({ *c2.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor to_split = graph.add_edge(v2, v6, e2).first;
+
+
+	DiscreteCurve c3({ u6, u7, u8 });
+	EdgeProperties e3({ *c3.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor to_collapse2 = graph.add_edge(v6, v8, e3).first;
+
+	DiscreteCurve c4({ u10, u9, u6 });
+	EdgeProperties e4({ *c4.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor to_collapse3 = graph.add_edge(v10, v6, e4).first;
+
+	DiscreteCurve c5({ u6, u11 });
+	EdgeProperties e5({ *c5.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor to_remain = graph.add_edge(v6, v11, e5).first;
+
+	std::cout << "graph : " << graph.to_string() << endl;
+
+	VertexVector path = graph.shortest_path(v0, v10);
+
+	std::cout << "path : " << std::endl;
+	for (auto vertex : path) {
+		std::cout << graph.get_vertex(vertex).position.to_string() << std::endl;
+	}
+}
+
+
+void linkEdges() {
+	SkeletalGraph graph;
+
+	GRuint window_width(1);
+
+	Vector3f u0 = Vector3f(0, 0, 0);
+	Vector3f u1 = Vector3f(1, 1, 0);
+	Vector3f u2 = Vector3f(2, 2, 0);
+	Vector3f u3 = Vector3f(0, 4, 0);
+	Vector3f u4 = Vector3f(1, 3, 0);
+	Vector3f u5 = Vector3f(3, 2, 0);
+	Vector3f u6 = Vector3f(4, 2, 0);
+	Vector3f u7 = Vector3f(5, 1, 0);
+	Vector3f u8 = Vector3f(6, 0, 0);
+	Vector3f u9 = Vector3f(5, 3, 0);
+	Vector3f u10 = Vector3f(6, 4, 0);
+	Vector3f u11 = Vector3f(6, 2, 0);
+
+	VertexDescriptor v0 = graph.add_vertex({ u0 });
+	VertexDescriptor v2 = graph.add_vertex({ u2 });
+	VertexDescriptor v3 = graph.add_vertex({ u3 });
+	VertexDescriptor v6 = graph.add_vertex({ u6 });
+	VertexDescriptor v8 = graph.add_vertex({ u8 });
+	VertexDescriptor v10 = graph.add_vertex({ u10 });
+	VertexDescriptor v11 = graph.add_vertex({ u11 });
+
+
+	DiscreteCurve c0({ u0, u1, u2 });
+	EdgeProperties e0({ *c0.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor to_collapse0 = graph.add_edge(v0, v2, e0).first;
+
+	DiscreteCurve c1({ u2, u4, u3 });
+	EdgeProperties e1({ *c1.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor to_link1 = graph.add_edge(v2, v3, e1).first;
+
+	DiscreteCurve c2({ u2, u5, u6 });
+	EdgeProperties e2({ *c2.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor asdfasd = graph.add_edge(v2, v6, e2).first;
+
+
+	DiscreteCurve c3({ u6, u7, u8 });
+	EdgeProperties e3({ *c3.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor to_link2 = graph.add_edge(v6, v8, e3).first;
+
+	DiscreteCurve c4({ u10, u9, u6 });
+	EdgeProperties e4({ *c4.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor to_collapse3 = graph.add_edge(v10, v6, e4).first;
+
+	DiscreteCurve c5({ u6, u11 });
+	EdgeProperties e5({ *c5.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor to_remain = graph.add_edge(v6, v11, e5).first;
+
+	std::cout << "graph : " << graph.to_string() << endl;
+
+	graph.link_edges(to_link1, to_link2);
+
+	std::cout << "graph after : " << graph.to_string()<<std::endl;
+
+}
+
 int main()
 {
-	splitEdgeAlongCurve();
+	linkEdges();
 
     return 0;
 }
