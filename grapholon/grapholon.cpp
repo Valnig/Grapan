@@ -1739,15 +1739,14 @@ void linkEdges() {
 	Vector3f u8 = Vector3f(6, 0, 0);
 	Vector3f u9 = Vector3f(5, 3, 0);
 	Vector3f u10 = Vector3f(6, 4, 0);
-	Vector3f u11 = Vector3f(6, 2, 0);
 
 	VertexDescriptor v0 = graph.add_vertex({ u0 });
 	VertexDescriptor v2 = graph.add_vertex({ u2 });
 	VertexDescriptor v3 = graph.add_vertex({ u3 });
+	VertexDescriptor v5 = graph.add_vertex({ u5 });
 	VertexDescriptor v6 = graph.add_vertex({ u6 });
 	VertexDescriptor v8 = graph.add_vertex({ u8 });
 	VertexDescriptor v10 = graph.add_vertex({ u10 });
-	VertexDescriptor v11 = graph.add_vertex({ u11 });
 
 
 	DiscreteCurve c0({ u0, u1, u2 });
@@ -1758,9 +1757,9 @@ void linkEdges() {
 	EdgeProperties e1({ *c1.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
 	EdgeDescriptor edge1 = graph.add_edge(v2, v3, e1).first;
 
-	DiscreteCurve c2({ u2, u5, u6 });
+	/*DiscreteCurve c2({ u2, u5, u6 });
 	EdgeProperties e2({ *c2.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
-	EdgeDescriptor asdfasd = graph.add_edge(v2, v6, e2).first;
+	EdgeDescriptor asdfasd = graph.add_edge(v2, v6, e2).first;*/
 
 
 	DiscreteCurve c3({ u6, u7, u8 });
@@ -1771,13 +1770,17 @@ void linkEdges() {
 	EdgeProperties e4({ *c4.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
 	EdgeDescriptor edge3 = graph.add_edge(v10, v6, e4).first;
 
-	DiscreteCurve c5({ u6, u11 });
+	DiscreteCurve c5({ u5, u2 });
 	EdgeProperties e5({ *c5.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
-	EdgeDescriptor to_remain = graph.add_edge(v6, v11, e5).first;
+	EdgeDescriptor to_remain = graph.add_edge(v5, v2, e5).first;
+
+	DiscreteCurve c6({ u5, u6 });
+	EdgeProperties e6({ *c6.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor sdfd = graph.add_edge(v5, v6, e6).first;
 
 	std::cout << "graph : " << graph.to_string() << endl;
 
-	graph.link_edges(edge3, edge2);
+	graph.link_edges(edge0, edge2);
 
 	std::cout << "graph after : " << graph.to_string()<<std::endl;
 

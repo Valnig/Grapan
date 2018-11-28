@@ -857,7 +857,7 @@ namespace grapholon {
 		DeformableSplineCurve convert_to_curve(VertexVector path) {
 			DeformableSplineCurve new_curve;
 
-			if (path.size()) {
+			if (path.size() > 1) {
 				EdgeDescriptor first_edge;
 
 				if (boost::edge(path[0], path[1], internal_graph_).second) {
@@ -871,15 +871,22 @@ namespace grapholon {
 
 				new_curve = DeformableSplineCurve(get_edge(first_edge).curve, path[0] == boost::target(first_edge, internal_graph_));
 
-				std::cout << "curve start : " << new_curve.to_string() << std::endl;
+				//std::cout << "curve start : " << new_curve.to_string() << std::endl;
 
 				for (size_t i(1); i < path.size() - 1; i++) {
-					if (!boost::edge(path[i], path[i + 1], internal_graph_).second
-						&& !boost::edge(path[i + 1], path[i], internal_graph_).second) {
-						return DeformableSplineCurve();
+					EdgeDescriptor next_edge;
+
+					if (boost::edge(path[0], path[1], internal_graph_).second) {
+						next_edge = boost::edge(path[0], path[1], internal_graph_).first;
 					}
-					EdgeDescriptor edge = boost::edge(path[i], path[i + 1], internal_graph_).first;
-					new_curve.append(get_edge(edge).curve, 1, path[i] == boost::target(edge, internal_graph_));
+					else if (boost::edge(path[1], path[0], internal_graph_).second) {
+						next_edge = boost::edge(path[1], path[0], internal_graph_).first;
+					}
+					else {
+						return new_curve;
+					}
+					
+					new_curve.append(get_edge(next_edge).curve, 1, path[i] == boost::target(next_edge, internal_graph_));
 				}
 			}
 

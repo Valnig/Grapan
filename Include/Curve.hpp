@@ -269,12 +269,12 @@ namespace grapholon {
 			GRuint second_junction_index = first_junction_index + 1;
 			GRfloat reverse_factor = reverse ? -1.f : 1.f;
 
-			std::cout << "this : " << std::endl;
+			/*std::cout << "this : " << std::endl;
 			std::cout<<this->to_string() << std::endl;
 
 			std::cout << "other : " << std::endl;
 			std::cout << other.to_string() << std::endl;
-			std::cout << "start index : " << start_index << std::endl;
+			std::cout << "start index : " << start_index << std::endl;*/
 
 
 			if (start_index >= pts_size || pts_size < 2) {
