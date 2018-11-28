@@ -215,21 +215,23 @@ namespace grapholon {
 
 		//this ensures that if a copy is made, the original shape is not valid anymore
 		DeformableSplineCurve(const DeformableSplineCurve& other, bool reverse = false) {
-			if (reverse) {
-				this->clear();
-				size_t pts_size = other.size();
-				for (size_t i(0); i < pts_size; i++) {
-					push_back(other[pts_size - i - 1]);
-					this->back().second *= -1.f;
-				}
+
+			this->clear();
+			if (! other.size()) {
+				set_original_shape();
+				return;
 			}
-			else {
-				(*this) = other;
+			size_t pts_size = other.size();
+			GRfloat reverse_factor = reverse ? -1.f : 1.f;
+			for (size_t i(0); i < pts_size; i++) {
+				size_t idx = reverse ? pts_size - i - 1 : i;
+				push_back(other[idx]);
+				this->back().second *= reverse_factor;
 			}
-			original_lengths_ = std::vector<GRfloat>();
-			original_points_  = std::vector<Vector3f>();
-			original_angles_  = std::vector<GRfloat>();
+			
+			set_original_shape();
 		}
+
 
 		void set_original_shape() {
 			original_lengths_ = std::vector<GRfloat>();

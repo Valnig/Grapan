@@ -1752,11 +1752,11 @@ void linkEdges() {
 
 	DiscreteCurve c0({ u0, u1, u2 });
 	EdgeProperties e0({ *c0.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
-	EdgeDescriptor to_collapse0 = graph.add_edge(v0, v2, e0).first;
+	EdgeDescriptor edge0 = graph.add_edge(v0, v2, e0).first;
 
 	DiscreteCurve c1({ u2, u4, u3 });
 	EdgeProperties e1({ *c1.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
-	EdgeDescriptor to_link1 = graph.add_edge(v2, v3, e1).first;
+	EdgeDescriptor edge1 = graph.add_edge(v2, v3, e1).first;
 
 	DiscreteCurve c2({ u2, u5, u6 });
 	EdgeProperties e2({ *c2.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
@@ -1765,11 +1765,11 @@ void linkEdges() {
 
 	DiscreteCurve c3({ u6, u7, u8 });
 	EdgeProperties e3({ *c3.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
-	EdgeDescriptor to_link2 = graph.add_edge(v6, v8, e3).first;
+	EdgeDescriptor edge2 = graph.add_edge(v6, v8, e3).first;
 
 	DiscreteCurve c4({ u10, u9, u6 });
 	EdgeProperties e4({ *c4.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
-	EdgeDescriptor to_collapse3 = graph.add_edge(v10, v6, e4).first;
+	EdgeDescriptor edge3 = graph.add_edge(v10, v6, e4).first;
 
 	DiscreteCurve c5({ u6, u11 });
 	EdgeProperties e5({ *c5.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
@@ -1777,7 +1777,7 @@ void linkEdges() {
 
 	std::cout << "graph : " << graph.to_string() << endl;
 
-	graph.link_edges(to_link1, to_link2);
+	graph.link_edges(edge3, edge2);
 
 	std::cout << "graph after : " << graph.to_string()<<std::endl;
 
