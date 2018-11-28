@@ -218,7 +218,9 @@ namespace grapholon {
 
 			this->clear();
 			if (! other.size()) {
-				set_original_shape();
+				original_lengths_ = std::vector<GRfloat>();
+				original_points_ = std::vector<Vector3f>();
+				original_angles_ = std::vector<GRfloat>();
 				return;
 			}
 			size_t pts_size = other.size();
@@ -228,8 +230,10 @@ namespace grapholon {
 				push_back(other[idx]);
 				this->back().second *= reverse_factor;
 			}
-			
-			set_original_shape();
+
+			original_lengths_ = std::vector<GRfloat>();
+			original_points_ = std::vector<Vector3f>();
+			original_angles_ = std::vector<GRfloat>();
 		}
 
 

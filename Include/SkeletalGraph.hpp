@@ -261,6 +261,11 @@ namespace grapholon {
 
 
 		VertexVector shortest_path(VertexDescriptor from, VertexDescriptor to) {
+
+			if (from == to) {
+				return { from };
+			}
+
 			//reset
 			VertexIterator vi, vi_end, next;
 			boost::tie(vi, vi_end) = vertices();
@@ -338,7 +343,7 @@ namespace grapholon {
 			}
 
 			if (!found_target) {
-				return {};
+				throw std::invalid_argument("Couldn't find path between vertices");
 			}
 
 			VertexVector path = { from };
@@ -350,7 +355,6 @@ namespace grapholon {
 				next_parent = get_vertex(next_parent).BFS_parent;
 			}
 
-			std::cout << "path length : " << path.size() << std::endl;
 
 			//cleanup
 			boost::tie(vi, vi_end) = vertices();
@@ -362,6 +366,12 @@ namespace grapholon {
 			}
 
 			return path;
+		}
+
+
+		EdgeDescriptor join_vertices(VertexDescriptor source, VertexDescriptor target) {
+			//TODO similar to join_edges but without the start and end edges and without the deformation
+
 		}
 
 		/****************************************************************************************************************************** Edge stuff*/
@@ -856,6 +866,7 @@ namespace grapholon {
 		//concatenates all the curves from the edges joined by the succession of vertices (path)
 		DeformableSplineCurve convert_to_curve(VertexVector path) {
 			DeformableSplineCurve new_curve;
+			new_curve.clear();
 
 			if (path.size() > 1) {
 				EdgeDescriptor first_edge;
@@ -876,11 +887,11 @@ namespace grapholon {
 				for (size_t i(1); i < path.size() - 1; i++) {
 					EdgeDescriptor next_edge;
 
-					if (boost::edge(path[0], path[1], internal_graph_).second) {
-						next_edge = boost::edge(path[0], path[1], internal_graph_).first;
+					if (boost::edge(path[i], path[i+1], internal_graph_).second) {
+						next_edge = boost::edge(path[i], path[i+1], internal_graph_).first;
 					}
-					else if (boost::edge(path[1], path[0], internal_graph_).second) {
-						next_edge = boost::edge(path[1], path[0], internal_graph_).first;
+					else if (boost::edge(path[i+1], path[i], internal_graph_).second) {
+						next_edge = boost::edge(path[i+1], path[i], internal_graph_).first;
 					}
 					else {
 						return new_curve;
@@ -893,7 +904,13 @@ namespace grapholon {
 			return new_curve;
 		}
 
-		std::pair<EdgePair, EdgeDescriptor> link_edges(EdgeDescriptor source_edge, EdgeDescriptor target_edge) {
+
+
+		std::pair<EdgePair, EdgeDescriptor> join_edges(EdgeDescriptor source_edge, EdgeDescriptor target_edge, GRfloat new_edge_displacement = 1.f) {
+
+			if (source_edge == target_edge) {
+				throw std::invalid_argument("Cannot join an edge to itself");
+			}
 
 			VertexDescriptor source_edge_source = boost::source(source_edge, internal_graph_);
 			VertexDescriptor source_edge_target = boost::target(source_edge, internal_graph_);
@@ -901,77 +918,94 @@ namespace grapholon {
 			VertexDescriptor target_edge_source = boost::source(target_edge, internal_graph_);
 			VertexDescriptor target_edge_target = boost::target(target_edge, internal_graph_);
 
+			try {
+				VertexVector source_to_source_path = shortest_path(source_edge_source, target_edge_source);
+				VertexVector source_to_target_path = shortest_path(source_edge_source, target_edge_target);
+				VertexVector target_to_source_path = shortest_path(source_edge_target, target_edge_source);
+				VertexVector target_to_target_path = shortest_path(source_edge_target, target_edge_target);
 
-			VertexVector source_to_source_path = shortest_path(source_edge_source, target_edge_source);
-			VertexVector source_to_target_path = shortest_path(source_edge_source, target_edge_target);
-			VertexVector target_to_source_path = shortest_path(source_edge_target, target_edge_source);
-			VertexVector target_to_target_path = shortest_path(source_edge_target, target_edge_target);
 
-			DeformableSplineCurve new_edge_curve;
-			VertexDescriptor new_source;
-			VertexDescriptor new_target;
+				DeformableSplineCurve new_edge_curve_start;
+				DeformableSplineCurve new_edge_curve_middle;
+				DeformableSplineCurve new_edge_curve_end;
 
-			std::vector<size_t> sizes = { source_to_source_path.size(),source_to_target_path.size(),  target_to_source_path.size(), target_to_target_path.size()};
-			size_t min_size_index = 0;
-			size_t min_size = (size_t)-1;
-			for (GRuint i(0); i < sizes.size(); i++) {
-				if (sizes[i] < min_size) {
-					min_size = sizes[i];
-					min_size_index = i;
+				VertexDescriptor new_source;
+				VertexDescriptor new_target;
+
+				std::vector<size_t> sizes = { source_to_source_path.size(),source_to_target_path.size(),  target_to_source_path.size(), target_to_target_path.size()};
+				size_t min_size_index = 0;
+				size_t min_size = (size_t)-1;
+				for (GRuint i(0); i < sizes.size(); i++) {
+
+					std::cout << "path length : " << sizes[i] << std::endl;
+					if (sizes[i] < min_size) {
+						min_size = sizes[i];
+						min_size_index = i;
+					}
 				}
-			}
-			switch (min_size_index) {
-			default: 
-			case(0): {
-				new_edge_curve = DeformableSplineCurve(get_edge(source_edge).curve, true);
-				if (min_size) {
-					new_edge_curve.append(convert_to_curve(source_to_source_path), 1);
+				switch (min_size_index) {
+				default: 
+				case(0): {
+					new_edge_curve_start  = DeformableSplineCurve(get_edge(source_edge).curve, true);
+					new_edge_curve_middle = convert_to_curve(source_to_source_path);
+					new_edge_curve_end    = DeformableSplineCurve(get_edge(target_edge).curve, false);
+					new_source = source_edge_target;
+					new_target = target_edge_target;
+					break;
 				}
-				new_edge_curve.append(DeformableSplineCurve(get_edge(target_edge).curve, false), 1);
-				new_source = source_edge_target;
-				new_target = target_edge_target;
-				break;
-			}
-			case(1): {
-				new_edge_curve = DeformableSplineCurve(get_edge(source_edge).curve, true);
-				if (min_size) {
-					new_edge_curve.append(convert_to_curve(source_to_target_path), 1);
+				case(1): {
+					new_edge_curve_start = DeformableSplineCurve(get_edge(source_edge).curve, true);
+					new_edge_curve_middle = convert_to_curve(source_to_target_path);
+					new_edge_curve_end = DeformableSplineCurve(get_edge(target_edge).curve, true);
+					new_source = source_edge_target;
+					new_target = target_edge_source;
+					break;
 				}
-				new_edge_curve.append(DeformableSplineCurve(get_edge(target_edge).curve,true), 1);
-				new_source = source_edge_target;
-				new_target = target_edge_source;
-				break;
-			}
-			case(2): {
-				new_edge_curve = DeformableSplineCurve(get_edge(source_edge).curve, false);
-				if (min_size) {
-					new_edge_curve.append(convert_to_curve(target_to_source_path), 1);
+				case(2): {
+					new_edge_curve_start = DeformableSplineCurve(get_edge(source_edge).curve, false);
+					new_edge_curve_middle = convert_to_curve(target_to_source_path);
+					new_edge_curve_end = DeformableSplineCurve(get_edge(target_edge).curve, false);
+					new_source = source_edge_source;
+					new_target = target_edge_target;
+					break;
 				}
-				new_edge_curve.append(DeformableSplineCurve(get_edge(target_edge).curve, false), 1);
-				new_source = source_edge_source;
-				new_target = target_edge_target;
-				break;
-			}
-			case(3): {
-				new_edge_curve = DeformableSplineCurve(get_edge(source_edge).curve, false);
-				if (min_size) {
-					new_edge_curve.append(convert_to_curve(target_to_target_path), 1);
+				case(3): {
+					new_edge_curve_start = DeformableSplineCurve(get_edge(source_edge).curve, false);
+					new_edge_curve_middle = convert_to_curve(target_to_target_path);
+					new_edge_curve_end = DeformableSplineCurve(get_edge(target_edge).curve, true);
+					new_source = source_edge_source;
+					new_target = target_edge_source;
+					break;
 				}
-				new_edge_curve.append(DeformableSplineCurve(get_edge(target_edge).curve, true), 1);
-				new_source = source_edge_source;
-				new_target = target_edge_source;
-				break;
-			}
-			}
+				}
 
-			//add the new edge
-			EdgeDescriptor new_edge = add_edge(new_source, new_target, { new_edge_curve }).first;
+				Vector3f first_junction_point = new_edge_curve_start.back().first + (new_edge_curve_start.before_back().first - new_edge_curve_start.back().first).normalize()*new_edge_displacement;
+				Vector3f second_junction_point = new_edge_curve_end.front().first + (new_edge_curve_end.after_front().first - new_edge_curve_end.front().first).normalize()*new_edge_displacement;
 
-			//remove the old edges
-			remove_edge(source_edge);
-			remove_edge(target_edge);
+				new_edge_curve_start.pseudo_elastic_deform(false, first_junction_point);
+			
+				if (new_edge_curve_middle.size()) {
+					new_edge_curve_middle.pseudo_elastic_deform(true, first_junction_point);
+					new_edge_curve_middle.pseudo_elastic_deform(false, second_junction_point);
+					new_edge_curve_start.append(new_edge_curve_middle, 1);
+				}
 
-			return {{source_edge, target_edge }, new_edge };
+				new_edge_curve_end.pseudo_elastic_deform(true, second_junction_point);
+
+				new_edge_curve_start.append(new_edge_curve_end, 1);
+
+				//add the new edge
+				EdgeDescriptor new_edge = add_edge(new_source, new_target, { new_edge_curve_start }).first;
+
+				//remove the old edges
+				remove_edge(source_edge);
+				remove_edge(target_edge);
+
+				return {{source_edge, target_edge }, new_edge };
+			}
+			catch (std::invalid_argument e) {
+				throw e;
+			}
 
 		}
 

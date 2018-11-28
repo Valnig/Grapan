@@ -1772,15 +1772,15 @@ void linkEdges() {
 
 	DiscreteCurve c5({ u5, u2 });
 	EdgeProperties e5({ *c5.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
-	EdgeDescriptor to_remain = graph.add_edge(v5, v2, e5).first;
+	EdgeDescriptor edge5 = graph.add_edge(v5, v2, e5).first;
 
 	DiscreteCurve c6({ u5, u6 });
 	EdgeProperties e6({ *c6.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
-	EdgeDescriptor sdfd = graph.add_edge(v5, v6, e6).first;
+	EdgeDescriptor edge6 = graph.add_edge(v5, v6, e6).first;
 
 	std::cout << "graph : " << graph.to_string() << endl;
 
-	graph.link_edges(edge0, edge2);
+	graph.join_edges(edge0, edge5);
 
 	std::cout << "graph after : " << graph.to_string()<<std::endl;
 
