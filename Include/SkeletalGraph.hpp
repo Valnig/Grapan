@@ -377,6 +377,11 @@ namespace grapholon {
 		/****************************************************************************************************************************** Edge stuff*/
 
 		std::pair<EdgeDescriptor, bool> add_edge(VertexDescriptor from, VertexDescriptor to, EdgeProperties properties) {
+
+			if (from == InternalBoostGraph::null_vertex()
+				|| to == InternalBoostGraph::null_vertex()) {
+				return { EdgeDescriptor(), false };
+			}
 			edge_spline_count_ += (GRuint)properties.curve.size();
 
 			std::pair<EdgeDescriptor, bool> new_edge = boost::add_edge(from, to, properties, internal_graph_);
@@ -449,6 +454,24 @@ namespace grapholon {
 
 		EdgeProperties& get_edge(EdgeDescriptor edge) {
 			return internal_graph_[edge];
+		}
+
+		std::pair<EdgeVector, bool> edge_exists(VertexDescriptor from, VertexDescriptor to, bool check_both_directions) {
+			if (from == InternalBoostGraph::null_vertex() || to == InternalBoostGraph::null_vertex()) {
+				return { {},false };
+			}
+			EdgeVector edges;
+			bool found_edge = false;
+			if (boost::edge(from, to, internal_graph_).second) {
+				edges.push_back(boost::edge(from, to, internal_graph_).first);
+				found_edge = true;
+			}
+			if (check_both_directions && boost::edge(to, from, internal_graph_).second) {
+				edges.push_back(boost::edge(from, to, internal_graph_).first);
+				found_edge = true;
+			}
+
+			return { edges, found_edge };
 		}
 
 		//TODO : maybe better

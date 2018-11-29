@@ -196,6 +196,239 @@ namespace grapholon {
 	};
 
 
+	/** Inherits from std::vector so we can use the same interface on it*/
+	class DiscreteCurve : public Curve, public std::vector<Vector3f> {
+	private:
+
+	public:
+
+		typedef enum { START_AND_END, CURVE_FITTING, FULL_CURVE, MIDDLE_POINT } CONVERSION_METHOD;
+
+#define MAX_CURVE_FITTING_ITERATIONS 10
+#define DEFAULT_MAX_ERROR 0.1f
+
+		DiscreteCurve(std::vector<Vector3f> points) : std::vector<Vector3f>(points) {}
+
+		DiscreteCurve(GRuint size) : std::vector<Vector3f>((size_t)size) {}
+
+		DiscreteCurve(size_t size) : std::vector<Vector3f>(size) {}
+
+		DiscreteCurve() {}
+
+
+		GRuint nearest_point_index(GRuint start, GRuint end, Vector3f point) {
+			if (start > end
+				|| start >= size()
+				|| end >= size()) {
+				return -1;
+			}
+			GRuint min_index(0);
+			GRfloat min(std::numeric_limits<GRfloat>::max());
+			for (GRuint i(start); i <= end; i++) {
+				GRfloat distance((*this)[i].distance(point));
+				if (distance < min) {
+					min = distance;
+					min_index = i;
+				}
+			}
+			return min_index;
+		}
+
+		GRuint furthest_point_to_line_index(GRuint start, GRuint end, Vector3f from, Vector3f to, GRfloat& max_distance) const {
+			GRuint max_index(0);
+			max_distance = -std::numeric_limits<GRfloat>::max();
+			for (GRuint i(start); i <= end; i++) {
+				GRfloat distance((*this)[i].distance_to_line(from, to));
+				if (distance > max_distance) {
+					max_distance = distance;
+					max_index = i;
+				}
+			}
+			return max_index;
+		}
+
+
+
+		void fit_curve_rec(GRuint start,
+			GRuint end,
+			GRuint current_iteration,
+			GRfloat max_error,
+			std::vector<Vector3f>& result,
+			std::vector<bool>& is_set) {
+			if (start <= end
+				&& start < size()
+				&& end < size()
+				&& current_iteration <= MAX_CURVE_FITTING_ITERATIONS) {
+				//std::cout << "current iteration : " << current_iteration << std::endl;
+				//std::cout << " from " << start << " to " << end << std::endl;
+
+				GRfloat error;
+
+				GRuint furthest_point_index(furthest_point_to_line_index(start, end, (*this)[start], (*this)[end], error));
+
+				//std::cout<< "furthest_point_index : " << furthest_point_index << std::endl;
+				//std::cout << "error : " << error << std::endl;
+				if (!is_set[furthest_point_index]) {
+					is_set[furthest_point_index] = true;
+
+					Vector3f point = (*this)[furthest_point_index];
+					//std::cout << "point : " << point.to_string() << std::endl;
+
+					/*Vector3f local_tangent;
+					if (furthest_point_index > 0 && furthest_point_index < size() - 1) {
+						local_tangent = (*this)[furthest_point_index + 1] - (*this)[furthest_point_index - 1];
+					}*/
+					//std::cout << "tangent : " << local_tangent.to_string() << std::endl;
+
+					result[furthest_point_index] = point;
+
+					if (error > max_error) {
+						fit_curve_rec(start, furthest_point_index, current_iteration + 1, max_error, result, is_set);
+						fit_curve_rec(furthest_point_index, end, current_iteration + 1, max_error, result, is_set);
+					}
+				}
+			}
+		}
+
+		void fit_curve(std::vector<Vector3f>& result, GRfloat max_error = DEFAULT_MAX_ERROR) {
+
+			//to avoid 0.f max error
+			if (max_error < FLT_EPSILON) {
+				max_error = FLT_EPSILON;
+			}
+
+			std::vector<Vector3f> result_rec(size());
+			std::vector<bool> is_set(size());
+
+
+			fit_curve_rec(1, (GRuint)size() - 1, 0, max_error, result_rec, is_set);
+
+
+			for (GRuint i(0); i < size(); i++) {
+				if (is_set[i]) {
+					result.push_back(result_rec[i]);
+				}
+			}
+		}
+
+
+
+
+		/** NOTE : allocates a new SplineCurve -> call 'delete' on the return value*/
+		SplineCurve* to_spline_curve(CONVERSION_METHOD method, void* extra_parameter = nullptr) {
+			if (size() < 2) {
+				throw std::invalid_argument("Cannot convert DiscreteCurve with less than two points to SplineCurve. Returning nullptr");
+			}
+			else if (size() == 2 || size() == 3) {
+				return new SplineCurve(*this);
+			}
+			else {
+				switch (method) {
+				case START_AND_END: {
+
+					return new SplineCurve(front(), back());
+
+					break;
+				}
+				case MIDDLE_POINT: {
+
+					GRuint middle_point_index = (GRuint)size() / 2;
+
+					std::vector<Vector3f> points;
+					points.push_back(front());
+					points.push_back((front() + back())*0.5f);
+					points.push_back(back());
+
+					return new SplineCurve(points);
+
+					break;
+				}
+				case CURVE_FITTING: {
+
+					std::vector<Vector3f> points;
+					points.push_back(front());
+
+					GRfloat default_error;
+					if (extra_parameter == nullptr) {
+						extra_parameter = &default_error;
+					}
+
+					fit_curve(points, *((GRfloat*)extra_parameter));
+					points.push_back(back());
+
+					return new SplineCurve(points);
+				}
+				case FULL_CURVE: {
+
+					return new SplineCurve(*this);
+
+					break;
+				}
+				default: {
+					return to_spline_curve(START_AND_END);
+				}
+				}
+			}
+		}
+
+		void smooth_moving_average(GRuint window_width) {
+			if (window_width > 2 && window_width < size()) {
+				DiscreteCurve smoothed;
+				smoothed.push_back(front());
+
+				for (GRuint i(1); i < size() - 1; i++) {
+					//std::cout << "smoothing element " << i << std::endl;
+					GRuint start((GRuint)(i < window_width / 2 ? 0 : i - window_width / 2));
+					GRuint end((GRuint)((i + window_width / 2) >= size() ? size() - 1 : i + window_width / 2));
+
+					//std::cout << "from " << start << " to " << end << std::endl;
+					Vector3f local_average(0.f);
+					for (GRuint j(start); j <= end; j++) {
+						local_average += (*this)[j];
+					}
+					smoothed.push_back(local_average / (GRfloat)(end - start + 1));
+				}
+				smoothed.push_back(back());
+				(*this) = smoothed;
+			}
+		}
+
+		void add_middle_point(Vector3f point) {
+			if (size()) {
+				Vector3f end = back();
+				pop_back();
+				push_back(point);
+				push_back(end);
+			}
+		}
+
+		Vector3f& after_front() {
+			return (*this)[1];
+		}
+
+		const Vector3f& after_front() const {
+			return (*this)[1];
+		}
+
+		Vector3f& before_back() {
+			return (*this)[size() - 2];
+		}
+		const Vector3f& before_back() const {
+			return (*this)[size() - 2];
+		}
+
+		std::string to_string() const {
+			std::stringstream msg;
+
+			msg << " points   : ";
+			for (auto point : (*this)) {
+				msg << point.to_string() << " ";
+			}
+
+			return msg.str();
+		}
+	};
+
 
 
 	class DeformableSplineCurve : public SplineCurve {
@@ -209,6 +442,10 @@ namespace grapholon {
 		DeformableSplineCurve() : SplineCurve() {}
 
 		DeformableSplineCurve(PointTangent start, PointTangent end) : SplineCurve(start, end) {}
+
+		DeformableSplineCurve(std::vector<Vector3f> points) : SplineCurve(points) {
+			set_original_shape();
+		}
 
 		DeformableSplineCurve(std::vector<PointTangent> points_and_tangents)
 			: SplineCurve(points_and_tangents) {}
@@ -236,6 +473,13 @@ namespace grapholon {
 			original_angles_ = std::vector<GRfloat>();
 		}
 
+		DiscreteCurve to_discrete_curve() const {
+			DiscreteCurve discrete_curve;
+			for (auto point_tangent : *this) {
+				discrete_curve.push_back(point_tangent.first);
+			}
+			return discrete_curve;
+		}
 
 		void set_original_shape() {
 			original_lengths_ = std::vector<GRfloat>();
@@ -404,237 +648,5 @@ namespace grapholon {
 		}
 	};
 
-	/** Inherits from std::vector so we can use the same interface on it*/
-	class DiscreteCurve : public Curve, public std::vector<Vector3f> {
-	private:
-
-	public:
-
-		typedef enum { START_AND_END, CURVE_FITTING, FULL_CURVE, MIDDLE_POINT } CONVERSION_METHOD;
-
-#define MAX_CURVE_FITTING_ITERATIONS 10
-#define DEFAULT_MAX_ERROR 0.1f
-
-		DiscreteCurve(std::vector<Vector3f> points) : std::vector<Vector3f>(points) {}
-
-		DiscreteCurve(GRuint size) : std::vector<Vector3f>((size_t)size) {}
-
-		DiscreteCurve(size_t size) : std::vector<Vector3f>(size) {}
-
-		DiscreteCurve() {}
-
-
-		GRuint nearest_point_index(GRuint start, GRuint end, Vector3f point) {
-			if (start > end
-				|| start >= size()
-				|| end >= size()) {
-				return -1;
-			}
-			GRuint min_index(0);
-			GRfloat min(std::numeric_limits<GRfloat>::max());
-			for (GRuint i(start); i <= end; i++) {
-				GRfloat distance((*this)[i].distance(point));
-				if (distance < min) {
-					min = distance;
-					min_index = i;
-				}
-			}
-			return min_index;
-		}
-
-		GRuint furthest_point_to_line_index(GRuint start, GRuint end, Vector3f from, Vector3f to, GRfloat& max_distance) const {
-			GRuint max_index(0);
-			max_distance = -std::numeric_limits<GRfloat>::max();
-			for (GRuint i(start); i <= end; i++) {
-				GRfloat distance((*this)[i].distance_to_line(from, to));
-				if (distance > max_distance) {
-					max_distance = distance;
-					max_index = i;
-				}
-			}
-			return max_index;
-		}
-
-
-
-		void fit_curve_rec(GRuint start,
-			GRuint end,
-			GRuint current_iteration,
-			GRfloat max_error,
-			std::vector<Vector3f>& result,
-			std::vector<bool>& is_set) {
-			if (start <= end
-				&& start < size()
-				&& end < size()
-				&& current_iteration <= MAX_CURVE_FITTING_ITERATIONS) {
-				//std::cout << "current iteration : " << current_iteration << std::endl;
-				//std::cout << " from " << start << " to " << end << std::endl;
-				
-				GRfloat error;
-
-				GRuint furthest_point_index(furthest_point_to_line_index(start, end, (*this)[start], (*this)[end], error));
-
-				//std::cout<< "furthest_point_index : " << furthest_point_index << std::endl;
-				//std::cout << "error : " << error << std::endl;
-				if (!is_set[furthest_point_index]) {
-					is_set[furthest_point_index] = true;
-
-					Vector3f point = (*this)[furthest_point_index];
-					//std::cout << "point : " << point.to_string() << std::endl;
-
-					/*Vector3f local_tangent;
-					if (furthest_point_index > 0 && furthest_point_index < size() - 1) {
-						local_tangent = (*this)[furthest_point_index + 1] - (*this)[furthest_point_index - 1];
-					}*/
-					//std::cout << "tangent : " << local_tangent.to_string() << std::endl;
-
-					result[furthest_point_index] = point;
-
-					if (error > max_error) {
-						fit_curve_rec(start, furthest_point_index, current_iteration + 1, max_error, result, is_set);
-						fit_curve_rec(furthest_point_index, end, current_iteration + 1, max_error, result, is_set);
-					}
-				}
-			}
-		}
-
-		void fit_curve(std::vector<Vector3f>& result, GRfloat max_error = DEFAULT_MAX_ERROR) {
-
-			//to avoid 0.f max error
-			if (max_error < FLT_EPSILON) {
-				max_error = FLT_EPSILON;
-			}
-
-			std::vector<Vector3f> result_rec(size());
-			std::vector<bool> is_set(size());
-			
-
-			fit_curve_rec(1, (GRuint)size() - 1, 0, max_error, result_rec, is_set);
-
-
-			for (GRuint i(0); i < size(); i++) {
-				if (is_set[i]) {
-					result.push_back(result_rec[i]);
-				}
-			}
-		}
-
-
-
-
-		/** NOTE : allocates a new SplineCurve -> call 'delete' on the return value*/
-		SplineCurve* to_spline_curve(CONVERSION_METHOD method, void* extra_parameter = nullptr) {
-			if (size() < 2) {
-				throw std::invalid_argument("Cannot convert DiscreteCurve with less than two points to SplineCurve. Returning nullptr");
-			}
-			else if (size() == 2 || size() == 3) {
-				return new SplineCurve(*this);
-			}
-			else {
-				switch (method) {
-				case START_AND_END: {
-
-					return new SplineCurve(front(), back());
-
-					break;
-				}
-				case MIDDLE_POINT: {
-
-					GRuint middle_point_index = (GRuint)size() / 2;
-
-					std::vector<Vector3f> points;
-					points.push_back(front());
-					points.push_back((front() + back())*0.5f);
-					points.push_back(back());
-
-					return new SplineCurve(points);
-
-					break;
-				}
-				case CURVE_FITTING: {
-
-					std::vector<Vector3f> points;
-					points.push_back(front());
-
-					GRfloat default_error;
-					if (extra_parameter == nullptr) {
-						extra_parameter = &default_error;
-					}
-
-					fit_curve(points, *((GRfloat*)extra_parameter));
-					points.push_back(back());
-
-					return new SplineCurve(points);
-				}
-				case FULL_CURVE: {
-
-					return new SplineCurve(*this);
-
-					break;
-				}
-				default: {
-					return to_spline_curve(START_AND_END);
-				}
-				}
-			}
-		}
-
-		void smooth_moving_average(GRuint window_width) {
-			if (window_width > 2 && window_width < size()) {
-				DiscreteCurve smoothed;
-				smoothed.push_back(front());
-
-				for (GRuint i(1); i < size() - 1; i++) {
-					//std::cout << "smoothing element " << i << std::endl;
-					GRuint start((GRuint)(i < window_width / 2 ? 0 : i - window_width / 2));
-					GRuint end((GRuint)((i + window_width / 2) >= size() ? size() - 1 : i + window_width / 2));
-
-					//std::cout << "from " << start << " to " << end << std::endl;
-					Vector3f local_average(0.f);
-					for (GRuint j(start); j <= end; j++) {
-						local_average += (*this)[j];
-					}
-					smoothed.push_back(local_average / (GRfloat)(end - start + 1));
-				}
-				smoothed.push_back(back());
-				(*this) = smoothed;
-			}
-		}
-
-		void add_middle_point(Vector3f point) {
-			if (size()) {
-				Vector3f end = back();
-				pop_back();
-				push_back(point);
-				push_back(end);
-			}
-		}
-
-		Vector3f& after_front() {
-			return (*this)[1];
-		}
-
-		const Vector3f& after_front() const {
-			return (*this)[1];
-		}
-
-		Vector3f& before_back() {
-			return (*this)[size() - 2];
-		}
-		const Vector3f& before_back() const {
-			return (*this)[size() - 2];
-		}
-
-		std::string to_string() const {
-			std::stringstream msg;
-
-			msg << " points   : ";
-			for (auto point : (*this)) {
-				msg << point.to_string() << " ";
-			}
-
-			return msg.str();
-		}
-	};
 
 };
