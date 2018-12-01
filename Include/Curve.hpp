@@ -22,6 +22,8 @@
 #pragma once
 
 #include "Vector.hpp"
+#include "CurveDeformer.hpp"
+
 
 namespace grapholon {
 
@@ -646,7 +648,19 @@ namespace grapholon {
 			update_tangents();
 			return true;
 		}
+
+
+		bool linear_variational_deform(bool source, Vector3f new_position) {
+
+			CurveDeformer<DeformableSplineCurve> deformer;
+
+			deformer.compile(*this);
+			deformer.update();
+
+		}
+
 	};
+
 
 
 };

@@ -131,7 +131,6 @@ namespace grapholon {
 			std::pair<InEdgeIterator, InEdgeIterator> in_edges = boost::in_edges(vertex, internal_graph_);
 			std::pair<OutEdgeIterator, OutEdgeIterator> out_edges = boost::out_edges(vertex, internal_graph_);
 
-			//in theory we only need to iterate through in_edges since it's an undirected graph
 			for (InEdgeIterator e_it(in_edges.first); e_it != in_edges.second; e_it++) {
 				edge_spline_count_ -= (GRuint)internal_graph_[*e_it].curve.size();
 				removed_edges.push_back(*e_it);
@@ -204,7 +203,8 @@ namespace grapholon {
 			return false;
 		}
 
-		/** Returns the vertex that was removed, its surrounding removed edges and the new added edges*/
+		/** Returns the vertex that was removed, its surrounding removed edges and the new added edges
+		\param option if it's the source or the target (i.e. vertex_one or vertex_two) that must be kept*/
 		std::pair<VertexNeighborhood, EdgeVector> merge_vertices(VertexDescriptor vertex_one, VertexDescriptor vertex_two, COLLAPSE_OPTION option = SOURCE) {
 
 			//add an edge from one vertex to the other
@@ -467,7 +467,7 @@ namespace grapholon {
 				found_edge = true;
 			}
 			if (check_both_directions && boost::edge(to, from, internal_graph_).second) {
-				edges.push_back(boost::edge(from, to, internal_graph_).first);
+				edges.push_back(boost::edge(to, from, internal_graph_).first);
 				found_edge = true;
 			}
 
@@ -928,6 +928,40 @@ namespace grapholon {
 		}
 
 
+		VertexVector shortest_path(EdgeDescriptor source_edge, EdgeDescriptor target_edge) {
+			VertexDescriptor source_edge_source = boost::source(source_edge, internal_graph_);
+			VertexDescriptor source_edge_target = boost::target(source_edge, internal_graph_);
+
+			VertexDescriptor target_edge_source = boost::source(target_edge, internal_graph_);
+			VertexDescriptor target_edge_target = boost::target(target_edge, internal_graph_);
+
+			try {
+				std::vector<VertexVector> paths = {
+					shortest_path(source_edge_source, target_edge_source),
+					shortest_path(source_edge_source, target_edge_target),
+					shortest_path(source_edge_target, target_edge_source),
+					shortest_path(source_edge_target, target_edge_target)
+				};
+				
+				size_t min_size_index = 0;
+				size_t min_size = (size_t)-1;
+				for (GRuint i(0); i < paths.size(); i++) {
+
+					//std::cout << "path length : " << paths[i].size() << std::endl;
+					if (paths[i].size() < min_size) {
+						min_size = paths[i].size();
+						min_size_index = i;
+					}
+				}
+				
+				return paths[min_size_index];
+
+			}
+			catch (std::invalid_argument e) {
+				throw e;
+			}
+
+		}
 
 		std::pair<EdgePair, EdgeDescriptor> join_edges(EdgeDescriptor source_edge, EdgeDescriptor target_edge, GRfloat new_edge_displacement = 1.f) {
 
@@ -966,6 +1000,7 @@ namespace grapholon {
 						min_size_index = i;
 					}
 				}
+
 				switch (min_size_index) {
 				default: 
 				case(0): {

@@ -8,8 +8,10 @@ Release/
 x64/
 grapholon/x64/
 
-#Boost folder
+#external libs folders
 Include/boost/
+Include/Eigen/
+
 
 
 #Visual Studio stuff

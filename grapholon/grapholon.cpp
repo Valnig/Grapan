@@ -1788,7 +1788,10 @@ void linkEdges() {
 
 int main()
 {
-	linkEdges();
+	VertexDescriptor test = VertexDescriptor();
+	VertexDescriptor test2 = SkeletalGraph::null_vertex();
+
+	std::cout << " equal : " << (test == test2) << std::endl;
 
     return 0;
 }

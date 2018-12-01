@@ -36,6 +36,9 @@
     <ClInclude Include="..\Include\VoxelSkeleton.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CurveDeformer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
