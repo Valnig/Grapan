@@ -652,10 +652,25 @@ namespace grapholon {
 
 		bool linear_variational_deform(bool source, Vector3f new_position) {
 
-			CurveDeformer<DeformableSplineCurve> deformer;
+			//actually, compile() should be called when creating the spline
+			//and update at each deformation
 
-			deformer.compile(*this);
+			//TODO: move to constructor
+			CurveDeformer<DeformableSplineCurve> deformer;
+			deformer.compile(*this,0, 0, (GRuint) this->size()-1);
+			//-----------
+
+
+			if (source) {
+				this->front().first = new_position;
+			}
+			else {
+				this->back().first = new_position;
+			}
+
 			deformer.update();
+
+			update_tangents();
 
 		}
 

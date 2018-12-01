@@ -156,11 +156,11 @@
   <ItemGroup>
     <ClInclude Include="..\Include\common.hpp" />
     <ClInclude Include="..\Include\Curve.hpp" />
+    <ClInclude Include="..\Include\CurveDeformer.hpp" />
     <ClInclude Include="..\Include\GrapholonTypes.hpp" />
     <ClInclude Include="..\Include\SkeletalGraph.hpp" />
     <ClInclude Include="..\Include\Vector.hpp" />
     <ClInclude Include="..\Include\VoxelSkeleton.hpp" />
-    <ClInclude Include="CurveDeformer.hpp" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>

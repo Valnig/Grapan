@@ -86,6 +86,7 @@ namespace grapholon {
 		}
 
 
+
 		_TYPE& X() {
 			return Vector<_TYPE, 3>::data_[0];
 		}
