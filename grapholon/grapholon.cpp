@@ -31,6 +31,7 @@
 
 #include "Curve.hpp"
 #include "VoxelSkeleton.hpp"
+#include "CurveDeformer.hpp"
 
 using namespace std;
 using namespace grapholon;
@@ -1147,7 +1148,7 @@ void extrudeDiagonal() {
 	std::cout << "graph at first : " << graph.to_string() << endl;
 
 	for (GRuint i(0); i < 30; i++) {
-		graph.extrude_tip_vertex(v3, Vector3f(2.f, 2.f, 0.f) + Vector3f(1.f, 1.f, 0.f)*0.1f*i, 1.f);
+	//	graph.extrude_tip_vertex(v3, Vector3f(2.f, 2.f, 0.f) + Vector3f(1.f, 1.f, 0.f)*0.1f*i, 1.f);
 	}
 	std::cout << "graph after removing vertices of degree 2 : " << graph.to_string() << endl;
 
@@ -1786,12 +1787,32 @@ void linkEdges() {
 
 }
 
+void deform_curve() {
+
+	DiscreteCurve curve;
+	curve.push_back({ 0,1,0 });
+	curve.push_back({ 1,1,0 });
+	curve.push_back({ 2,1,0 });
+	curve.push_back({ 3,1,0 });
+	curve.push_back({ 4,1,0 });
+
+	std::cout << "original curve : " << std::endl << curve.to_string() << std::endl;
+
+	CurveDeformer<DiscreteCurve> deformer;
+	deformer.compile(curve, 0, 2, (GRuint)curve.size()-1);
+
+	deformer.vs[2] = { 2,2,0 };
+
+	DiscreteCurve result;
+
+	deformer.update(result);
+
+	std::cout << "deformed curve : " << std::endl << result.to_string() << std::endl;
+}
+
 int main()
 {
-	VertexDescriptor test = VertexDescriptor();
-	VertexDescriptor test2 = SkeletalGraph::null_vertex();
-
-	std::cout << " equal : " << (test == test2) << std::endl;
+	deform_curve();
 
     return 0;
 }

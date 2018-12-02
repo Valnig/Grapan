@@ -654,7 +654,7 @@ namespace grapholon {
 
 			//actually, compile() should be called when creating the spline
 			//and update at each deformation
-
+#if 0
 			//TODO: move to constructor
 			CurveDeformer<DeformableSplineCurve> deformer;
 			deformer.compile(*this,0, 0, (GRuint) this->size()-1);
@@ -668,9 +668,10 @@ namespace grapholon {
 				this->back().first = new_position;
 			}
 
-			deformer.update();
+			deformer.update(*this);
 
 			update_tangents();
+#endif
 
 		}
 
