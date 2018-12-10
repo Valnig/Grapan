@@ -60,6 +60,12 @@ namespace grapholon {
 	public:
 
 
+		std::string to_string(EigenVector vec) {
+			std::stringstream msg;
+			msg << "( "<<vec.x() << ", " << vec.y() << ", " << vec.z() << " )";
+			return msg.str();
+		}
+
 		void compile(_CURVE_TYPE& path, GRuint index_low, GRuint index_handle, GRuint index_high) {
 
 			index_low_involved = index_low - 1;
@@ -76,6 +82,10 @@ namespace grapholon {
 			n_involved = index_high_involved - index_low_involved + 1;
 			n_laplacians_P = USE_L0 ? n_involved - 1 : n_involved - 2;
 			n_laplacians_R = USE_L0_R ? n_involved - 1 : n_involved - 2;
+
+			std::cout << " n involved : " << n_involved << std::endl;
+			std::cout << " n_laplacians_P : " << n_laplacians_P << std::endl;
+			std::cout << " n_laplacians_R : " << n_laplacians_R << std::endl;
 
 			//involved vertices
 			vs = std::vector<EigenVector3>(n_involved);
@@ -115,6 +125,10 @@ namespace grapholon {
 					original_laplacians_[i] = vs[i + 1] - (vs[i] + vs[i+2])*0.5f;
 				}
 			}
+			std::cout << "original laplacians : " << std::endl;
+			for (auto lap : original_laplacians_) {
+				std::cout<<to_string(lap)<<std::endl;
+			}
 
 			if (USE_L0 && ENABLE_FINAL_L1_ADJUST) {
 				prepare_for_laplacian_L1_adjust();
@@ -126,6 +140,11 @@ namespace grapholon {
 			}
 
 			original_vs_ = vs;
+
+			std::cout << "original vs : " << std::endl;
+			for (auto v : original_vs_) {
+				std::cout << to_string(v) << std::endl;
+			}
 
 			/*original_vs = new Vertex[n_involved];
 			for (int i = 0; i < vs.length; i++) {
@@ -144,7 +163,7 @@ namespace grapholon {
 				single_R = EigenMatrix::Identity(3,3);
 			}
 
-			for (GRuint i(0); i < 10; i++) {
+			for (GRuint i(0); i < 1; i++) {
 				solve();
 				update_R();
 				update_B();
@@ -274,6 +293,8 @@ namespace grapholon {
 
 			A_.setFromTriplets(triplets.begin(), triplets.end());
 
+			std::cout << " A: " << std::endl << A_ << std::endl;
+			std::cout << " B : " << std::endl << B_ << std::endl;
 
 		}
 
@@ -291,6 +312,7 @@ namespace grapholon {
 					
 				}
 			}
+			std::cout << "B after update : " << B_ << std::endl;
 		}
 
 
@@ -301,6 +323,8 @@ namespace grapholon {
 				return;
 			}
 			vxyz_rxyz_ = solver_.solve(B_);
+
+			std::cout << "vxyz_rxyz : " << vxyz_rxyz_ << std::endl;
 		}
 
 
@@ -326,6 +350,7 @@ cout << "Its right singular vectors are the columns of the thin V matrix:" << en
 
 		void update_R() {
 
+			std::cout << "Rs after update : " << std::endl;
 			for (GRuint i(0); i < n_involved; i++) {
 				GRfloat rx = vxyz_rxyz_[n_involved * 3 + i * 3 + 0];
 				GRfloat ry = vxyz_rxyz_[n_involved * 3 + i * 3 + 1];
@@ -333,6 +358,7 @@ cout << "Its right singular vectors are the columns of the thin V matrix:" << en
 
 				R_[i] = cross_multiply(rx, ry, rz, R_[i]);
 				R_[i] = get_closest_orthonormal(R_[i]);
+				std::cout << R_[i] << std::endl;
 			}
 		}
 
@@ -348,9 +374,9 @@ cout << "Its right singular vectors are the columns of the thin V matrix:" << en
 						
 					max = d > max ? d : max;
 
-					vs[i].x() = vxyz_rxyz_[i + 3 + 0];
-					vs[i].y() = vxyz_rxyz_[i + 3 + 1];
-					vs[i].z() = vxyz_rxyz_[i + 3 + 2];
+					vs[i].x() = vxyz_rxyz_[i * 3 + 0];
+					vs[i].y() = vxyz_rxyz_[i * 3 + 1];
+					vs[i].z() = vxyz_rxyz_[i * 3 + 2];
 				}
 			}
 		}

@@ -33,6 +33,9 @@
 #include "VoxelSkeleton.hpp"
 #include "CurveDeformer.hpp"
 
+#include "CGAL/Surface_mesh.h"
+
+
 using namespace std;
 using namespace grapholon;
 
@@ -1789,19 +1792,22 @@ void linkEdges() {
 
 void deform_curve() {
 
+	GRuint nb_points(5);
+	GRuint handle_index((nb_points-1)/2);
+
 	DiscreteCurve curve;
-	curve.push_back({ 0,1,0 });
-	curve.push_back({ 1,1,0 });
-	curve.push_back({ 2,1,0 });
-	curve.push_back({ 3,1,0 });
-	curve.push_back({ 4,1,0 });
+	for (GRuint i(0); i < nb_points; i++) {
+		curve.push_back({ (GRfloat) i,1,0 });
+	}
 
 	std::cout << "original curve : " << std::endl << curve.to_string() << std::endl;
 
 	CurveDeformer<DiscreteCurve> deformer;
-	deformer.compile(curve, 0, 2, (GRuint)curve.size()-1);
+	deformer.compile(curve, 0, handle_index, nb_points-1);
 
-	deformer.vs[2] = { 2,2,0 };
+	EigenVector3 pos = deformer.vs[handle_index];
+	//pos.y() +=0.1f;
+	deformer.vs[handle_index] = pos;
 
 	DiscreteCurve result;
 
