@@ -72,7 +72,8 @@ namespace grapholon {
 
 		SplineCurve(std::vector<Vector3f> points) {
 			if (points.size() < 2) {
-				throw std::invalid_argument("Cannot create spine curve with less than two points");
+				std::cerr << "Cannot create spine curve with less than two points" << std::endl;
+				(*this) = SplineCurve();
 			}
 			for (auto point : points) {
 				push_back(PointTangent(point, Vector3f(0.f)));
@@ -193,6 +194,16 @@ namespace grapholon {
 			points_line << std::endl;
 
 			msg << points_line.str() << tangents_line.str();
+			return msg.str();
+		}
+
+		std::string to_compact_string() const {
+			std::stringstream msg;
+
+			for (auto point_and_tangent : (*this)) {
+				msg << point_and_tangent.first.to_compact_string() << std::endl;
+			}
+
 			return msg.str();
 		}
 	};
@@ -445,9 +456,11 @@ namespace grapholon {
 
 		DeformableSplineCurve(PointTangent start, PointTangent end) : SplineCurve(start, end) {}
 
+		
 		DeformableSplineCurve(std::vector<Vector3f> points) : SplineCurve(points) {
 			set_original_shape();
 		}
+		
 
 		DeformableSplineCurve(std::vector<PointTangent> points_and_tangents)
 			: SplineCurve(points_and_tangents) {}

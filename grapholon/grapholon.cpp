@@ -25,6 +25,7 @@
 
 //#include "stdafx.h"
 #include "pch.h"
+
 #include <iostream>
 #include <bitset>
 #include <ctime>
@@ -1147,7 +1148,7 @@ void extrudeDiagonal() {
 	std::cout << "graph at first : " << graph.to_string() << endl;
 
 	for (GRuint i(0); i < 30; i++) {
-		graph.extrude_tip_vertex(v3, Vector3f(2.f, 2.f, 0.f) + Vector3f(1.f, 1.f, 0.f)*0.1f*i, 1.f);
+		graph.extrude_tip_vertex(v3, Vector3f(2.f, 2.f, 0.f) + Vector3f(1.f, 1.f, 0.f)*0.1f*(GRfloat)i, 1.f);
 	}
 	std::cout << "graph after removing vertices of degree 2 : " << graph.to_string() << endl;
 
@@ -1716,10 +1717,17 @@ void shortestPath() {
 
 	VertexVector path = graph.shortest_path(v0, v10);
 
-	std::cout << "path : " << std::endl;
+	/*std::cout << "path : " << std::endl;
 	for (auto vertex : path) {
 		std::cout << graph.get_vertex(vertex).position.to_string() << std::endl;
-	}
+	}*/
+
+	std::string filename = "graph1.txt";
+	graph.export_to_file(filename);
+	SkeletalGraph graph2 = SkeletalGraph::import_from_file(filename);
+	std::cout << "imported graph : " << std::endl;
+
+	std::cout << graph2.to_string() << std::endl;
 }
 
 
@@ -1788,10 +1796,7 @@ void linkEdges() {
 
 int main()
 {
-	VertexDescriptor test = VertexDescriptor();
-	VertexDescriptor test2 = SkeletalGraph::null_vertex();
-
-	std::cout << " equal : " << (test == test2) << std::endl;
+	shortestPath();
 
     return 0;
 }

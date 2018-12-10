@@ -25,6 +25,9 @@
 
 #include <queue>
 #include <set>
+#include <map>
+
+#include <fstream>
 
 #include "Curve.hpp"
 
@@ -1070,6 +1073,229 @@ namespace grapholon {
 
 
 		/************************************************************************************* General operations*/
+
+		bool export_to_file(std::string filename) {
+			std::ofstream output_file(filename.c_str());
+
+			std::map<VertexDescriptor, GRuint> vertex_index_map;
+
+
+			if (output_file.is_open()) {
+
+				GRuint iteration_count(0);
+				std::pair<VertexIterator, VertexIterator> vp;
+
+				output_file << "<vertices>\n";
+				for (vp = boost::vertices(internal_graph_); vp.first != vp.second; ++vp.first) {
+					VertexDescriptor v = *vp.first;
+					VertexProperties props = internal_graph_[v];
+					output_file << "<vertex>\n";
+					output_file << "<pos>" << props.position.to_compact_string() << "</pos>\n";
+					output_file << "<radius>" << props.radius << "</radius>\n";
+					output_file << "<cycle>" << props.is_part_of_cycle << "</cycle>\n";
+					output_file << "</vertex>\n";
+
+					vertex_index_map.insert({v, iteration_count});
+					iteration_count++;
+				}
+				output_file << "</vertices>\n";
+
+
+				iteration_count = 0;
+
+				output_file << "<edges>\n";
+				std::pair<EdgeIterator, EdgeIterator> ep ;
+				for (ep = boost::edges(internal_graph_); ep.first != ep.second; ++ep.first) {
+					output_file << "<edge>\n";
+
+					EdgeDescriptor e = *ep.first;
+					EdgeProperties props = internal_graph_[e];
+					std::map<VertexDescriptor, GRuint>::iterator index_it = vertex_index_map.find(boost::source(e, internal_graph_));
+					if (index_it == vertex_index_map.end()) {
+						std::cerr << "ERROR : invalid edge found when trying to export graph" << std::endl;
+						output_file.close();
+						return false;
+					}
+					output_file << "<source>" << index_it->second <<"</source>\n";
+
+					index_it = vertex_index_map.find(boost::target(e, internal_graph_));
+					if (index_it == vertex_index_map.end()) {
+						std::cerr << "ERROR : invalid edge found when trying to export graph" << std::endl;
+						output_file.close();
+						return false;
+					}
+					output_file << "<target>" << index_it->second << "</target>\n";
+
+					output_file << "<cycle>" << props.is_part_of_cycle << "</cycle>\n";
+
+					output_file << "<curve>\n";
+					output_file << props.curve.to_compact_string();
+
+					output_file << "</curve>\n";
+
+					output_file << "</edge>\n";
+				}
+				output_file << "</edges>\n";
+
+
+
+				output_file.close();
+			}
+
+			return false;
+		}
+
+		static SkeletalGraph import_from_file(std::string filename) {
+			SkeletalGraph graph;
+
+			VertexVector vertices;
+
+			std::ifstream input_file(filename);
+			if (! input_file.is_open()) {
+				throw std::runtime_error("ERROR - Could not open specified file. No SkeletalGraph was imported");
+			}
+
+			std::string line;
+			bool reading_vertices(false);
+			bool reading_edges(false);
+			bool reading_vertex(false);
+			bool reading_edge(false);
+			bool reading_curve(false);
+
+			VertexProperties v_props;
+			EdgeProperties e_props;
+			GRuint e_source_index = 0;
+			GRuint e_target_index = 0;
+			DiscreteCurve e_curve;
+
+
+			while (std::getline(input_file, line)) {
+
+				if (line == "<vertices>") {
+					reading_vertices = true;
+				}
+				else if (line == "</vertices>") {
+					reading_vertices = false;
+				}
+				else if (reading_vertices) {
+
+					if (line == "<vertex>") {
+						reading_vertex = true;
+						v_props = VertexProperties();
+					}
+					else if (line == "</vertex>") {
+						reading_vertex = false;
+						vertices.push_back(graph.add_vertex(v_props));
+					}
+					else if (reading_vertex) {
+						if (line.substr(0, 5) == "<pos>") {
+							GRfloat x(0.f), y(0.f), z(0.f);
+							if (sscanf_s(line.c_str(), "<pos>%f %f %f</pos>", &x, &y, &z) == 3) {
+								v_props.position = Vector3f(x, y, z);
+							}
+							else {
+								std::cerr << "could not read position from line : " << line << std::endl;
+								v_props.position = Vector3f(0.f);
+							}
+
+						}else if (line.substr(0, 8) == "<radius>") {
+							GRfloat radius = DEFAULT_VERTEX_RADIUS;
+							if (sscanf_s(line.c_str(), "<radius>%f</radius>", &radius) == 1) {
+								v_props.radius = radius;
+							}
+							else {
+								std::cerr << "could not read radius from line : " << line << std::endl;
+								v_props.radius = DEFAULT_VERTEX_RADIUS;
+							}
+
+						}
+						else if (line.substr(0, 7) == "<cycle>") {
+							GRuint cycle = false;
+							if (sscanf_s(line.c_str(), "<cycle>%u</cycle>", &cycle) == 1) {
+								v_props.is_part_of_cycle = cycle;
+							}
+							else {
+								std::cerr << "could not read if in cycle from line : " << line << std::endl;
+								v_props.is_part_of_cycle = false;
+							}
+						}
+					}
+
+				}
+				else if (line == "<edges>") {
+					reading_edges = true;
+					if (!vertices.size()) {
+						break;
+					}
+				}
+				else if (line == "</edges>") {
+					reading_edges = false;
+				}
+				else if (reading_edges) {
+					if (line == "<edge>") {
+						reading_edge = true;
+						e_props = EdgeProperties();
+						e_source_index = 0;
+						e_target_index = 0;
+						e_curve = DiscreteCurve();
+					}
+					else if (line == "</edge>") {
+						reading_edge = false;
+						if (e_source_index < vertices.size() && e_target_index < vertices.size()) {
+							graph.add_edge(vertices[e_source_index], vertices[e_target_index], e_props);
+						}
+						else {
+							std::cerr << " ERROR - could not add edge with invalid vertex indices : " << e_source_index << ", " << e_target_index << std::endl;
+						}
+					}
+					else if (reading_edge) {
+						if (line == "<curve>") {
+							reading_curve = true;
+						}
+						else if (line == "</curve>") {
+							reading_curve = false;
+							try {
+								e_props.curve = DeformableSplineCurve(e_curve);
+							}
+							catch (std::runtime_error e) {
+								std::cerr << e.what() << std::endl;
+							}
+						}
+						else if (reading_curve) {
+							GRfloat x(0.f), y(0.f), z(0.f);
+							if (sscanf_s(line.c_str(), "%f %f %f", &x, &y, &z) == 3) {
+								e_curve.push_back(Vector3f(x, y, z));
+							}
+							else {
+								std::cerr << "could not curve point from line : " << line << std::endl;
+							}
+						}
+						else if (line.substr(0, 8) == "<source>") {							
+							if (sscanf_s(line.c_str(), "<source>%u</source>", &e_source_index) != 1) {
+								std::cerr << "could not read source from line : " << line << std::endl;
+							}
+						}
+						else if (line.substr(0, 8) == "<target>") {
+							if (sscanf_s(line.c_str(), "<target>%u</target>", &e_target_index) != 1) {
+								std::cerr << "could not read target from line : " << line << std::endl;
+								std::cerr << " read : " << sscanf_s(line.c_str(), "<target>%u</target>", &e_target_index) << std::endl;
+							}
+						}
+						else if (line.substr(0, 7) == "<cycle>") {
+							GRuint cycle = 0;
+							if (sscanf_s(line.c_str(), "<cycle>%u</cycle>", &cycle) == 1) {
+								e_props.is_part_of_cycle = cycle;
+							}else{
+								std::cerr << "could not read cycle from line : " << line << std::endl;
+							}
+						}
+						
+					}
+				}
+			}
+			return graph;
+		}
+
 
 		void find_cycle_in_spanning_tree(VertexDescriptor vertex_one, VertexDescriptor vertex_two) {
 

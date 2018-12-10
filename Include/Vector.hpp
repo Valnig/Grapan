@@ -53,6 +53,15 @@ namespace grapholon {
 			msg << data_[_SIZE - 1] << ")";
 			return msg.str();
 		}
+
+		std::string to_compact_string() const {
+			std::stringstream msg;
+			for (GRuint i(0); i < _SIZE - 1; i++) {
+				msg << data_[i] << " ";
+			}
+			msg << data_[_SIZE - 1];
+			return msg.str();
+		}
 	};
 
 

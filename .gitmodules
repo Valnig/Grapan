@@ -1,0 +1,6 @@
+[submodule "pugixml"]
+	path = pugixml
+	url = https://github.com/zeux/pugixml
+[submodule "Include/pugixml"]
+	path = Include/pugixml
+	url = https://github.com/zeux/pugixml
