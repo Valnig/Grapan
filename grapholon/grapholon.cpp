@@ -1365,7 +1365,15 @@ void findCycle() {
 
 	graph->print_cycles();
 
+
+	std::string filename = "graph1.txt";
+	graph->export_to_file(filename);
+	SkeletalGraph* graph2 = new SkeletalGraph();
+	GRfloat scale;
+	SkeletalGraph::import_from_file(filename, graph2, scale);
+
 	delete graph;
+	delete graph2;
 }
 
 void findCycles() {
@@ -1724,10 +1732,14 @@ void shortestPath() {
 
 	std::string filename = "graph1.txt";
 	graph.export_to_file(filename);
-	SkeletalGraph graph2 = SkeletalGraph::import_from_file(filename);
+	SkeletalGraph* graph2 = new SkeletalGraph();
+	GRfloat scale;
+	SkeletalGraph::import_from_file(filename, graph2, scale);
 	std::cout << "imported graph : " << std::endl;
 
-	std::cout << graph2.to_string() << std::endl;
+	std::cout << graph2->to_string() << std::endl;
+
+	delete graph2;
 }
 
 
@@ -1796,7 +1808,19 @@ void linkEdges() {
 
 int main()
 {
-	shortestPath();
+
+	VoxelSkeleton skeleton(100, 100, 100);
+	skeleton.generate_artificial_simple_kissing(10);
+
+	SkeletalGraph* graph = skeleton.extract_skeletal_graph(nullptr, DiscreteCurve::START_AND_END, 1, 0);
+
+
+	SkeletalGraph* graph2 = graph->copy();
+
+	delete graph2;
+
+
+	delete graph;
 
     return 0;
 }

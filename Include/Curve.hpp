@@ -22,7 +22,7 @@
 #pragma once
 
 #include "Vector.hpp"
-#include "CurveDeformer.hpp"
+//#include "CurveDeformer.hpp"
 
 
 namespace grapholon {
@@ -662,7 +662,7 @@ namespace grapholon {
 			return true;
 		}
 
-
+#if 0
 		bool linear_variational_deform(bool source, Vector3f new_position) {
 
 			CurveDeformer<DeformableSplineCurve> deformer;
@@ -670,7 +670,8 @@ namespace grapholon {
 			deformer.compile(*this);
 			deformer.update();
 
-		}
+
+#endif		}
 
 	};
 

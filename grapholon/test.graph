@@ -1,0 +1,88 @@
+<vertices>
+<vertex>
+<pos>0 10 10</pos>
+<radius>1</radius>
+<cycle>0</cycle>
+</vertex>
+<vertex>
+<pos>0 30 10</pos>
+<radius>1</radius>
+<cycle>0</cycle>
+</vertex>
+<vertex>
+<pos>0 20 20</pos>
+<radius>1</radius>
+<cycle>0</cycle>
+</vertex>
+<vertex>
+<pos>0 20 40</pos>
+<radius>1</radius>
+<cycle>1</cycle>
+</vertex>
+<vertex>
+<pos>0 20 70</pos>
+<radius>1</radius>
+<cycle>1</cycle>
+</vertex>
+<vertex>
+<pos>0 20 89</pos>
+<radius>1</radius>
+<cycle>0</cycle>
+</vertex>
+</vertices>
+<edges>
+<edge>
+<source>0</source>
+<target>2</target>
+<cycle>0</cycle>
+<curve>
+0 10 10
+0 20 20
+</curve>
+</edge>
+<edge>
+<source>2</source>
+<target>3</target>
+<cycle>0</cycle>
+<curve>
+0 20 20
+0 20 40
+</curve>
+</edge>
+<edge>
+<source>2</source>
+<target>1</target>
+<cycle>0</cycle>
+<curve>
+0 20 20
+0 30 10
+</curve>
+</edge>
+<edge>
+<source>3</source>
+<target>4</target>
+<cycle>1</cycle>
+<curve>
+0 20 40
+0 20 70
+</curve>
+</edge>
+<edge>
+<source>3</source>
+<target>4</target>
+<cycle>1</cycle>
+<curve>
+0 20 40
+0 20 70
+</curve>
+</edge>
+<edge>
+<source>4</source>
+<target>5</target>
+<cycle>0</cycle>
+<curve>
+0 20 70
+0 20 89
+</curve>
+</edge>
+</edges>

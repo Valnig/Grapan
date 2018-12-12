@@ -22,6 +22,7 @@
 #pragma once
 
 #include "boost/graph/adjacency_list.hpp"
+#include "boost/graph/copy.hpp"
 
 #include <queue>
 #include <set>
@@ -75,6 +76,13 @@ namespace grapholon {
 
 	typedef std::pair<VertexDescriptor, EdgeVector> VertexNeighborhood;
 
+	/*struct GraphOperationResult {
+		std::vector<std::pair<grapholon::VertexDescriptor, grapholon::VertexProperties>> added_vertices;
+		std::vector<std::pair<grapholon::EdgeDescriptor, grapholon::EdgeProperties>> added_edges;
+
+		std::vector<std::pair<grapholon::VertexDescriptor, grapholon::VertexProperties>> removed_vertices;
+		std::vector<std::pair<grapholon::EdgeDescriptor, grapholon::EdgeProperties>> removed_edges;
+	};*/
 
 	class SkeletalGraph {
 	private:
@@ -97,6 +105,18 @@ namespace grapholon {
 			std::cout << "created SkeletalGraph with " << vertex_count << " vertices and no edges : " << std::endl;
 
 		}
+
+		SkeletalGraph* copy() {
+			SkeletalGraph* new_graph = new SkeletalGraph();
+			//boost::copy_graph<InternalBoostGraph, InternalBoostGraph>(this->internal_graph_, new_graph->internal_graph_);
+			new_graph->internal_graph_ = internal_graph_;
+			return new_graph;
+		}
+
+		~SkeletalGraph() {
+
+		}
+
 
 		/** size getters */
 
@@ -1074,7 +1094,7 @@ namespace grapholon {
 
 		/************************************************************************************* General operations*/
 
-		bool export_to_file(std::string filename) {
+		bool export_to_file(std::string filename, GRfloat scale = 1.0f) {
 			std::ofstream output_file(filename.c_str());
 
 			std::map<VertexDescriptor, GRuint> vertex_index_map;
@@ -1082,10 +1102,13 @@ namespace grapholon {
 
 			if (output_file.is_open()) {
 
+				output_file << "<scale>" << scale << "</scale>" << std::endl;
+
 				GRuint iteration_count(0);
 				std::pair<VertexIterator, VertexIterator> vp;
 
 				output_file << "<vertices>\n";
+
 				for (vp = boost::vertices(internal_graph_); vp.first != vp.second; ++vp.first) {
 					VertexDescriptor v = *vp.first;
 					VertexProperties props = internal_graph_[v];
@@ -1140,20 +1163,27 @@ namespace grapholon {
 
 
 				output_file.close();
+				return true;
 			}
 
 			return false;
 		}
 
-		static SkeletalGraph import_from_file(std::string filename) {
-			SkeletalGraph graph;
 
-			VertexVector vertices;
+		/** NOTE : this allocates a new Graph. It should be deleted when done with it*/
+		static void import_from_file(std::string filename, SkeletalGraph* graph, GRfloat& scale) {
+			scale = 1.0f;
+
+			if (graph == nullptr) {
+				throw std::runtime_error("ERROR - Cannot set nullptr SkeletalGraph");
+			}
 
 			std::ifstream input_file(filename);
 			if (! input_file.is_open()) {
 				throw std::runtime_error("ERROR - Could not open specified file. No SkeletalGraph was imported");
 			}
+
+			VertexVector vertices;
 
 			std::string line;
 			bool reading_vertices(false);
@@ -1170,8 +1200,10 @@ namespace grapholon {
 
 
 			while (std::getline(input_file, line)) {
-
-				if (line == "<vertices>") {
+				if (line.substr(0, 7) == "<scale>") {
+					sscanf_s(line.c_str(), "<scale>%f</scale>", &scale);
+				}
+				else if (line == "<vertices>") {
 					reading_vertices = true;
 				}
 				else if (line == "</vertices>") {
@@ -1185,7 +1217,7 @@ namespace grapholon {
 					}
 					else if (line == "</vertex>") {
 						reading_vertex = false;
-						vertices.push_back(graph.add_vertex(v_props));
+						vertices.push_back(graph->add_vertex(v_props));
 					}
 					else if (reading_vertex) {
 						if (line.substr(0, 5) == "<pos>") {
@@ -1242,7 +1274,7 @@ namespace grapholon {
 					else if (line == "</edge>") {
 						reading_edge = false;
 						if (e_source_index < vertices.size() && e_target_index < vertices.size()) {
-							graph.add_edge(vertices[e_source_index], vertices[e_target_index], e_props);
+							graph->add_edge(vertices[e_source_index], vertices[e_target_index], e_props);
 						}
 						else {
 							std::cerr << " ERROR - could not add edge with invalid vertex indices : " << e_source_index << ", " << e_target_index << std::endl;
@@ -1293,7 +1325,6 @@ namespace grapholon {
 					}
 				}
 			}
-			return graph;
 		}
 
 
@@ -1676,6 +1707,148 @@ namespace grapholon {
 		//returns the merged edge and the pair of removed edges
 		//NOTE : only works if the vertex is of degree 2 and has one in-edge and one out-edge
 		std::pair<EdgeDescriptor, EdgePair> remove_degree_2_vertex_and_merge_edges(VertexDescriptor vertex_to_remove) {
+
+
+			VertexDescriptor new_source;
+			VertexDescriptor new_target;
+			EdgeProperties new_curve;
+
+			//first we gather the two edges's curves
+
+					//those should vary in size between 0 and 2 only
+			std::vector<VertexDescriptor> sources;
+			std::vector<VertexDescriptor> targets;
+
+			//same
+			std::vector<EdgeProperties> in_curves;
+			std::vector<EdgeProperties> out_curves;
+
+			std::pair<InEdgeIterator, InEdgeIterator> in_edges = boost::in_edges(vertex_to_remove, internal_graph_);
+			std::pair<OutEdgeIterator, OutEdgeIterator> out_edges = boost::out_edges(vertex_to_remove, internal_graph_);
+
+			for (InEdgeIterator e_it(in_edges.first); e_it != in_edges.second; e_it++) {
+				in_curves.push_back(get_edge(*e_it));
+				sources.push_back(boost::source(*e_it, internal_graph_));
+			}
+			for (OutEdgeIterator e_it(out_edges.first); e_it != out_edges.second; e_it++) {
+				out_curves.push_back(get_edge(*e_it));
+				targets.push_back(boost::target(*e_it, internal_graph_));
+			}
+
+			//and merge them together in a way that depends on their direction (->*<- ,  <-*->, ->*-> or <-*<-)
+
+			//in case the directions are the same we add the out curve to the incident curve
+			if (in_curves.size() == 1 && out_curves.size() == 1) {
+
+				//copy the in curve
+				EdgeProperties new_prop = in_curves[0];
+
+				//update the tangent (we don't take the first PointTangent since it's the same as 
+				//the last of the incident curve. i.e. the removed vertex' position)
+				new_prop.curve.back().second = (out_curves[0].curve[1].first - new_prop.curve.back().first).normalize();
+
+				//add the out curve (same comment)
+				for (GRuint i(1); i < out_curves[0].curve.size(); i++) {
+					new_prop.curve.push_back(out_curves[0].curve[i]);
+				}
+
+				//and add the new curve
+				new_curve = new_prop;
+
+				//and add the new source and target
+				new_source = sources[0];
+				new_target = targets[0];
+
+			}
+			//and if the directions are not the same we further check if it's two out or two in edges
+			else if (in_curves.size() == 2 && out_curves.size() == 0) {//case ->*<-
+				//copy the first in curve
+				EdgeProperties new_prop = in_curves[0];
+
+				GRuint second_curve_size((GRuint)in_curves[1].curve.size());
+
+				//update the tangent
+				new_prop.curve.back().second = (in_curves[1].curve[second_curve_size - 2].first - new_prop.curve.back().first).normalize();
+
+				//add the second in curve in reverse order (and with the tangents in opposite direction
+				for (GRuint i(1); i < second_curve_size; i++) {
+					new_prop.curve.push_back(
+						PointTangent(
+							in_curves[1].curve[second_curve_size - 1 - i].first,
+							in_curves[1].curve[second_curve_size - 1 - i].second * (-1.f)
+						)
+					);
+				}
+
+				//add the new curve
+				new_curve = new_prop;
+
+				//and add the new source and target
+				new_source = sources[0];
+				new_target = sources[1];
+
+			}
+			else if (in_curves.size() == 0 && out_curves.size() == 2) {//case <-*->
+				GRuint first_curve_size((GRuint)out_curves[0].curve.size());
+
+				std::vector<PointTangent> first_half;
+				//add the first in curve in reverse order (and with the tangents in opposite direction
+				for (GRuint i(0); i < first_curve_size; i++) {
+					first_half.push_back(
+						PointTangent(
+							out_curves[0].curve[first_curve_size - 1 - i].first,
+							out_curves[0].curve[first_curve_size - 1 - i].second * (-1.f)
+						)
+					);
+				}
+
+				EdgeProperties new_prop;
+				new_prop.curve = first_half;
+
+				//update the tangent
+				new_prop.curve.back().second = (out_curves[1].curve[1].first - new_prop.curve.back().first).normalize();
+
+				GRuint second_curve_size((GRuint)out_curves[1].curve.size());
+
+				//add the second in curve in standard order (except the first element)
+				for (GRuint i(1); i < second_curve_size; i++) {
+					new_prop.curve.push_back(
+						PointTangent(
+							out_curves[1].curve[i].first,
+							out_curves[1].curve[i].second
+						)
+					);
+				}
+
+				//add the new curve
+				new_curve = new_prop;
+
+				//and add the new source and target
+				new_source = targets[0];
+				new_target = targets[1];
+
+			}
+			else {
+				throw std::runtime_error("Could not create new edge to replace vertex of degree 2");
+			}
+
+			if (new_source != VertexDescriptor() && new_target != VertexDescriptor()) {
+				//add an edge from the in-edge's source to the out-edge's target
+				std::pair<EdgeDescriptor, bool> new_edge = add_edge(new_source, new_target, { new_curve });
+
+				//remove the vertex (and both in and out-edges)
+				EdgeVector removed_edges = remove_vertex(vertex_to_remove);
+
+				//std::cout << "edge count : " << edge_count() << std::endl;
+				//std::cout << " new edge length : " << new_curve.size() << std::endl;
+				if (new_edge.second && removed_edges.size() == 2) {
+					return std::pair<EdgeDescriptor, EdgePair>(new_edge.first, EdgePair(removed_edges[0], removed_edges[1]));
+				}
+			}
+
+			throw std::runtime_error("Could not create new edge to replace vertex of degree 2");
+
+#if 0
 			if (boost::in_degree(vertex_to_remove, internal_graph_) != 1 || boost::out_degree(vertex_to_remove, internal_graph_) != 1) {
 				throw std::invalid_argument("Cannot remove vertex of degree 2");
 			}
@@ -1716,6 +1889,8 @@ namespace grapholon {
 			else {
 				throw std::invalid_argument("Could not create new edge to replace vertex of degree 2");
 			}
+
+#endif
 		}
 
 
