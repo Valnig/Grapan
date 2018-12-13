@@ -22,7 +22,6 @@
 #pragma once
 
 #include "Vector.hpp"
-#include "CurveDeformer.hpp"
 
 
 namespace grapholon {

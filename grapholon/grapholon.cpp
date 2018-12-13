@@ -28,12 +28,12 @@
 #include <iostream>
 #include <bitset>
 #include <ctime>
+#include <fstream>
 
 #include "Curve.hpp"
 #include "VoxelSkeleton.hpp"
 #include "CurveDeformer.hpp"
 
-#include "CGAL/Surface_mesh.h"
 
 
 using namespace std;
@@ -1792,34 +1792,33 @@ void linkEdges() {
 
 void deform_curve() {
 
-	GRuint nb_points(5);
-	GRuint handle_index((nb_points-1)/2);
+	GRuint nb_points(10);
 
 	DiscreteCurve curve;
 	for (GRuint i(0); i < nb_points; i++) {
 		curve.push_back({ (GRfloat) i,1,0 });
 	}
 
-	std::cout << "original curve : " << std::endl << curve.to_string() << std::endl;
+	DeformableSplineCurve true_curve(curve);
 
-	CurveDeformer<DiscreteCurve> deformer;
-	deformer.compile(curve, 0, handle_index, nb_points-1);
+	std::cout << "original curve : " << std::endl << true_curve.to_string() << std::endl;
 
-	EigenVector3 pos = deformer.vs[handle_index];
-	//pos.y() +=0.1f;
-	deformer.vs[handle_index] = pos;
+	CurveDeformer::deform_curve(true_curve, true, Vector3f(0,2,0));
 
-	DiscreteCurve result;
-
-	deformer.update(result);
-
-	std::cout << "deformed curve : " << std::endl << result.to_string() << std::endl;
+	std::cout << "deformed curve : " << std::endl << true_curve.to_string() << std::endl;
 }
+
+
 
 int main()
 {
 	deform_curve();
+}
+
+/*int main()
+{
+	deform_curve();
 
     return 0;
-}
+}*/
 
