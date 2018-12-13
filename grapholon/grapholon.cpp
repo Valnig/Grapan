@@ -29,9 +29,13 @@
 #include <iostream>
 #include <bitset>
 #include <ctime>
+#include <fstream>
 
 #include "Curve.hpp"
 #include "VoxelSkeleton.hpp"
+#include "CurveDeformer.hpp"
+
+
 
 using namespace std;
 using namespace grapholon;
@@ -1806,22 +1810,30 @@ void linkEdges() {
 
 }
 
+
+void deform_curve() {
+
+	GRuint nb_points(10);
+
+	DiscreteCurve curve;
+	for (GRuint i(0); i < nb_points; i++) {
+		curve.push_back({ (GRfloat) i,1,0 });
+	}
+
+	DeformableSplineCurve true_curve(curve);
+
+	std::cout << "original curve : " << std::endl << true_curve.to_string() << std::endl;
+
+	CurveDeformer::deform_curve(true_curve, true, Vector3f(0,2,0));
+
+	std::cout << "deformed curve : " << std::endl << true_curve.to_string() << std::endl;
+}
+
+
+
 int main()
 {
 
-	VoxelSkeleton skeleton(100, 100, 100);
-	skeleton.generate_artificial_simple_kissing(10);
-
-	SkeletalGraph* graph = skeleton.extract_skeletal_graph(nullptr, DiscreteCurve::START_AND_END, 1, 0);
-
-
-	SkeletalGraph* graph2 = graph->copy();
-
-	delete graph2;
-
-
-	delete graph;
-
-    return 0;
+	deform_curve();
 }
 
