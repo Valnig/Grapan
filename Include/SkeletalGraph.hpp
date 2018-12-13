@@ -433,10 +433,15 @@ namespace grapholon {
 
 		VertexPair remove_edge(EdgeDescriptor edge) {
 
+			VertexPair vertices(InternalBoostGraph::null_vertex(), InternalBoostGraph::null_vertex());
+
+			if (edge == EdgeDescriptor()) {
+				return vertices;
+			}
+
 			VertexDescriptor source = boost::source(edge, internal_graph_);
 			VertexDescriptor target = boost::target(edge, internal_graph_);
 
-			VertexPair vertices(InternalBoostGraph::null_vertex(), InternalBoostGraph::null_vertex());
 
 			if (boost::edge(source, target, internal_graph_).second) {
 
