@@ -4,3 +4,6 @@
 [submodule "Include/pugixml"]
 	path = Include/pugixml
 	url = https://github.com/zeux/pugixml
+[submodule "include/libigl"]
+	path = include/libigl
+	url = https://github.com/libigl/libigl.git
