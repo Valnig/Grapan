@@ -443,7 +443,7 @@ namespace grapholon {
 
 
 	class DeformableSplineCurve : public SplineCurve {
-	private:
+	public:
 
 		std::vector<GRfloat> original_lengths_;
 		std::vector<Vector3f> original_points_;

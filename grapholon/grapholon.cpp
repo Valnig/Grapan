@@ -1813,23 +1813,31 @@ void linkEdges() {
 
 void deform_curve() {
 
-	GRuint nb_points(10);
+	GRuint nb_points(5);
 
 	DiscreteCurve curve;
+	DiscreteCurve curve2;
 	for (GRuint i(0); i < nb_points; i++) {
 		curve.push_back({ (GRfloat) i,(GRfloat) 1,0.f });
+		curve2.push_back({ (GRfloat)i,(GRfloat)1,0.f });
 	}
 
 	DeformableSplineCurve true_curve(curve);
+	DeformableSplineCurve true_curve2(curve2);
 
 	std::cout << "original curve : " << std::endl << true_curve.to_string() << std::endl;
 
-	CurveDeformer::deform_curve(true_curve, true, Vector3f(0,2,0));
+	CurveDeformer::deform_curve(true_curve, true, curve[0] + Vector3f(0,4,0));
 
-	std::cout << "deformed curve : " << std::endl << true_curve.to_string() << std::endl;
+	for (GRuint i(0); i < 10; i++) {
+	//	CurveDeformer::deform_curve(true_curve2, true, curve[0] + Vector3f(0, 4, 0)*((GRfloat)i / 9.f));
 
-	CurveDeformer::deform_curve(true_curve, false, curve.back() + Vector3f(0, 1, 0));
+	}
+
+	std::cout << std::endl;
 	std::cout << "deformed curve : " << std::endl << true_curve.to_string() << std::endl;
+	std::cout << std::endl;
+	std::cout << "deformed curve2 : " << std::endl << true_curve2.to_string() << std::endl;
 }
 
 

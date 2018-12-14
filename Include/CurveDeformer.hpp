@@ -32,23 +32,34 @@ namespace grapholon {
 			return Vector3f(eigen.x(), eigen.y(), eigen.z());
 		}
 
-		static bool deform_curve(DeformableSplineCurve& curve, bool source_control_point, Vector3f target_position) {
+		static bool deform_curve(DeformableSplineCurve& in_curve, bool source_control_point, Vector3f target_position) {
 
+
+			if (in_curve.original_points_.size() != in_curve.size()) {
+				in_curve.set_original_shape();
+			}
+
+			if (in_curve.size() < 3) {
+				return false;
+			}
+
+			std::vector<Vector3f> curve = in_curve.original_points_;
 
 			Eigen::MatrixXd V(curve.size(), 3);
-			Eigen::MatrixXd U(curve.size(), 3);
-			Eigen::MatrixXi F(curve.size()-2, 3);
+			Eigen::MatrixXd U(V.cols(), V.rows());
+			Eigen::MatrixXi F((size_t)((GRdouble)curve.size()/2.0), 3);
 
 			Eigen::VectorXi S, b(2);
 			Eigen::MatrixXd bc(b.size(), V.cols());
 
 			for (GRuint i(0); i < curve.size(); i++) {
-				V.row(i) = to_eigen(curve[i].first);
+				V.row(i) = to_eigen(curve[i]);
 			}
 
-			for (GRuint i(1); i < curve.size() - 1; i++) {
-				F.row(i-1) = Eigen::Vector3i(i, i - 1, i + 1);
+			for (GRuint i(0); i < F.rows()-1; i++) {
+				F.row(i) = Eigen::Vector3i(i*2, i*2 + 1, i*2 + 2);
 			}
+			F.row(F.rows() - 1) = Eigen::Vector3i(V.rows() - 3, V.rows() - 2, V.rows() - 1);
 
 			U = V;
 
@@ -61,14 +72,16 @@ namespace grapholon {
 			bc.row(1) = source_control_point ? V.row(V.rows()-1) : new_position;
 
 
-			/*std::cout << " V : " << V << std::endl;
+			std::cout << " V : " << V << std::endl;
 			std::cout << "F : " << F << std::endl;
 			std::cout << " b : " << b << std::endl;
-			std::cout << " bc : " << bc << std::endl;*/
+			std::cout << " bc : " << bc << std::endl;
+
+
 
 
 			igl::ARAPData arap_data;
-			arap_data.energy = igl::ARAP_ENERGY_TYPE_ELEMENTS;
+			arap_data.energy = igl::ARAP_ENERGY_TYPE_SPOKES;
 			arap_data.max_iter = 100;
 			arap_data.with_dynamics = true;
 
@@ -78,9 +91,9 @@ namespace grapholon {
 			igl::arap_solve(bc, arap_data, U);
 
 			for (GRuint i(0); i < V.rows(); i++) {
-				curve[i].first = to_vec3(U.row(i));
+				in_curve[i].first = to_vec3(U.row(i));
 			}
-			curve.update_tangents();
+			in_curve.update_tangents();
 
 
 			return true;
