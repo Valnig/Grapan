@@ -31,7 +31,7 @@
 #include <fstream>
 
 #include "Curve.hpp"
-//#include "CurveDeformer.hpp"
+#include "CurveDeformer.hpp"
 
 //TODO : add sizes on each edge_to_collapse and vertex
 
@@ -190,18 +190,18 @@ namespace grapholon {
 
 			for (InEdgeIterator e_it(in_edges.first); e_it != in_edges.second; e_it++) {
 
-				//if (!CurveDeformer::deform_curve(internal_graph_[*e_it].curve, false, new_position)) {
+				if (!CurveDeformer::deform_curve(internal_graph_[*e_it].curve, false, new_position)) {
 					if (!internal_graph_[*e_it].curve.pseudo_elastic_deform(false, new_position, maintain_shape_around_tip)) {
 						return false;
 					}
-				//}
+				}
 			}
 			for (OutEdgeIterator e_it(out_edges.first); e_it != out_edges.second; e_it++) {
-				//if (!CurveDeformer::deform_curve(internal_graph_[*e_it].curve, true, new_position)) {
+				if (!CurveDeformer::deform_curve(internal_graph_[*e_it].curve, true, new_position)) {
 					if (!internal_graph_[*e_it].curve.pseudo_elastic_deform(true, new_position, maintain_shape_around_tip)) {
 						return false;
 					}
-				//}
+				}
 			}
 
 			return true;

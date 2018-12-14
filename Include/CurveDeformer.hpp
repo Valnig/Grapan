@@ -1,158 +1,90 @@
 ﻿#pragma once
 
-#include "curve.hpp"
-
-namespace grapholon {
-	class CurveDeformer {
-
-	public:
-		static bool deform_curve(DeformableSplineCurve& curve, bool source_control_point, Vector3f target_position) {
-			return false;
-		}
-
-	};
-
-}
-
-#if 0
-#include <CGAL/Simple_cartesian.h>
-#include <CGAL/Polyhedron_3.h>
-#include <CGAL/Polyhedron_items_with_id_3.h>
-#include <CGAL/Surface_mesh/Surface_mesh.h>
-#include "CGAL/Surface_mesh_deformation.h"
-
 
 #include "curve.hpp"
+#include "igl/arap.h"
 
-
+#include <Eigen/Dense>
+#include <Eigen/Core>
+#include <Eigen/Geometry>
+#include <Eigen/StdVector>
 
 namespace grapholon {
-	typedef CGAL::Simple_cartesian<double>                                   Kernel;
-	typedef Kernel::Point_3 Point_3;
-	//typedef CGAL::Polyhedron_3<Kernel, CGAL::Polyhedron_items_with_id_3> Polyhedron;
-	typedef CGAL::Surface_mesh<Point_3> Polyhedron;
-	typedef boost::graph_traits<Polyhedron>::vertex_descriptor    vertex_descriptor;
-	typedef boost::graph_traits<Polyhedron>::vertex_iterator        vertex_iterator;
-	typedef boost::graph_traits<Polyhedron>::halfedge_descriptor halfedge_descriptor;
-	typedef boost::graph_traits<Polyhedron>::halfedge_iterator    halfedge_iterator;
-
-	//typedef CGAL::Surface_mesh_deformation<Polyhedron> Surface_mesh_deformation;
-
-	// a simple model to `SurfaceMeshDeformationWeights` concept, which provides uniform weights
-	struct Identity_weight
-	{
-		template<class VertexPointMap>
-		double operator()(typename boost::graph_traits<Polyhedron>::halfedge_descriptor  /*e*/, const Polyhedron& /*p*/, VertexPointMap /*v*/)
-		{
-			return 1.0;
-		}
-	};
-
-	typedef std::map<vertex_descriptor, std::size_t>   Internal_vertex_map;
-	typedef std::map<halfedge_descriptor, std::size_t>     Internal_hedge_map;
-	typedef boost::associative_property_map<Internal_vertex_map>   Vertex_index_map;
-	typedef boost::associative_property_map<Internal_hedge_map>     Hedge_index_map;
-
-	typedef CGAL::Surface_mesh_deformation<Polyhedron, Vertex_index_map, Hedge_index_map, CGAL::ORIGINAL_ARAP, Identity_weight> Surface_mesh_deformation;
-
+	
 	class CurveDeformer {
 
 
 	public:
 
-		static Point_3 to_point3(Vector3f vec) {
+		/*static Point_3 to_point3(Vector3f vec) {
 			return Point_3(vec.X(), vec.Y(), vec.Z());
 		}
 
 		static Vector3f to_vec3(Point_3 point) {
 			return Vector3f(point.x(), point.y(), point.z());
+		}*/
+
+		static Eigen::Vector3d to_eigen(Vector3f vec) {
+			return Eigen::Vector3d(vec.X(), vec.Y(), vec.Z());
+		}
+
+		static Vector3f to_vec3(Eigen::Vector3d eigen) {
+			return Vector3f(eigen.x(), eigen.y(), eigen.z());
 		}
 
 		static bool deform_curve(DeformableSplineCurve& curve, bool source_control_point, Vector3f target_position) {
-			Polyhedron mesh;
 
-			//todo : handle size = 2 case
 
-			std::vector<vertex_descriptor> mesh_vertices;
+			Eigen::MatrixXd V(curve.size(), 3);
+			Eigen::MatrixXd U(curve.size(), 3);
+			Eigen::MatrixXi F(curve.size()-2, 3);
+
+			Eigen::VectorXi S, b(2);
+			Eigen::MatrixXd bc(b.size(), V.cols());
 
 			for (GRuint i(0); i < curve.size(); i++) {
-				mesh_vertices.push_back(mesh.add_vertex(to_point3(curve[i].first)));
+				V.row(i) = to_eigen(curve[i].first);
 			}
 
 			for (GRuint i(1); i < curve.size() - 1; i++) {
-				mesh.add_face(mesh_vertices[i], mesh_vertices[i - 1], mesh_vertices[i + 1]);
+				F.row(i-1) = Eigen::Vector3i(i, i - 1, i + 1);
 			}
 
+			U = V;
 
-			halfedge_iterator eb, ee;
+			b(0) = 0 ;
+			b(1) = (int)(curve.size() - 1);
 
-			// Create and initialize the vertex index map
-			Internal_vertex_map internal_vertex_index_map;
-			Vertex_index_map vertex_index_map(internal_vertex_index_map);
+			Eigen::VectorXd new_position(to_eigen(target_position));
+
+			bc.row(0) = source_control_point ? new_position : V.row(0);
+			bc.row(1) = source_control_point ? V.row(V.rows()-1) : new_position;
 
 
-			vertex_iterator vb, ve;
-			std::size_t counter = 0;
-			for (boost::tie(vb, ve) = vertices(mesh); vb != ve; ++vb, ++counter) {
-				put(vertex_index_map, *vb, counter);
+			/*std::cout << " V : " << V << std::endl;
+			std::cout << "F : " << F << std::endl;
+			std::cout << " b : " << b << std::endl;
+			std::cout << " bc : " << bc << std::endl;*/
+
+
+			igl::ARAPData arap_data;
+			arap_data.energy = igl::ARAP_ENERGY_TYPE_ELEMENTS;
+			arap_data.max_iter = 100;
+			arap_data.with_dynamics = true;
+
+			igl::arap_precomputation(V, F, V.cols(), b, arap_data);
+
+
+			igl::arap_solve(bc, arap_data, U);
+
+			for (GRuint i(0); i < V.rows(); i++) {
+				curve[i].first = to_vec3(U.row(i));
 			}
-			// Create and initialize the halfedge index map
-			Internal_hedge_map internal_hedge_index_map;
-			Hedge_index_map hedge_index_map(internal_hedge_index_map);
-			counter = 0;
-			for (boost::tie(eb, ee) = halfedges(mesh); eb != ee; ++eb, ++counter) {
-				put(hedge_index_map, *eb, counter);
-			}
-
-			Surface_mesh_deformation deform_mesh(mesh,
-				vertex_index_map,
-				hedge_index_map,
-				get(CGAL::vertex_point, mesh),
-				Identity_weight());
-
-			// Init the indices of the halfedges and the vertices.
-			//set_halfedgeds_items_id(mesh);
-			// Create a deformation object
-			//Surface_mesh_deformation deform_mesh(mesh,);
-			// Definition of the region of interest (use the whole mesh)
-			//vertex_iterator vb, ve;
-			boost::tie(vb, ve) = vertices(mesh);
-			deform_mesh.insert_roi_vertices(vb, ve);
-			// Select two control vertices ...
-
-			vertex_descriptor source_point = mesh_vertices[0];
-			vertex_descriptor target_point = mesh_vertices.back();
-
-			vertex_descriptor control = source_control_point ? source_point : target_point;
-			// ... and insert them
-			deform_mesh.insert_control_vertex(source_point);
-			deform_mesh.insert_control_vertex(target_point);
-			// The definition of the ROI and the control vertices is done, call preprocess
-			bool is_matrix_factorization_OK = deform_mesh.preprocess();
-			if (!is_matrix_factorization_OK) {
-				std::cerr << "Error in preprocessing, check documentation of preprocess()" << std::endl;
-				return false;
-			}
-			// Use set_target_position() to set the constained position
-			// of control_1. control_2 remains at the last assigned positions
-			Surface_mesh_deformation::Point constrained_pos(to_point3(target_position));
-			deform_mesh.set_target_position(control, constrained_pos);
-			// Deform the mesh, the positions of vertices of 'mesh' are updated
-			deform_mesh.deform();
-			// The function deform() can be called several times if the convergence has not been reached yet
-			deform_mesh.deform();
-
-			counter = 0;
-			for (boost::tie(vb, ve) = vertices(mesh); vb != ve; ++vb, ++counter) {
-				curve[counter].first = to_vec3(mesh.point(mesh_vertices[counter]));
-			}
-
 			curve.update_tangents();
+
 
 			return true;
 		}
 
 	};
 };
-
-#endif

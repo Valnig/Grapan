@@ -11,6 +11,8 @@ grapholon/x64/
 #external libs folders
 Include/boost/
 Include/Eigen/
+Include/igl/
+Include/unsupported/
 
 
 

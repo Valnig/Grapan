@@ -1817,7 +1817,7 @@ void deform_curve() {
 
 	DiscreteCurve curve;
 	for (GRuint i(0); i < nb_points; i++) {
-		curve.push_back({ (GRfloat) i,1,0 });
+		curve.push_back({ (GRfloat) i,(GRfloat) 1,0.f });
 	}
 
 	DeformableSplineCurve true_curve(curve);
@@ -1826,6 +1826,9 @@ void deform_curve() {
 
 	CurveDeformer::deform_curve(true_curve, true, Vector3f(0,2,0));
 
+	std::cout << "deformed curve : " << std::endl << true_curve.to_string() << std::endl;
+
+	CurveDeformer::deform_curve(true_curve, false, curve.back() + Vector3f(0, 1, 0));
 	std::cout << "deformed curve : " << std::endl << true_curve.to_string() << std::endl;
 }
 
