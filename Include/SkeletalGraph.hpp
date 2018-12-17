@@ -1079,50 +1079,27 @@ shortest_path(source_edge_target, target_edge_target)
 				}
 				}
 
-				Vector3f first_junction_point = new_edge_curve_start.back().first;// = new_edge_curve_start.back().first + (new_edge_curve_start.before_back().first - new_edge_curve_start.back().first).normalize()*new_edge_displacement;
-
-				std::cout << "junction point : " << first_junction_point.to_string() << std::endl;
+				Vector3f first_junction_point = new_edge_curve_start.back().first;
 
 				GRfloat distance_to_back = 0.f;
 				Vector3f original_back = new_edge_curve_start.back().first;
 				while (new_edge_curve_start.size()>2
 					&& distance_to_back < new_edge_displacement) {
-					std::cout << "........................" << std::endl;
-					std::cout << " curve length : " << new_edge_curve_start.size() << std::endl;
-					std::cout << " back : " << new_edge_curve_start.back().first.to_string() << std::endl;
-					std::cout << " before back : " << new_edge_curve_start.before_back().first.to_string() << std::endl;
 
 					GRfloat last_segment_length = (new_edge_curve_start.back().first - new_edge_curve_start.before_back().first).norm();
-
-
 					GRfloat distance_to_next_point = MIN(last_segment_length, new_edge_displacement - distance_to_back);
-					std::cout << "distance to next : " << distance_to_next_point << std::endl;
-
-					std::cout << "last length : " << last_segment_length << std::endl;
-					distance_to_back += last_segment_length;
-					std::cout << "distance : " << distance_to_back << std::endl;
 
 					first_junction_point += (new_edge_curve_start.before_back().first - new_edge_curve_start.back().first).normalize() * distance_to_next_point;
-					std::cout << "direction : " << (new_edge_curve_start.before_back().first - new_edge_curve_start.back().first).normalize().to_string() << std::endl;
 
-					std::cout << "junction point : " << first_junction_point.to_string() << std::endl;
-
+					distance_to_back += last_segment_length;
 					new_edge_curve_start.pop_back();
 				}
 
 				//CurveDeformer::deform_curve(new_edge_curve_start, new_edge_curve_start.size() - 1, first_junction_point);
-
 				new_edge_curve_start.pseudo_elastic_deform(false, first_junction_point);
 
-				std::cout << "-----------------" << std::endl;
-				
-
-
-				//Vector3f second_junction_point = new_edge_curve_end.front().first + (new_edge_curve_end.after_front().first - new_edge_curve_end.front().first).normalize()*new_edge_displacement;
 
 				Vector3f second_junction_point = new_edge_curve_end.front().first;
-
-				std::cout << " second junction point : " << second_junction_point.to_string() << std::endl;
 
 				GRfloat distance_to_front = 0.f;
 				Vector3f original_front = new_edge_curve_end.front().first;
@@ -1130,33 +1107,17 @@ shortest_path(source_edge_target, target_edge_target)
 
 				while (index < new_edge_curve_end.size() - 2
 					&& distance_to_front < new_edge_displacement) {
-					std::cout << "........................" << std::endl;
-					std::cout << " curve length : " << new_edge_curve_end.size() << std::endl;
-					std::cout << " back : " << new_edge_curve_end[index].first.to_string() << std::endl;
-					std::cout << " before back : " << new_edge_curve_end[index + 1].first.to_string() << std::endl;
 
 					GRfloat last_segment_length = (new_edge_curve_end[index].first - new_edge_curve_end[index + 1].first).norm();
-
-
 					GRfloat distance_to_next_point = MIN(last_segment_length, new_edge_displacement - distance_to_front);
-					std::cout << "distance to next : " << distance_to_next_point << std::endl;
-
-					std::cout << "last length : " << last_segment_length << std::endl;
-					distance_to_front += last_segment_length;
-					std::cout << "distance : " << distance_to_front << std::endl;
 
 					second_junction_point += (new_edge_curve_end[index + 1].first - new_edge_curve_end[index].first).normalize() * distance_to_next_point;
-					std::cout << "direction : " << (new_edge_curve_end[index + 1].first - new_edge_curve_end[index].first).normalize().to_string() << std::endl;
 
-					std::cout << "junction point : " << second_junction_point.to_string() << std::endl;
-
+					distance_to_front += last_segment_length;
 					index++;
-					//new_edge_curve_end.pop_back();
 				}
 
 				//CurveDeformer::deform_curve(new_edge_curve_end, 0, second_junction_point);
-
-
 				new_edge_curve_end.trim_front(index);
 				new_edge_curve_end.pseudo_elastic_deform(true, second_junction_point);
 
