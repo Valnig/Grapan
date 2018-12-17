@@ -190,14 +190,14 @@ namespace grapholon {
 
 			for (InEdgeIterator e_it(in_edges.first); e_it != in_edges.second; e_it++) {
 
-				if (!CurveDeformer::deform_curve(internal_graph_[*e_it].curve, false, new_position)) {
+				if (!CurveDeformer::deform_curve(internal_graph_[*e_it].curve, internal_graph_[*e_it].curve.size()-1, new_position)) {
 					if (!internal_graph_[*e_it].curve.pseudo_elastic_deform(false, new_position, maintain_shape_around_tip)) {
 						return false;
 					}
 				}
 			}
 			for (OutEdgeIterator e_it(out_edges.first); e_it != out_edges.second; e_it++) {
-				if (!CurveDeformer::deform_curve(internal_graph_[*e_it].curve, true, new_position)) {
+				if (!CurveDeformer::deform_curve(internal_graph_[*e_it].curve, 0, new_position)) {
 					if (!internal_graph_[*e_it].curve.pseudo_elastic_deform(true, new_position, maintain_shape_around_tip)) {
 						return false;
 					}
@@ -506,6 +506,14 @@ namespace grapholon {
 			}
 
 			return { edges, found_edge };
+		}
+
+		void deform_edge(EdgeDescriptor edge, GRuint point_index, Vector3f target_position) {
+			CurveDeformer::deform_curve(internal_graph_[edge].curve, point_index, target_position);
+		}
+
+		void fix_curve_shape(EdgeDescriptor edge) {
+			internal_graph_[edge].curve.set_original_shape();
 		}
 
 		//TODO : maybe better
@@ -974,9 +982,9 @@ namespace grapholon {
 					shortest_path(source_edge_source, target_edge_source),
 					shortest_path(source_edge_source, target_edge_target),
 					shortest_path(source_edge_target, target_edge_source),
-					shortest_path(source_edge_target, target_edge_target)
+shortest_path(source_edge_target, target_edge_target)
 				};
-				
+
 				size_t min_size_index = 0;
 				size_t min_size = (size_t)-1;
 				for (GRuint i(0); i < paths.size(); i++) {
@@ -987,7 +995,7 @@ namespace grapholon {
 						min_size_index = i;
 					}
 				}
-				
+
 				return paths[min_size_index];
 
 			}
@@ -1023,12 +1031,12 @@ namespace grapholon {
 				VertexDescriptor new_source;
 				VertexDescriptor new_target;
 
-				std::vector<size_t> sizes = { source_to_source_path.size(),source_to_target_path.size(),  target_to_source_path.size(), target_to_target_path.size()};
+				std::vector<size_t> sizes = { source_to_source_path.size(),source_to_target_path.size(),  target_to_source_path.size(), target_to_target_path.size() };
 				size_t min_size_index = 0;
 				size_t min_size = (size_t)-1;
 				for (GRuint i(0); i < sizes.size(); i++) {
 
-					std::cout << "path length : " << sizes[i] << std::endl;
+					//std::cout << "path length : " << sizes[i] << std::endl;
 					if (sizes[i] < min_size) {
 						min_size = sizes[i];
 						min_size_index = i;
@@ -1036,11 +1044,11 @@ namespace grapholon {
 				}
 
 				switch (min_size_index) {
-				default: 
+				default:
 				case(0): {
-					new_edge_curve_start  = DeformableSplineCurve(get_edge(source_edge).curve, true);
+					new_edge_curve_start = DeformableSplineCurve(get_edge(source_edge).curve, true);
 					new_edge_curve_middle = convert_to_curve(source_to_source_path);
-					new_edge_curve_end    = DeformableSplineCurve(get_edge(target_edge).curve, false);
+					new_edge_curve_end = DeformableSplineCurve(get_edge(target_edge).curve, false);
 					new_source = source_edge_target;
 					new_target = target_edge_target;
 					break;
@@ -1071,20 +1079,101 @@ namespace grapholon {
 				}
 				}
 
-				Vector3f first_junction_point = new_edge_curve_start.back().first + (new_edge_curve_start.before_back().first - new_edge_curve_start.back().first).normalize()*new_edge_displacement;
-				Vector3f second_junction_point = new_edge_curve_end.front().first + (new_edge_curve_end.after_front().first - new_edge_curve_end.front().first).normalize()*new_edge_displacement;
+				Vector3f first_junction_point = new_edge_curve_start.back().first;// = new_edge_curve_start.back().first + (new_edge_curve_start.before_back().first - new_edge_curve_start.back().first).normalize()*new_edge_displacement;
 
-				new_edge_curve_start.pseudo_elastic_deform(false, first_junction_point);
-			
-				if (new_edge_curve_middle.size()) {
-					new_edge_curve_middle.pseudo_elastic_deform(true, first_junction_point);
-					new_edge_curve_middle.pseudo_elastic_deform(false, second_junction_point);
-					new_edge_curve_start.append(new_edge_curve_middle, 1);
+				std::cout << "junction point : " << first_junction_point.to_string() << std::endl;
+
+				GRfloat distance_to_back = 0.f;
+				Vector3f original_back = new_edge_curve_start.back().first;
+				while (new_edge_curve_start.size()>2
+					&& distance_to_back < new_edge_displacement) {
+					std::cout << "........................" << std::endl;
+					std::cout << " curve length : " << new_edge_curve_start.size() << std::endl;
+					std::cout << " back : " << new_edge_curve_start.back().first.to_string() << std::endl;
+					std::cout << " before back : " << new_edge_curve_start.before_back().first.to_string() << std::endl;
+
+					GRfloat last_segment_length = (new_edge_curve_start.back().first - new_edge_curve_start.before_back().first).norm();
+
+
+					GRfloat distance_to_next_point = MIN(last_segment_length, new_edge_displacement - distance_to_back);
+					std::cout << "distance to next : " << distance_to_next_point << std::endl;
+
+					std::cout << "last length : " << last_segment_length << std::endl;
+					distance_to_back += last_segment_length;
+					std::cout << "distance : " << distance_to_back << std::endl;
+
+					first_junction_point += (new_edge_curve_start.before_back().first - new_edge_curve_start.back().first).normalize() * distance_to_next_point;
+					std::cout << "direction : " << (new_edge_curve_start.before_back().first - new_edge_curve_start.back().first).normalize().to_string() << std::endl;
+
+					std::cout << "junction point : " << first_junction_point.to_string() << std::endl;
+
+					new_edge_curve_start.pop_back();
 				}
 
+				//CurveDeformer::deform_curve(new_edge_curve_start, new_edge_curve_start.size() - 1, first_junction_point);
+
+				new_edge_curve_start.pseudo_elastic_deform(false, first_junction_point);
+
+				std::cout << "-----------------" << std::endl;
+				
+
+
+				//Vector3f second_junction_point = new_edge_curve_end.front().first + (new_edge_curve_end.after_front().first - new_edge_curve_end.front().first).normalize()*new_edge_displacement;
+
+				Vector3f second_junction_point = new_edge_curve_end.front().first;
+
+				std::cout << " second junction point : " << second_junction_point.to_string() << std::endl;
+
+				GRfloat distance_to_front = 0.f;
+				Vector3f original_front = new_edge_curve_end.front().first;
+				GRuint index(0);
+
+				while (index < new_edge_curve_end.size() - 2
+					&& distance_to_front < new_edge_displacement) {
+					std::cout << "........................" << std::endl;
+					std::cout << " curve length : " << new_edge_curve_end.size() << std::endl;
+					std::cout << " back : " << new_edge_curve_end[index].first.to_string() << std::endl;
+					std::cout << " before back : " << new_edge_curve_end[index + 1].first.to_string() << std::endl;
+
+					GRfloat last_segment_length = (new_edge_curve_end[index].first - new_edge_curve_end[index + 1].first).norm();
+
+
+					GRfloat distance_to_next_point = MIN(last_segment_length, new_edge_displacement - distance_to_front);
+					std::cout << "distance to next : " << distance_to_next_point << std::endl;
+
+					std::cout << "last length : " << last_segment_length << std::endl;
+					distance_to_front += last_segment_length;
+					std::cout << "distance : " << distance_to_front << std::endl;
+
+					second_junction_point += (new_edge_curve_end[index + 1].first - new_edge_curve_end[index].first).normalize() * distance_to_next_point;
+					std::cout << "direction : " << (new_edge_curve_end[index + 1].first - new_edge_curve_end[index].first).normalize().to_string() << std::endl;
+
+					std::cout << "junction point : " << second_junction_point.to_string() << std::endl;
+
+					index++;
+					//new_edge_curve_end.pop_back();
+				}
+
+				//CurveDeformer::deform_curve(new_edge_curve_end, 0, second_junction_point);
+
+
+				new_edge_curve_end.trim_front(index);
 				new_edge_curve_end.pseudo_elastic_deform(true, second_junction_point);
 
-				new_edge_curve_start.append(new_edge_curve_end, 1);
+
+				if (new_edge_curve_middle.size() > 2) {
+					//new_edge_curve_middle.pseudo_elastic_deform(true, first_junction_point);
+					//new_edge_curve_middle.pseudo_elastic_deform(false, second_junction_point);
+
+					CurveDeformer::deform_curve(new_edge_curve_middle, 0, first_junction_point);
+					CurveDeformer::deform_curve(new_edge_curve_middle, new_edge_curve_middle.size() - 1, second_junction_point);
+					new_edge_curve_start.append(new_edge_curve_middle, 1);
+					new_edge_curve_start.pop_back();
+				}
+
+				new_edge_curve_start.append(new_edge_curve_end);
+
+				new_edge_curve_start.update_tangents();
 
 				//add the new edge
 				EdgeDescriptor new_edge = add_edge(new_source, new_target, { new_edge_curve_start }).first;

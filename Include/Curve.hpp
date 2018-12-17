@@ -495,9 +495,9 @@ namespace grapholon {
 		}
 
 		void set_original_shape() {
-			original_lengths_ = std::vector<GRfloat>();
-			original_points_  = std::vector<Vector3f>();
-			original_angles_  = std::vector<GRfloat>();
+			original_lengths_.clear();
+			original_points_.clear();
+			original_angles_.clear();
 			
 			for (GRuint i(0); i < size() - 1; i++) {
 				original_lengths_.push_back(((*this)[i + 1].first - (*this)[i].first).norm());
@@ -516,6 +516,38 @@ namespace grapholon {
 
 			//std::cout << "original shape is now : " << original_points_.size() << std::endl;
 		}
+
+
+
+		void insert_point(GRuint index, PointTangent point_tangent) {
+			if (index > size() - 1) {
+				return;
+			}
+
+			//dubliate the last point
+			push_back(back());
+
+			for (GRuint i(size()-2); i > index; i--) {
+				(*this)[i] = (*this)[i - 1];
+			}
+
+			(*this)[index] = point_tangent;
+		}
+
+		void trim_front(GRuint start_index) {
+			if (start_index > size() - 1) {
+				return;
+			}
+
+			for (GRuint i(0); i < size() - start_index; i++) {
+				(*this)[i] = (*this)[i + start_index];
+			}
+			GRuint size_at_start(size());
+			for (GRuint i(size_at_start - start_index); i < size_at_start; i++) {
+				pop_back();
+			}
+		}
+
 
 		//x should be in [0, 1]
 		GRfloat smoothing_function(GRfloat x) {

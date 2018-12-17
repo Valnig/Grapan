@@ -1827,24 +1827,69 @@ void deform_curve() {
 
 	std::cout << "original curve : " << std::endl << true_curve.to_string() << std::endl;
 
-	CurveDeformer::deform_curve(true_curve, true, curve[0] + Vector3f(0,4,0));
+	GRuint control_point_index = 2;
+
+	//CurveDeformer::deform_curve(true_curve, control_point_index, curve[control_point_index] + Vector3f(0,4,0));
 
 	for (GRuint i(0); i < 10; i++) {
-	//	CurveDeformer::deform_curve(true_curve2, true, curve[0] + Vector3f(0, 4, 0)*((GRfloat)i / 9.f));
+		CurveDeformer::deform_curve(true_curve2, true, curve[control_point_index] + Vector3f(0, 4, 0)*((GRfloat)i / 9.f));
 
 	}
 
 	std::cout << std::endl;
-	std::cout << "deformed curve : " << std::endl << true_curve.to_string() << std::endl;
+	//std::cout << "deformed curve : " << std::endl << true_curve.to_string() << std::endl;
 	std::cout << std::endl;
 	std::cout << "deformed curve2 : " << std::endl << true_curve2.to_string() << std::endl;
 }
 
 
+void joinEdges() {
+	SkeletalGraph graph;
+
+	GRuint window_width(1);
+
+	Vector3f u0 = Vector3f(0, 0, 0);
+	Vector3f u1 = Vector3f(0, 1, 0);
+	Vector3f u2 = Vector3f(0.5f, 1.5f, 0);
+	Vector3f u3 = Vector3f(1, 2, 0);
+	Vector3f u4 = Vector3f(2, 2, 0);
+	Vector3f u5 = Vector3f(2.5f, 1.5f, 0);
+	Vector3f u6 = Vector3f(3, 1, 0);
+	Vector3f u7 = Vector3f(3, 0, 0);
+	Vector3f u8 = Vector3f(1.5f, 2, 0);
+
+	VertexDescriptor v0 = graph.add_vertex({ u0 });
+	VertexDescriptor v3 = graph.add_vertex({ u3 });
+	VertexDescriptor v4 = graph.add_vertex({ u4 });
+	VertexDescriptor v6 = graph.add_vertex({ u6 });
+	VertexDescriptor v7 = graph.add_vertex({ u7 });
+
+
+	DiscreteCurve c0({ u0, u1, u2, u3 });
+	EdgeProperties e0({ *c0.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor edge0 = graph.add_edge(v0, v3, e0).first;
+
+	DiscreteCurve c1({ u3,u8,  u4 });
+	EdgeProperties e1({ *c1.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor edge1 = graph.add_edge(v3, v4, e1).first;
+
+	DiscreteCurve c2({ u4, u5, u6, u7 });
+	EdgeProperties e2({ *c2.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor edge2 = graph.add_edge(v4, v7, e2).first;
+
+
+	std::cout << "graph : " << graph.to_string() << endl;
+
+	graph.join_edges(edge0, edge2, 1.f);
+
+	std::cout << "graph after : " << graph.to_string() << std::endl;
+
+}
+
 
 int main()
 {
 
-	deform_curve();
+	joinEdges();
 }
 

@@ -32,52 +32,83 @@ namespace grapholon {
 			return Vector3f(eigen.x(), eigen.y(), eigen.z());
 		}
 
-		static bool deform_curve(DeformableSplineCurve& in_curve, bool source_control_point, Vector3f target_position) {
+		static bool deform_curve(DeformableSplineCurve& in_curve, GRuint control_point_index, Vector3f target_position) {
 
 
-			if (in_curve.original_points_.size() != in_curve.size()) {
-				in_curve.set_original_shape();
-			}
+
 
 			if (in_curve.size() < 3) {
 				return false;
+			}
+
+			if (control_point_index > in_curve.size() - 1) {
+				return false;
+			}
+
+			if (in_curve.original_points_.size() != in_curve.size()) {
+
+				in_curve.set_original_shape();
 			}
 
 			std::vector<Vector3f> curve = in_curve.original_points_;
 
 			Eigen::MatrixXd V(curve.size(), 3);
 			Eigen::MatrixXd U(V.cols(), V.rows());
-			Eigen::MatrixXi F((size_t)((GRdouble)curve.size()/2.0), 3);
+			Eigen::MatrixXi F((size_t)((GRdouble)curve.size() / 2.0), 3);
 
-			Eigen::VectorXi S, b(2);
-			Eigen::MatrixXd bc(b.size(), V.cols());
 
 			for (GRuint i(0); i < curve.size(); i++) {
 				V.row(i) = to_eigen(curve[i]);
 			}
 
-			for (GRuint i(0); i < F.rows()-1; i++) {
-				F.row(i) = Eigen::Vector3i(i*2, i*2 + 1, i*2 + 2);
+			for (GRuint i(0); i < F.rows() - 1; i++) {
+				F.row(i) = Eigen::Vector3i(i * 2, i * 2 + 1, i * 2 + 2);
 			}
 			F.row(F.rows() - 1) = Eigen::Vector3i(V.rows() - 3, V.rows() - 2, V.rows() - 1);
 
 			U = V;
 
-			b(0) = 0 ;
+
+
+			Eigen::VectorXi S, b;
+
+			if (control_point_index == 0 || control_point_index == curve.size() - 1) {
+				b = Eigen::VectorXi(2);
+			}
+			else {
+				b = Eigen::VectorXi(3);
+				b(2) = control_point_index;
+			}
+
+			b(0) = 0;
 			b(1) = (int)(curve.size() - 1);
+
+			Eigen::MatrixXd bc(b.size(), V.cols());
 
 			Eigen::VectorXd new_position(to_eigen(target_position));
 
-			bc.row(0) = source_control_point ? new_position : V.row(0);
-			bc.row(1) = source_control_point ? V.row(V.rows()-1) : new_position;
+			if (control_point_index == 0) {
+				bc.row(0) = new_position;
+			}
+			else {
+				bc.row(0) = to_eigen(in_curve.front().first);
+			}
+
+			if (control_point_index == (V.rows() - 1)) {
+				bc.row(1) = new_position;
+			}else{
+				bc.row(1) = to_eigen(in_curve.back().first);
+			}
+
+			if (bc.rows() == 3) {
+				bc.row(2) = new_position;
+			}
 
 
-			std::cout << " V : " << V << std::endl;
+			/*std::cout << " V : " << V << std::endl;
 			std::cout << "F : " << F << std::endl;
 			std::cout << " b : " << b << std::endl;
-			std::cout << " bc : " << bc << std::endl;
-
-
+			std::cout << " bc : " << bc << std::endl;*/
 
 
 			igl::ARAPData arap_data;
