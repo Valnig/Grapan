@@ -1886,10 +1886,131 @@ void joinEdges() {
 
 }
 
+void deform_stuf() {
+
+	std::vector<Vector3f> points({ {0,0,0}, {1,0,0 }, {2,0,0},{3,0,0}, {4,0,0 }, {5,0,0} });
+
+	DiscreteCurve* extruded_curve_ = new DiscreteCurve(points);
+	SplineCurve* spline_curve = extruded_curve_->to_spline_curve(DiscreteCurve::CURVE_FITTING);
+
+	DeformableSplineCurve deformable_extruded_curve(*spline_curve);
+
+	std::cout << "deformabel : " << deformable_extruded_curve.to_string() << std::endl;
+
+	//deformable_extruded_curve.pseudo_elastic_deform(false, new_position);
+
+	Vector3f new_position(5, 2, 0);
+
+	CurveDeformer::deform_curve(deformable_extruded_curve, deformable_extruded_curve.size() - 1, new_position);
+
+	std::cout << "deformed : " << deformable_extruded_curve.to_string() << std::endl;
+	*extruded_curve_ = deformable_extruded_curve.to_discrete_curve();
+
+	std::cout << "result : " << extruded_curve_->to_string() << std::endl;
+
+	delete extruded_curve_;
+	delete spline_curve;
+}
+
+void count_ccs() {
+	SkeletalGraph graph;
+
+	GRuint window_width(1);
+
+	Vector3f u0 = Vector3f(0, 0, 0);
+	Vector3f u1 = Vector3f(0, 1, 0);
+	Vector3f u2 = Vector3f(1, 1, 0);
+	Vector3f u3 = Vector3f(1, 0, 0);
+
+	Vector3f u4 = Vector3f(0, 2, 0);
+	Vector3f u5 = Vector3f(1, 2, 0);
+
+	Vector3f u6 = Vector3f(3, 1, 0);
+	
+	Vector3f u7 = Vector3f(2, 2, 0);
+	Vector3f u8 = Vector3f(2, 3, 0);
+	Vector3f u9 = Vector3f(3, 3, 0);
+	Vector3f u10 = Vector3f(3, 2, 0);
+
+	VertexDescriptor v0 = graph.add_vertex({ u0 });
+	VertexDescriptor v1 = graph.add_vertex({ u1 });
+	VertexDescriptor v2 = graph.add_vertex({ u2 });
+	VertexDescriptor v3 = graph.add_vertex({ u3 });
+	VertexDescriptor v4 = graph.add_vertex({ u4 });
+	VertexDescriptor v5 = graph.add_vertex({ u5 });
+	VertexDescriptor v6 = graph.add_vertex({ u6 });
+	VertexDescriptor v7 = graph.add_vertex({ u7 });
+	VertexDescriptor v8 = graph.add_vertex({ u8 });
+	VertexDescriptor v9 = graph.add_vertex({ u9 });
+	VertexDescriptor v10 = graph.add_vertex({ u10 });
+
+
+	DiscreteCurve c0({ u0, u1 });
+	EdgeProperties e0({ *c0.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor edge0 = graph.add_edge(v0, v1, e0).first;
+	DiscreteCurve c1({ u1, u2 });
+	EdgeProperties e1({ *c1.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor edge1 = graph.add_edge(v1, v2, e1).first;
+	DiscreteCurve c2({ u2, u3 });
+	EdgeProperties e2({ *c2.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor edge2 = graph.add_edge(v2, v3, e2).first;
+	DiscreteCurve c3({ u3, u0 });
+	EdgeProperties e3({ *c3.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor edge3 = graph.add_edge(v3, v0, e3).first;
+
+
+	DiscreteCurve c4({ u4, u5 });
+	EdgeProperties e4({ *c4.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor edge4 = graph.add_edge(v4, v5, e4).first;
+
+
+	DiscreteCurve c6({ u7, u8 });
+	EdgeProperties e6({ *c6.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor edge6 = graph.add_edge(v7, v8, e6).first;
+	DiscreteCurve c7({ u7, u10 });
+	EdgeProperties e7({ *c7.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor edge7 = graph.add_edge(v7, v10, e7).first;
+	DiscreteCurve c8({ u9, u8 });
+	EdgeProperties e8({ *c8.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor edge8 = graph.add_edge(v9, v8, e8).first;
+	DiscreteCurve c9({ u9, u10 });
+	EdgeProperties e9({ *c9.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor edge9 = graph.add_edge(v9, v10, e9).first;
+
+	//edge to link components 1 and 2
+	DiscreteCurve c10({ u5, u7 });
+	EdgeProperties e10({ *c10.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	//EdgeDescriptor edge10 = graph.add_edge(v5, v7, e10).first;
+
+	//edge to link components 2 and 3
+	DiscreteCurve c11({ u10, u6 });
+	EdgeProperties e11({ *c11.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	//EdgeDescriptor edge11 = graph.add_edge(v10, v6, e11).first;
+
+
+	//edge to link components 0 and 1
+	DiscreteCurve c12({ u1, u4 });
+	EdgeProperties e12({ *c12.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor edge12 = graph.add_edge(v1, v4, e12).first;
+
+
+	//edge to link components 0 and 3
+	DiscreteCurve c13({ u2, u6 });
+	EdgeProperties e13({ *c13.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
+	EdgeDescriptor edge13 = graph.add_edge(v2, v6, e13).first;
+
+
+
+	std::cout << graph.to_string() << std::endl << std::endl;
+
+	std::cout << "number of components : " << graph.count_connected_components() << std::endl;
+}
 
 int main()
 {
 
-	joinEdges();
+	count_ccs();
+
+	return 0;
 }
 

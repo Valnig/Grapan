@@ -182,6 +182,11 @@ namespace grapholon {
 
 		bool update_vertex_position(VertexDescriptor vertex, Vector3f new_position, bool maintain_shape_around_tip = true) {
 
+			if (vertex == InternalBoostGraph::null_vertex()
+				|| vertex == VertexDescriptor()) {
+				return false;
+			}
+
 			internal_graph_[vertex].position = new_position;
 
 			std::pair<InEdgeIterator, InEdgeIterator> in_edges = boost::in_edges(vertex, internal_graph_);
@@ -490,22 +495,25 @@ namespace grapholon {
 			return internal_graph_[edge];
 		}
 
-		std::pair<EdgeVector, bool> edge_exists(VertexDescriptor from, VertexDescriptor to, bool check_both_directions) {
+		std::pair<std::pair<EdgeVector, bool>, bool> edge_exists(VertexDescriptor from, VertexDescriptor to) {
 			if (from == InternalBoostGraph::null_vertex() || to == InternalBoostGraph::null_vertex()) {
-				return { {},false };
+				return {{{},false }, false};
 			}
 			EdgeVector edges;
+			bool right_direction = false;
 			bool found_edge = false;
+			if (boost::edge(to, from, internal_graph_).second) {
+				edges.push_back(boost::edge(to, from, internal_graph_).first);
+				found_edge = true;
+				right_direction = false;
+			}
 			if (boost::edge(from, to, internal_graph_).second) {
 				edges.push_back(boost::edge(from, to, internal_graph_).first);
 				found_edge = true;
-			}
-			if (check_both_directions && boost::edge(to, from, internal_graph_).second) {
-				edges.push_back(boost::edge(to, from, internal_graph_).first);
-				found_edge = true;
+				right_direction = true;
 			}
 
-			return { edges, found_edge };
+			return { {edges, right_direction}, found_edge };
 		}
 
 		void deform_edge(EdgeDescriptor edge, GRuint point_index, Vector3f target_position) {
@@ -1123,11 +1131,11 @@ shortest_path(source_edge_target, target_edge_target)
 
 
 				if (new_edge_curve_middle.size() > 2) {
-					//new_edge_curve_middle.pseudo_elastic_deform(true, first_junction_point);
-					//new_edge_curve_middle.pseudo_elastic_deform(false, second_junction_point);
+					new_edge_curve_middle.pseudo_elastic_deform(true, first_junction_point);
+					new_edge_curve_middle.pseudo_elastic_deform(false, second_junction_point);
 
-					CurveDeformer::deform_curve(new_edge_curve_middle, 0, first_junction_point);
-					CurveDeformer::deform_curve(new_edge_curve_middle, new_edge_curve_middle.size() - 1, second_junction_point);
+					/*CurveDeformer::deform_curve(new_edge_curve_middle, 0, first_junction_point);
+					CurveDeformer::deform_curve(new_edge_curve_middle, new_edge_curve_middle.size() - 1, second_junction_point);*/
 					new_edge_curve_start.append(new_edge_curve_middle, 1);
 					new_edge_curve_start.pop_back();
 				}
@@ -1154,6 +1162,72 @@ shortest_path(source_edge_target, target_edge_target)
 
 
 		/************************************************************************************* General operations*/
+
+		GRuint count_connected_components(){
+			if (!vertex_count()) {
+				return 0;
+			}
+
+			std::pair<VertexIterator, VertexIterator> vp = vertices();
+			
+			GRuint cc_count(0);
+
+			for (auto vi = vp.first; vi != vp.second; vi++) {
+				if (!get_vertex(*vi).is_in_spanning_tree) {
+					//std::cout << "---------------------" << std::endl;
+					//std::cout << "found unexplored vertex at " << get_vertex(*vi).position.to_compact_string() << std::endl;
+					explore_from_vertex(*vi);
+					cc_count++;
+				}
+			}
+
+			//cleanup
+			for (auto vi = vp.first; vi != vp.second; vi++) {
+				get_vertex(*vi).is_in_spanning_tree = false;
+			}
+
+			return cc_count;
+		}
+
+		void explore_from_vertex(VertexDescriptor start_vertex) {
+
+			GRuint iteration_count(0);
+
+			std::queue<VertexDescriptor> vertex_queue;
+			vertex_queue.push(start_vertex);
+
+			//get_vertex(start_vertex).is_in_spanning_tree = true;
+			//get_vertex(start_vertex).BFS_path_cost = 0;
+
+			while (iteration_count < vertex_count() * 2 && !vertex_queue.empty()) {
+
+				VertexDescriptor current_vertex = vertex_queue.front();
+				vertex_queue.pop();
+
+				if (!get_vertex(current_vertex).is_in_spanning_tree) {
+					get_vertex(current_vertex).is_in_spanning_tree = true;
+
+					//std::cout << " exploring vertex at " << get_vertex(current_vertex).position.to_compact_string() << std::endl;
+
+					//first the in-edges
+					std::pair<InEdgeIterator, InEdgeIterator> in_ep;
+					for (in_ep = boost::in_edges(current_vertex, internal_graph_); in_ep.first != in_ep.second; ++in_ep.first) {
+
+						VertexDescriptor new_source = boost::source(*in_ep.first, internal_graph_);
+						vertex_queue.push(new_source);
+					}
+
+					//and then the out-edges
+					std::pair<OutEdgeIterator, OutEdgeIterator> out_ep;
+					for (out_ep = boost::out_edges(current_vertex, internal_graph_); out_ep.first != out_ep.second; ++out_ep.first) {
+						VertexDescriptor new_target = boost::target(*out_ep.first, internal_graph_);
+						vertex_queue.push(new_target);
+					}
+				}
+				iteration_count++;
+
+			}
+		}
 
 		bool export_to_file(std::string filename, GRfloat scale = 1.0f) {
 			std::ofstream output_file(filename.c_str());
@@ -1768,7 +1842,9 @@ shortest_path(source_edge_target, target_edge_target)
 		//returns the merged edge and the pair of removed edges
 		//NOTE : only works if the vertex is of degree 2 and has one in-edge and one out-edge
 		std::pair<EdgeDescriptor, EdgePair> remove_degree_2_vertex_and_merge_edges(VertexDescriptor vertex_to_remove) {
-
+			if (degree(vertex_to_remove) != 2) {
+				throw std::invalid_argument(" Trying to merge edges of non degree-2 vertex");
+			}
 
 			VertexDescriptor new_source;
 			VertexDescriptor new_target;
@@ -2150,7 +2226,6 @@ shortest_path(source_edge_target, target_edge_target)
 
 		
 		/******************************************************************************************** Print stuff */
-
 
 		std::string to_string() {
 			std::stringstream msg;

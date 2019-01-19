@@ -208,7 +208,7 @@ namespace grapholon {
 
 
 	/** Inherits from std::vector so we can use the same interface on it*/
-	class DiscreteCurve : public Curve, public std::vector<Vector3f> {
+	class DiscreteCurve : public std::vector<Vector3f> {
 	private:
 
 	public:
@@ -226,6 +226,12 @@ namespace grapholon {
 
 		DiscreteCurve() {}
 
+		void append(const DiscreteCurve& other, bool reverse = false) {
+			for (GRuint i(0); i < other.size(); i++) {
+				GRuint index = reverse ? other.size() - 1 - i : i;
+				push_back(other[index]);
+			}
+		}
 
 		GRuint nearest_point_index(GRuint start, GRuint end, Vector3f point) {
 			if (start > end
@@ -445,12 +451,13 @@ namespace grapholon {
 	class DeformableSplineCurve : public SplineCurve {
 	public:
 
-		std::vector<GRfloat> original_lengths_;
-		std::vector<Vector3f> original_points_;
-		std::vector<GRfloat> original_angles_;
+		std::vector<GRfloat> original_lengths_ = std::vector<GRfloat>();
+		std::vector<Vector3f> original_points_ = std::vector<Vector3f>();
+		std::vector<GRfloat> original_angles_ = std::vector<GRfloat>();
 
 	public:
-		DeformableSplineCurve() : SplineCurve() {}
+		DeformableSplineCurve() : SplineCurve() {
+		}
 
 		DeformableSplineCurve(PointTangent start, PointTangent end) : SplineCurve(start, end) {}
 
@@ -466,6 +473,7 @@ namespace grapholon {
 		//this ensures that if a copy is made, the original shape is not valid anymore
 		DeformableSplineCurve(const DeformableSplineCurve& other, bool reverse = false) {
 
+			//todo : clear instead of replace
 			this->clear();
 			if (! other.size()) {
 				original_lengths_ = std::vector<GRfloat>();
@@ -485,6 +493,14 @@ namespace grapholon {
 			original_points_ = std::vector<Vector3f>();
 			original_angles_ = std::vector<GRfloat>();
 		}
+
+		/*DeformableSplineCurve(const DiscreteCurve& curve) {
+			for (auto point : curve) {
+				push_back({ point, Vector3f(0.f) });
+			}
+			update_tangents();
+			set_original_shape();
+		}*/
 
 		DiscreteCurve to_discrete_curve() const {
 			DiscreteCurve discrete_curve;
