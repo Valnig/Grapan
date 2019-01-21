@@ -1667,69 +1667,82 @@ shortest_path(source_edge_target, target_edge_target)
 				++e_next;
 				get_edge(*ei).is_part_of_cycle = false;
 			}
+			GRuint iteration_count2(0);
+			boost::tie(vi, vi_end) = vertices();
+			for (next = vi; vi != vi_end; vi = next) {
+				++next;
+				//std::cout << "checking vertex " << get_vertex(*vi).position.to_compact_string() << std::endl;
+				if (!get_vertex(*vi).is_in_spanning_tree) {
 
-			VertexDescriptor start_vertex = *boost::vertices(internal_graph_).first;
+					//std::cout << "big iteration " << iteration_count2 << std::endl;
+					//std::cout << "start vertex  : " << get_vertex(*vi).position.to_compact_string() << std::endl;
 
-			GRuint iteration_count(0);
+					VertexDescriptor start_vertex = *vi;//*boost::vertices(internal_graph_).first;
 
-			std::queue<VertexDescriptor> vertex_queue;
-			vertex_queue.push(start_vertex);
+					GRuint iteration_count(0);
 
-			get_vertex(start_vertex).is_in_spanning_tree = true;
+					std::queue<VertexDescriptor> vertex_queue;
+					vertex_queue.push(start_vertex);
 
-			//std::set<VertexDescriptor> spanning_tree;
-			//spanning_tree.insert(start_vertex);
+					get_vertex(start_vertex).is_in_spanning_tree = true;
 
-			std::vector<std::vector<VertexDescriptor>> cycles;
+					//std::set<VertexDescriptor> spanning_tree;
+					//spanning_tree.insert(start_vertex);
 
-			while (iteration_count < vertex_count() * 2 && !vertex_queue.empty()) {
+					std::vector<std::vector<VertexDescriptor>> cycles;
 
-				//std::cout << std::endl << " at iteration " << iteration_count << " queue is : " << std::endl;
-				//print(vertex_queue);
+					while (iteration_count < vertex_count() * 2 && !vertex_queue.empty()) {
 
-				VertexDescriptor current_vertex = vertex_queue.front();
-				vertex_queue.pop();
+						//std::cout << std::endl << " at iteration " << iteration_count << " queue is : " << std::endl;
+						//print(vertex_queue);
 
-				//std::cout << "current vertex is " << get_vertex(current_vertex).position.to_string() << std::endl;
+						VertexDescriptor current_vertex = vertex_queue.front();
+						vertex_queue.pop();
 
-				std::pair<InEdgeIterator, InEdgeIterator> in_edges = boost::in_edges(current_vertex, internal_graph_);
-				std::pair<OutEdgeIterator, OutEdgeIterator> out_edges = boost::out_edges(current_vertex, internal_graph_);
-				for (InEdgeIterator e_it(in_edges.first); e_it != in_edges.second; e_it++) {
-					VertexDescriptor source = boost::source(*e_it, internal_graph_);
-					if (get_vertex(current_vertex).cycle_parent != source) {
-						//std::cout << "checking vertex at " << get_vertex(source).position.to_string() << std::endl;
-						if (get_vertex(source).is_in_spanning_tree) {
-						//	std::cout << "   found cycle at " << get_vertex(source).position.to_string()<<std::endl;
-							find_cycle_in_spanning_tree(current_vertex, source);
+						//std::cout << "current vertex is " << get_vertex(current_vertex).position.to_string() << std::endl;
 
+						std::pair<InEdgeIterator, InEdgeIterator> in_edges = boost::in_edges(current_vertex, internal_graph_);
+						std::pair<OutEdgeIterator, OutEdgeIterator> out_edges = boost::out_edges(current_vertex, internal_graph_);
+						for (InEdgeIterator e_it(in_edges.first); e_it != in_edges.second; e_it++) {
+							VertexDescriptor source = boost::source(*e_it, internal_graph_);
+							if (get_vertex(current_vertex).cycle_parent != source) {
+								//std::cout << "checking vertex at " << get_vertex(source).position.to_string() << std::endl;
+								if (get_vertex(source).is_in_spanning_tree) {
+									//	std::cout << "   found cycle at " << get_vertex(source).position.to_string()<<std::endl;
+									find_cycle_in_spanning_tree(current_vertex, source);
+
+								}
+								else {
+									vertex_queue.push(source);
+									get_vertex(source).is_in_spanning_tree = true;
+									get_vertex(source).cycle_parent = current_vertex;
+									//	std::cout << "set parent of " << get_vertex(source).position.to_string() << " as " << get_vertex(current_vertex).position.to_string() << std::endl;
+								}
+							}
 						}
-						else {
-							vertex_queue.push(source);
-							get_vertex(source).is_in_spanning_tree = true;
-							get_vertex(source).cycle_parent = current_vertex;
-						//	std::cout << "set parent of " << get_vertex(source).position.to_string() << " as " << get_vertex(current_vertex).position.to_string() << std::endl;
+						for (OutEdgeIterator e_it(out_edges.first); e_it != out_edges.second; e_it++) {
+							VertexDescriptor target = boost::target(*e_it, internal_graph_);
+							//std::cout << "checking vertex at " << get_vertex(target).position.to_string() << std::endl;
+							if (get_vertex(current_vertex).cycle_parent != target) {
+								if (get_vertex(target).is_in_spanning_tree) {
+									//		std::cout << "   found cycle at " << get_vertex(target).position.to_string() << std::endl;
+									find_cycle_in_spanning_tree(current_vertex, target);
+
+								}
+								else {
+									vertex_queue.push(target);
+									get_vertex(target).is_in_spanning_tree = true;
+									get_vertex(target).cycle_parent = current_vertex;
+									//		std::cout << "set parent of " << get_vertex(target).position.to_string() << " as " << get_vertex(current_vertex).position.to_string() << std::endl;
+								}
+							}
 						}
+
+						iteration_count++;
 					}
-				}
-				for (OutEdgeIterator e_it(out_edges.first); e_it != out_edges.second; e_it++) {
-					VertexDescriptor target = boost::target(*e_it, internal_graph_);
-					//std::cout << "checking vertex at " << get_vertex(target).position.to_string() << std::endl;
-					if (get_vertex(current_vertex).cycle_parent != target) {
-						if (get_vertex(target).is_in_spanning_tree) {
-					//		std::cout << "   found cycle at " << get_vertex(target).position.to_string() << std::endl;
-							find_cycle_in_spanning_tree(current_vertex, target);
 
-						}
-						else {
-							vertex_queue.push(target);
-							get_vertex(target).is_in_spanning_tree = true;
-							get_vertex(target).cycle_parent = current_vertex;
-					//		std::cout << "set parent of " << get_vertex(target).position.to_string() << " as " << get_vertex(current_vertex).position.to_string() << std::endl;
-						}
-					}
+					iteration_count2++;
 				}
-
-				iteration_count++;
 			}
 
 			//cleanup
@@ -1741,6 +1754,8 @@ shortest_path(source_edge_target, target_edge_target)
 				get_vertex(*vi).is_in_spanning_tree = false;
 			}
 		}
+
+
 
 
 		GRuint collapse_edges_shorter_than(GRfloat min_length) {
@@ -2240,7 +2255,7 @@ shortest_path(source_edge_target, target_edge_target)
 			msg << "------ vertices ------" << std::endl;
 			for (vp = boost::vertices(internal_graph_); vp.first != vp.second; ++vp.first) {
 				VertexDescriptor v = *vp.first;
-				msg << iteration_count << " : " << std::endl <<v<<" : "<< internal_graph_[v].position.to_string()<<", radius : "<<internal_graph_[v].radius << std::endl;
+				msg << iteration_count << " : " << std::endl <<v<<" : "<< internal_graph_[v].position.to_string()<<", radius : "<<internal_graph_[v].radius<<", in cycle : "<<internal_graph_[v].is_part_of_cycle << std::endl;
 
 				iteration_count++;
 			}

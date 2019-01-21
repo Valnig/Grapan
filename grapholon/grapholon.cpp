@@ -1991,20 +1991,26 @@ void count_ccs() {
 	//edge to link components 0 and 1
 	DiscreteCurve c12({ u1, u4 });
 	EdgeProperties e12({ *c12.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
-	EdgeDescriptor edge12 = graph.add_edge(v1, v4, e12).first;
+	//EdgeDescriptor edge12 = graph.add_edge(v1, v4, e12).first;
 
 
 	//edge to link components 0 and 3
 	DiscreteCurve c13({ u2, u6 });
 	EdgeProperties e13({ *c13.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
-	EdgeDescriptor edge13 = graph.add_edge(v2, v6, e13).first;
+	//EdgeDescriptor edge13 = graph.add_edge(v2, v6, e13).first;
 
 
 
 	std::cout << graph.to_string() << std::endl << std::endl;
 
 	std::cout << "number of components : " << graph.count_connected_components() << std::endl;
+
+	graph.find_cycles();
+
+	std::cout << "graph : " << graph.to_string() << std::endl;
+
 }
+
 
 int main()
 {
