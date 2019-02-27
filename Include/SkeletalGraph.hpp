@@ -1039,7 +1039,8 @@ shortest_path(source_edge_target, target_edge_target)
 
 		}
 
-		std::pair<EdgePair, EdgeDescriptor> split_path(EdgeDescriptor source_edge, EdgeDescriptor target_edge, GRfloat new_edge_displacement = 1.f) {
+		//Returns the array of new edges and the arrays of removed vertices and edges
+		std::pair<EdgeVector, std::pair<VertexVector, EdgeVector>> split_path(EdgeDescriptor source_edge, EdgeDescriptor target_edge, GRfloat new_edge_displacement = 1.f) {
 
 			if (source_edge == target_edge) {
 				throw std::invalid_argument("Cannot join an edge to itself");
@@ -1077,11 +1078,14 @@ shortest_path(source_edge_target, target_edge_target)
 					}
 				}
 
+				VertexVector shortest_path;
+
 				switch (min_size_index) {
 				default:
 				case(0): {
 					new_edge_curve_start = DeformableSplineCurve(get_edge(source_edge).curve, true);
-					new_edge_curve_middle = convert_to_curve(source_to_source_path);
+					//new_edge_curve_middle = convert_to_curve(source_to_source_path);
+					shortest_path = source_to_source_path;
 					new_edge_curve_end = DeformableSplineCurve(get_edge(target_edge).curve, false);
 					new_source = source_edge_target;
 					new_target = target_edge_target;
@@ -1089,7 +1093,8 @@ shortest_path(source_edge_target, target_edge_target)
 				}
 				case(1): {
 					new_edge_curve_start = DeformableSplineCurve(get_edge(source_edge).curve, true);
-					new_edge_curve_middle = convert_to_curve(source_to_target_path);
+					//new_edge_curve_middle = convert_to_curve(source_to_target_path);
+					shortest_path = source_to_target_path;
 					new_edge_curve_end = DeformableSplineCurve(get_edge(target_edge).curve, true);
 					new_source = source_edge_target;
 					new_target = target_edge_source;
@@ -1097,7 +1102,8 @@ shortest_path(source_edge_target, target_edge_target)
 				}
 				case(2): {
 					new_edge_curve_start = DeformableSplineCurve(get_edge(source_edge).curve, false);
-					new_edge_curve_middle = convert_to_curve(target_to_source_path);
+					//new_edge_curve_middle = convert_to_curve(target_to_source_path);
+					shortest_path = target_to_source_path;
 					new_edge_curve_end = DeformableSplineCurve(get_edge(target_edge).curve, false);
 					new_source = source_edge_source;
 					new_target = target_edge_target;
@@ -1105,13 +1111,16 @@ shortest_path(source_edge_target, target_edge_target)
 				}
 				case(3): {
 					new_edge_curve_start = DeformableSplineCurve(get_edge(source_edge).curve, false);
-					new_edge_curve_middle = convert_to_curve(target_to_target_path);
+					//new_edge_curve_middle = convert_to_curve(target_to_target_path);
+					shortest_path = target_to_target_path;
 					new_edge_curve_end = DeformableSplineCurve(get_edge(target_edge).curve, true);
 					new_source = source_edge_source;
 					new_target = target_edge_source;
 					break;
 				}
 				}
+
+				new_edge_curve_middle = convert_to_curve(shortest_path);
 
 				Vector3f first_junction_point = new_edge_curve_start.back().first;
 
@@ -1177,7 +1186,13 @@ shortest_path(source_edge_target, target_edge_target)
 				remove_edge(source_edge);
 				remove_edge(target_edge);
 
-				return {{source_edge, target_edge }, new_edge };
+				auto degree_2_removal_result = remove_vertices_of_degree_2_and_merge_edges(shortest_path);
+
+				degree_2_removal_result.first.push_back(new_edge);
+				degree_2_removal_result.second.second.push_back(source_edge);
+				degree_2_removal_result.second.second.push_back(target_edge);
+
+				return degree_2_removal_result;
 			}
 			catch (std::invalid_argument e) {
 				throw e;
@@ -1976,7 +1991,7 @@ shortest_path(source_edge_target, target_edge_target)
 							out_curves[0].curve[first_curve_size - 1 - i].first,
 							out_curves[0].curve[first_curve_size - 1 - i].second * (-1.f)
 						)
-					);
+);
 				}
 
 				EdgeProperties new_prop;
@@ -2006,7 +2021,7 @@ shortest_path(source_edge_target, target_edge_target)
 
 			}
 			else {
-				throw std::runtime_error("Could not create new edge to replace vertex of degree 2");
+			throw std::runtime_error("Could not create new edge to replace vertex of degree 2");
 			}
 
 			if (new_source != VertexDescriptor() && new_target != VertexDescriptor()) {
@@ -2061,7 +2076,7 @@ shortest_path(source_edge_target, target_edge_target)
 			//std::cout << "edge count : " << edge_count() << std::endl;
 			//std::cout << " new edge length : " << new_curve.size() << std::endl;
 			if (new_edge.second && removed_edges.size() == 2) {
-				return std::pair<EdgeDescriptor, EdgePair> (new_edge.first, EdgePair(removed_edges[0], removed_edges[1]));
+				return std::pair<EdgeDescriptor, EdgePair>(new_edge.first, EdgePair(removed_edges[0], removed_edges[1]));
 			}
 			else {
 				throw std::invalid_argument("Could not create new edge to replace vertex of degree 2");
@@ -2070,8 +2085,67 @@ shortest_path(source_edge_target, target_edge_target)
 #endif
 		}
 
+		//returns the array of added edges and the arrays of removed vertices and edges
+		std::pair< EdgeVector, std::pair<VertexVector, EdgeVector>> remove_vertices_of_degree_2_and_merge_edges(VertexVector vertices_to_check) {
+			VertexVector removed_vertices;
+			EdgeVector removed_edges;
+			EdgeVector added_edges;
+			std::vector<bool> added_edge_is_still_valid;
 
+			for (auto vertex_to_check : vertices_to_check) {
+				if (degree(vertex_to_check) == 2) {
+					auto result = remove_degree_2_vertex_and_merge_edges(vertex_to_check);
+					
+					bool first_edge_already_added(false);
+					bool second_edge_already_added(false);
 
+					for (GRuint i(0); i < added_edges.size(); i++) {
+						if (added_edges[i] == result.second.first) {
+							added_edge_is_still_valid[i] = false;
+							first_edge_already_added = true;
+						}
+						if (added_edges[i] == result.second.second) {
+							added_edge_is_still_valid[i] = false;
+							second_edge_already_added = true;
+						}
+					}
+					if (!first_edge_already_added) {
+						removed_edges.push_back(result.second.first);
+					}
+
+					if (!second_edge_already_added) {
+						removed_edges.push_back(result.second.second);
+					}
+
+					removed_vertices.push_back(vertex_to_check);
+					added_edges.push_back(result.first); 
+					added_edge_is_still_valid.push_back(true);
+				}
+
+			}
+
+			EdgeVector truly_added_edges;
+			for (GRuint i(0); i < added_edges.size(); i++) {
+				if (added_edge_is_still_valid[i]) {
+					truly_added_edges.push_back(added_edges[i]);
+				}
+			}
+
+			/*
+			for (auto vertex : removed_vertices) {
+				std::cout << "removed vertices : " << vertex << std::endl;
+			}
+			for (auto edge : removed_edges) {
+				std::cout << " removed edge : " << edge.m_source << " -> " << edge.m_target << std::endl;
+			}
+			for (auto edge : truly_added_edges) {
+				std::cout << " added edge : " << edge.m_source << " -> " << edge.m_target << std::endl;
+			}*/
+
+			return {truly_added_edges, {removed_vertices, removed_edges}};
+		}
+
+#if 0
 		/** NOTE : this will crash for chained degree-2 vertices !*/
 		void remove_vertices_of_degree_2_and_merge_edges() {
 
@@ -2232,6 +2306,7 @@ shortest_path(source_edge_target, target_edge_target)
 				add_edge(new_sources[i], new_targets[i], new_props[i]);
 			}
 		}
+#endif
 
 
 

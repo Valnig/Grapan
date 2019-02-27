@@ -1070,36 +1070,6 @@ void RemoveVerticesWithDegree() {
 }
 
 
-void mergeEdgesWhereDegree2() {
-	SkeletalGraph graph;
-
-	GRuint window_width(1);
-
-	Vector3f u0 = Vector3f(0, 0, 0);
-	Vector3f u1 = Vector3f(1, 1, 0);
-	Vector3f u2 = Vector3f(2, 1, 0);
-	Vector3f u3 = Vector3f(3, 1, 0);
-	Vector3f u4 = Vector3f(4, 0, 0);
-
-
-	VertexDescriptor v0 = graph.add_vertex({ u0 });
-	VertexDescriptor v2 = graph.add_vertex({ u2 });
-	VertexDescriptor v4 = graph.add_vertex({ u4 });
-
-	DiscreteCurve c0({ u2, u1, u0 });
-	EdgeProperties e0({ *c0.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
-	EdgeDescriptor to_collapse0 = graph.add_edge(v2, v0, e0).first;
-
-	DiscreteCurve c1({ u2, u3, u4 });
-	EdgeProperties e1({ *c1.to_spline_curve(DiscreteCurve::FULL_CURVE, &window_width) });
-	EdgeDescriptor to_collapse1 = graph.add_edge(v2, v4, e1).first;
-
-	std::cout << "graph at first : " << graph.to_string() << endl;
-
-	graph.remove_vertices_of_degree_2_and_merge_edges();
-
-	std::cout << "graph after removing vertices of degree 2 : " << graph.to_string() << endl;
-}
 
 
 void splitEdge() {
@@ -1804,7 +1774,7 @@ void linkEdges() {
 
 	std::cout << "graph : " << graph.to_string() << endl;
 
-	graph.join_edges(edge0, edge5);
+	graph.split_path(edge0, edge5);
 
 	std::cout << "graph after : " << graph.to_string()<<std::endl;
 
@@ -1880,7 +1850,7 @@ void joinEdges() {
 
 	std::cout << "graph : " << graph.to_string() << endl;
 
-	graph.join_edges(edge0, edge2, 1.f);
+	graph.split_path(edge0, edge2, 1.f);
 
 	std::cout << "graph after : " << graph.to_string() << std::endl;
 
@@ -2033,10 +2003,41 @@ void deform_edge_stuff() {
 	std::cout << graph.to_string() << std::endl;
 }
 
+void remove_degree_2_vertices_stuff() {
+
+	SkeletalGraph graph;
+
+	VertexDescriptor v1 = graph.add_vertex({ { 0,0,0 } });
+	VertexDescriptor v2 = graph.add_vertex({ { 1,0,0 } });
+	VertexDescriptor v3 = graph.add_vertex({ { 2,0,0 } });
+	VertexDescriptor v4 = graph.add_vertex({ { 3,0,0 } });
+	VertexDescriptor v5 = graph.add_vertex({ { 4,0,0 } });
+
+	VertexDescriptor v6 = graph.add_vertex({ { 0,1,0 } });
+	VertexDescriptor v7 = graph.add_vertex({ { 4,1,0 } });
+	VertexDescriptor v8 = graph.add_vertex({ { 4,-1,0 } });
+
+	EdgeDescriptor e1 = graph.add_edge(v1, v2).first;
+	EdgeDescriptor e2 = graph.add_edge(v2, v3).first;
+	EdgeDescriptor e3 = graph.add_edge(v3, v4).first;
+	EdgeDescriptor e4 = graph.add_edge(v4, v5).first;
+
+	EdgeDescriptor e5 = graph.add_edge(v1, v6).first;
+	EdgeDescriptor e6 = graph.add_edge(v4, v7).first;
+	EdgeDescriptor e7 = graph.add_edge(v4, v8).first;
+
+	std::cout << "graph : " << graph.to_string() << std::endl;
+
+	graph.split_path(e5, e6, 1.f);
+
+	std::cout << "graph : " << graph.to_string()<<std::endl;
+
+}
+
 int main()
 {
 
-	deform_edge_stuff();
+	remove_degree_2_vertices_stuff();
 
 	return 0;
 }
