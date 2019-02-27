@@ -2114,6 +2114,21 @@ namespace grapholon {
 			return skeleton;
 		}
 
+		void generate_single_edge_skeleton() {
+			memset(voxels_, 0, nb_voxels_ * sizeof(SkeletonVoxel));
+
+			//horizontal branch
+			GRuint start_x(width_ / 2), start_y(height_ / 4), start_z(slice_ / 2);
+			GRuint x = start_x;
+			GRuint y = start_y;
+			GRuint z = start_z;
+
+			for (GRuint i(0); i < MIN(20,width_/2); i++) {
+				set_voxel(x, y++, z);
+			}
+
+		}
+
 
 		void generate_sinusoidal_skeleton() {
 			memset(voxels_, 0, nb_voxels_ * sizeof(SkeletonVoxel));

@@ -35,9 +35,7 @@ namespace grapholon {
 		static bool deform_curve(DeformableSplineCurve& in_curve, GRuint control_point_index, Vector3f target_position) {
 
 
-
-
-			if (in_curve.size() < 3) {
+			if (in_curve.size() < 4) {
 				return false;
 			}
 
@@ -49,6 +47,7 @@ namespace grapholon {
 
 				in_curve.set_original_shape();
 			}
+
 
 			std::vector<Vector3f> curve = in_curve.original_points_;
 

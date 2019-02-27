@@ -2011,11 +2011,32 @@ void count_ccs() {
 
 }
 
+void deform_edge_stuff() {
+	DeformableSplineCurve curve;
+	curve.clear();
+
+	curve.push_back({ {0,0,0}, {1,0,0} });
+	curve.push_back({ {1,0,0}, {1,0,0} });
+	curve.push_back({ {2,0,0}, {1,0,0} });
+	curve.push_back({ {3,0,0}, {1,0,0} });
+	curve.push_back({ {4,0,0}, {1,0,0} });
+
+	SkeletalGraph graph;
+
+	VertexDescriptor v1 = graph.add_vertex({ 0,0,0 });
+	VertexDescriptor v2 = graph.add_vertex({ 4,0,0 });
+
+	EdgeDescriptor edge = graph.add_edge(v1, v2, { curve }).first;
+
+	graph.deform_edge(edge, 2, { 2,4,0 });
+
+	std::cout << graph.to_string() << std::endl;
+}
 
 int main()
 {
 
-	count_ccs();
+	deform_edge_stuff();
 
 	return 0;
 }

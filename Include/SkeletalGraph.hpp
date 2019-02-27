@@ -152,16 +152,18 @@ namespace grapholon {
 		EdgeVector clear_vertex(VertexDescriptor vertex) {
 			EdgeVector removed_edges;
 
-			std::pair<InEdgeIterator, InEdgeIterator> in_edges = boost::in_edges(vertex, internal_graph_);
-			std::pair<OutEdgeIterator, OutEdgeIterator> out_edges = boost::out_edges(vertex, internal_graph_);
+			if (degree(vertex)) {
+				std::pair<InEdgeIterator, InEdgeIterator> in_edges = boost::in_edges(vertex, internal_graph_);
+				std::pair<OutEdgeIterator, OutEdgeIterator> out_edges = boost::out_edges(vertex, internal_graph_);
 
-			for (InEdgeIterator e_it(in_edges.first); e_it != in_edges.second; e_it++) {
-				edge_spline_count_ -= (GRuint)internal_graph_[*e_it].curve.size();
-				removed_edges.push_back(*e_it);
-			}
-			for (OutEdgeIterator e_it(out_edges.first); e_it != out_edges.second; e_it++) {
-				edge_spline_count_ -= (GRuint)internal_graph_[*e_it].curve.size();
-				removed_edges.push_back(*e_it);
+				for (InEdgeIterator e_it(in_edges.first); e_it != in_edges.second; e_it++) {
+					edge_spline_count_ -= (GRuint)internal_graph_[*e_it].curve.size();
+					removed_edges.push_back(*e_it);
+				}
+				for (OutEdgeIterator e_it(out_edges.first); e_it != out_edges.second; e_it++) {
+					edge_spline_count_ -= (GRuint)internal_graph_[*e_it].curve.size();
+					removed_edges.push_back(*e_it);
+				}
 			}
 
 			boost::clear_vertex(vertex, internal_graph_);
@@ -403,10 +405,7 @@ namespace grapholon {
 		}
 
 
-		EdgeDescriptor join_vertices(VertexDescriptor source, VertexDescriptor target) {
-			//TODO similar to join_edges but without the start and end edges and without the deformation
 
-		}
 
 		/****************************************************************************************************************************** Edge stuff*/
 
@@ -517,6 +516,33 @@ namespace grapholon {
 		}
 
 		void deform_edge(EdgeDescriptor edge, GRuint point_index, Vector3f target_position) {
+			//pseudo-elastic deform version
+			/*DeformableSplineCurve curve = internal_graph_[edge].curve;
+			if (point_index > curve.size() - 2) {
+				return;
+			}
+
+			DeformableSplineCurve first_half;
+			DeformableSplineCurve second_half;
+			first_half.clear();
+			second_half.clear();
+
+			for (GRuint i(0); i <= point_index; i++) {
+				first_half.push_back(curve[i]);
+			}
+			for (GRuint i(point_index); i < curve.size(); i++) {
+				second_half.push_back(curve[i]);
+			}
+
+			first_half.pseudo_elastic_deform(false, target_position);
+			second_half.pseudo_elastic_deform(true, target_position);
+
+			first_half.append(second_half, 1);
+
+			internal_graph_[edge].curve = first_half;*/
+
+
+
 			CurveDeformer::deform_curve(internal_graph_[edge].curve, point_index, target_position);
 		}
 
@@ -1013,7 +1039,7 @@ shortest_path(source_edge_target, target_edge_target)
 
 		}
 
-		std::pair<EdgePair, EdgeDescriptor> join_edges(EdgeDescriptor source_edge, EdgeDescriptor target_edge, GRfloat new_edge_displacement = 1.f) {
+		std::pair<EdgePair, EdgeDescriptor> split_path(EdgeDescriptor source_edge, EdgeDescriptor target_edge, GRfloat new_edge_displacement = 1.f) {
 
 			if (source_edge == target_edge) {
 				throw std::invalid_argument("Cannot join an edge to itself");
@@ -1110,7 +1136,7 @@ shortest_path(source_edge_target, target_edge_target)
 				Vector3f second_junction_point = new_edge_curve_end.front().first;
 
 				GRfloat distance_to_front = 0.f;
-				Vector3f original_front = new_edge_curve_end.front().first;
+				Vector3f original_front = second_junction_point;
 				GRuint index(0);
 
 				while (index < new_edge_curve_end.size() - 2
@@ -1855,7 +1881,6 @@ shortest_path(source_edge_target, target_edge_target)
 		}
 
 		//returns the merged edge and the pair of removed edges
-		//NOTE : only works if the vertex is of degree 2 and has one in-edge and one out-edge
 		std::pair<EdgeDescriptor, EdgePair> remove_degree_2_vertex_and_merge_edges(VertexDescriptor vertex_to_remove) {
 			if (degree(vertex_to_remove) != 2) {
 				throw std::invalid_argument(" Trying to merge edges of non degree-2 vertex");
