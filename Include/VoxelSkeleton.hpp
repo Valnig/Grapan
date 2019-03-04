@@ -54,52 +54,51 @@ namespace grapholon {
 
 #define IF_DEBUG_DO(command) {if(debug_log)command; }
 
-	enum VoxelState {
-		visible = 0,
-		fixed = 1,
-		hidden = 2
-	};
 
-	struct Voxel {
-		int value;
-		int threshold;
-		VoxelState state;
-	};
 
+
+
+	/** The various possible types of cliques*/
 	enum CriticalClique{ NON_CRITICAL, CLIQUE3, CLIQUE2, CLIQUE1, CLIQUE0};
+
+	 /** The possible nature of voxels, based on their neighborhood*/
 	enum TopologicalClass{UNCLASSIFIED, INTERIOR_POINT, ISOLATED_POINT, BORDER_POINT, CURVES_POINT, CURVE_JUNCTION, SURFACE_CURVES_JUNCTION, SURFACE_JUNCTION, SURFACES_CURVE_JUNCTION};
 	
-	struct SkeletonVoxel {
+	/** A simple structure to hold elementary information about each voxel. 
+	Note that their position is not explicitly stored.
+	The information is implicitly contained by their position in an array.
+	
+	IMPORTANT NOTE : This class is meant to be used as basis for Thinning or Skeletonization algorithms. 
+	Specifically, the method implemented here, called the "Asymmetric Thinning Scheme" is the one presented in the work of Couprie et al.
+	Please refer to the original publication for more information about all concepts involved in this method https://doi.org/10.1016/j.patrec.2015.03.014 */
+	struct Voxel {
 		bool value_ = false;
 		bool selected_ = false;
 		TopologicalClass topological_class_ = UNCLASSIFIED;
 
-		SkeletonVoxel(bool value, bool selected, TopologicalClass top_class) 
+		Voxel(bool value, bool selected, TopologicalClass top_class) 
 			: value_(value), selected_(selected), topological_class_(top_class) {}
 	};
 
 	typedef std::vector<GRuint> IndexVector;
 
-	//todo
-	class zero_neighbour_iterator {
 
-	};
-
-
-	class VoxelSkeleton {
+	/** Represents a complex of voxels set in a 3D discrete grid as an array of Voxels.
+	The index of the voxel within that array corresponds to its 3D location.*/
+	class VoxelComplex {
 
 	private:
-		const GRuint width_;
-		const GRuint height_;
-		const GRuint slice_;
+		const GRuint width_;///< X-dimension
+		const GRuint height_;///< Y-dimension
+		const GRuint slice_;///< Z-dimension
 
-		const GRuint nb_voxels_;
+		const GRuint nb_voxels_;///< Should be width_ * height_ * slice_
 
-		SkeletonVoxel* voxels_;
+		Voxel* voxels_;///< the array containing all the voxels. It should be an array of nb_voxels_ * sizeof(Voxel) bytes.
 
-		IndexVector true_voxels_;
+		IndexVector true_voxels_;///< A vector containing the indices (within voxels_) of the voxels that are set or occupied. This allows for fast query of the actual complex
 
-		IndexVector anchor_voxels_;///< Voxels that cannot be removed during thinning
+		IndexVector anchor_voxels_;///< Voxels that cannot be removed during thinning. CURRENTLY NOT USED
 
 
 	public:
@@ -110,9 +109,9 @@ namespace grapholon {
 		/*********************************************************************************** TYPEDEFS **/
 		/***********************************************************************************************/
 
-		typedef bool(VoxelSkeleton::*AdjencyFunction)(GRuint, GRuint);
-		typedef GRuint(VoxelSkeleton::*SelectionFunction)(const std::vector<GRuint>&);
-		typedef bool(VoxelSkeleton::*SkelFunction)(GRuint);
+		typedef bool(VoxelComplex::*AdjencyFunction)(GRuint, GRuint);
+		typedef GRuint(VoxelComplex::*SelectionFunction)(const std::vector<GRuint>&);
+		typedef bool(VoxelComplex::*SkelFunction)(GRuint);
 
 
 
@@ -120,13 +119,16 @@ namespace grapholon {
 		/******************************************************************************* CONSTRUCTORS **/
 		/***********************************************************************************************/
 
-
-		VoxelSkeleton(GRuint width, GRuint height, GRuint slice) : width_(width + 2), height_(height + 2), slice_(slice + 2), nb_voxels_(width_*height_*slice_) {
-			voxels_ = (SkeletonVoxel*)calloc(nb_voxels_, sizeof(SkeletonVoxel));
-			memset(voxels_, 0, nb_voxels_ *sizeof(SkeletonVoxel));
+		/** Sole constructor based on the complex' dimensions.
+		We add +2 to each dimension to "pad" the space in each direction.
+		This way, we can access the neighborhood of any voxel (i.e. even on the border, e.g. with x=0) without having to be careful of not reaching outside the voxel space.
+		Voxel (0,0,0) = 0 is seen internally as voxel (1,1,1)*/
+		VoxelComplex(GRuint width, GRuint height, GRuint slice) : width_(width + 2), height_(height + 2), slice_(slice + 2), nb_voxels_(width_*height_*slice_) {
+			voxels_ = (Voxel*)calloc(nb_voxels_, sizeof(Voxel));
+			memset(voxels_, 0, nb_voxels_ *sizeof(Voxel));
 		}
 
-		~VoxelSkeleton(){
+		~VoxelComplex(){
 			free(voxels_);
 		}
 
@@ -153,7 +155,8 @@ namespace grapholon {
 		}
 
 
-		bool same_dimensions_as(VoxelSkeleton* other_voxel_set)const {
+		/** Used when copying a complex to another*/
+		bool same_dimensions_as(VoxelComplex* other_voxel_set)const {
 			return width() == other_voxel_set->width() 
 				&& height() == other_voxel_set->height() 
 				&& slice() == other_voxel_set->slice();
@@ -163,16 +166,18 @@ namespace grapholon {
 			return (GRuint)true_voxels_.size();
 		}
 
-		SkeletonVoxel voxel(GRuint id) const {
+		/** ID-based accessor*/
+		Voxel voxel(GRuint id) const {
 			if (id >= (GRint)nb_voxels_) {
-				return SkeletonVoxel(false, false, UNCLASSIFIED);
+				return Voxel(false, false, UNCLASSIFIED);
 			}
 			else {
 				return voxels_[id];
 			}
 		}
 
-		SkeletonVoxel voxel(GRint x, GRint y, GRint z) const {
+		/** Coordinates-based accessor*/
+		Voxel voxel(GRint x, GRint y, GRint z) const {
 			return voxel(voxel_coordinates_to_id(x, y, z));
 		}
 
@@ -182,6 +187,7 @@ namespace grapholon {
 		}
 
 
+		/** Adding is in O(1), removing in O(n) where n is the number of TRUE voxels*/
 		bool set_voxel(GRuint id, bool value = true) {
 			if (
 				id >= nb_voxels_) {
@@ -205,7 +211,6 @@ namespace grapholon {
 			return true;
 		}
 
-		/** set the whole memory to zero and empty the list of true voxels*/
 		bool set_voxel(GRuint x, GRuint y, GRuint z, bool value = true) {
 			return set_voxel(voxel_coordinates_to_id(x, y, z), value);
 		}
@@ -230,8 +235,9 @@ namespace grapholon {
 		}
 
 
+		/** sets the whole memory to zero and empties the list of true voxels*/
 		void remove_all_voxels() {
-			memset(voxels_, 0, nb_voxels_ * sizeof(SkeletonVoxel));
+			memset(voxels_, 0, nb_voxels_ * sizeof(Voxel));
 			true_voxels_ = std::vector<GRuint>();
 			anchor_voxels_ = std::vector<GRuint>();
 		}
@@ -240,7 +246,7 @@ namespace grapholon {
 		/***************************************************************** COORDINATES-ID CONVERSIONS **/
 		/***********************************************************************************************/
 
-		//id 0 is actually voxel (-1, -1, -1)
+		//coordinates to ID conversion. each discrete 3D position is uniquely encoded as an index (positive number)
 		GRuint voxel_coordinates_to_id(GRuint x, GRuint y, GRuint z) const {
 			return x+1 + (y+1 + (z+1) * height_) * width_;
 		}
@@ -351,7 +357,7 @@ namespace grapholon {
 			return Vector3f(x1, y1, z1).distance(Vector3f(x2, y2, z2));
 		}
 
-
+		/** Computes the minimum distance from a voxel before finding an empty voxel.*/
 		GRfloat min_voxel_radius(GRuint voxel_id) const {
 
 			std::vector<bool> checked_voxel(voxel_count());
@@ -385,7 +391,7 @@ namespace grapholon {
 
 				for (auto other_voxel_id : voxels_to_check) {
 
-					if (!voxel(other_voxel_id).value_) {
+					if (!voxel(other_voxel_id).value_ && voxel_id != other_voxel_id) {
 						GRfloat distance(voxel_distance(voxel_id, other_voxel_id));
 				//		std::cout << "found unset voxel  at distance : " << distance << std::endl;
 
@@ -430,7 +436,7 @@ namespace grapholon {
 		/********************************************************************************** ADJACENCY **/
 
 
-		/**This checks if the two ids correspond to 0-adjacent voxels
+		/**This checks if the two ids correspond to 0-adjacent voxels (i.e. have at least one corner in common)
 		NOTE : if id == id2 it will return false so this is not really 0-adjency*/
 		bool are_0adjacent(GRuint id, GRuint id2) {
 			if (id >= nb_voxels_ || id2 >= nb_voxels_) {
@@ -447,6 +453,8 @@ namespace grapholon {
 				|| are_1adjacent(id, id2);
 		}
 
+		/**This checks if the two ids correspond to 1-adjacent voxels (i.e. have at least one edge in common)
+		NOTE : if id == id2 it will return false so this is not really 1-adjency*/
 		bool are_1adjacent(GRuint id, GRuint id2) {
 			if (id >= nb_voxels_ || id2 >= nb_voxels_) {
 				return false;
@@ -467,6 +475,8 @@ namespace grapholon {
 		}
 
 
+		/**This checks if the two ids correspond to 0-adjacent voxels (i.e. have one face in common)
+		NOTE : if id == id2 it will return false so this is not really 2-adjency*/
 		bool are_2adjacent(GRuint id, GRuint id2) {
 			if (id >= nb_voxels_ || id2 >= nb_voxels_) {
 				return false;
@@ -478,6 +488,7 @@ namespace grapholon {
 				|| id + width_ * height_ == id2
 				|| id - width_ * height_ == id2;
 		}
+
 
 		bool are_0adjacent(GRuint x, GRuint y, GRuint z, GRuint x2, GRuint y2, GRuint z2) {
 			return are_0adjacent(voxel_coordinates_to_id(x, y, z), voxel_coordinates_to_id(x2, y2, z2));
@@ -576,20 +587,7 @@ namespace grapholon {
 					}
 				}
 				
-				/*std::cout << "visited : ";
-				for (GRuint i(0); i < visited.size(); i++) {
-				std::cout << " " << visited[i];
-				}
-				std::cout << std::endl;
-				std::cout << "explored : ";
-				for (GRuint i(0); i < explored.size(); i++) {
-				std::cout << " " << explored[i];
-				}
-				std::cout << std::endl;
-				*/
 			}
-
-			//std::cout << " nb voxels : " << voxel_ids.size() << ", iterations : " << iteration_count << std::endl;
 
 			return result;
 		}
@@ -602,15 +600,15 @@ namespace grapholon {
 		bool is_k_connected(std::vector<GRuint> voxel_ids, GRuint k, GRuint n = 0) {
 			switch (k) {
 			case 0: {
-				return is_k_connected(voxel_ids, &VoxelSkeleton::are_0adjacent, n);
+				return is_k_connected(voxel_ids, &VoxelComplex::are_0adjacent, n);
 				break;
 			}
 			case 1: {
-				return is_k_connected(voxel_ids, &VoxelSkeleton::are_1adjacent, n);
+				return is_k_connected(voxel_ids, &VoxelComplex::are_1adjacent, n);
 				break;
 			}
 			case 2: {
-				return is_k_connected(voxel_ids, &VoxelSkeleton::are_2adjacent, n);
+				return is_k_connected(voxel_ids, &VoxelComplex::are_2adjacent, n);
 				break;
 			}
 			default: {
@@ -624,6 +622,7 @@ namespace grapholon {
 		/******************************************************************************* REDUCIBILITY **/
 
 
+		/** See the definition of reducibility in litterature*/
 		bool is_reducible(std::vector<GRuint> voxels_id) {
 			std::cout << "checking if voxel set is reducible : " << std::endl;
 			for (GRuint i(0); i < voxels_id.size(); i++) {
@@ -679,6 +678,7 @@ namespace grapholon {
 		/********************************************************************************* SIMPLICITY **/
 
 
+		/** See the definition of simple voxels in litterature*/
 		bool is_simple(GRuint x, GRuint y, GRuint z) {
 
 			bool debug_log = false;
@@ -720,7 +720,8 @@ namespace grapholon {
 
 
 
-		/**K_2 mask matchings. 
+		/**K_2 mask matchings. NOTE : The mask-matching techniques are meant to speed-up the thinning of voxel complices.
+		However, it is not used in the current implementation
 		\param axis 0:X-axis, 1:Y-axis, 2:Z-axis */
 		bool clique_matches_K2_mask(const GRuint x, const GRuint y, const GRuint z, const AXIS axis) {
 
@@ -743,7 +744,6 @@ namespace grapholon {
 			//first create the list of voxels in {X0,...,X7, Y0,...,Y7}AND X (at most 16 voxels)
 			std::vector<GRuint> mask_neighborhood_intersection;
 
-			//std::cout << "checking clique (" << x << ", " << y << ", " << z<<") - ("<<x2<<", "<<y2<<", "<<z2<<") on axis "<<axis<< std::endl;
 
 			for (GRuint i(0); i < 3; i++) {
 				for (GRuint j(0); j < 3; j++) {
@@ -810,10 +810,6 @@ namespace grapholon {
 			//std::cout << "neighborhood is 0-connected" << std::endl;
 
 			//finally check if for each i in {0,2,4,6}, Xi or Yi is in X
-			/*bool i_th_subset_is_in_neighborhood[4] = { false };
-			for (GRuint i(0); i < mask_neighborhood_intersection.size(); i++) {
-			if()
-			}*/
 
 			//std::cout << "checking last condition" << std::endl;
 
@@ -839,7 +835,7 @@ namespace grapholon {
 		/** here the axis is the direction of the "normal" of the ABCD plane. 
 		So the K1 mask is on the X axis in the reference literature
 		
-		IMPORTANT NOTE : this method assumes that all coordinates correspond tovoxels correctly located. 
+		IMPORTANT NOTE : this method assumes that all coordinates correspond to voxels correctly located. 
 		e.g. if axis = X_AXIS, and A = (0,0,0), then 
 		B = (0,1,0), C = (0,0,1) and D = (0,1,1)
 
@@ -1260,7 +1256,7 @@ namespace grapholon {
 			for (GRuint mask_value(first_valid_mask); mask_value < K2Y_CONFIGURATIONS; mask_value++) {
 
 				//set up neighborhood skeleton
-				VoxelSkeleton skeleton(10, 10, 10);
+				VoxelComplex skeleton(10, 10, 10);
 
 				//create bit mask
 				std::bitset<18> bit_mask(mask_value);
@@ -1308,7 +1304,7 @@ namespace grapholon {
 			return !is_k_connected(neighborhood2, 0u);*/
 
 			//first create a
-			VoxelSkeleton neighborhood(3, 3, 3);
+			VoxelComplex neighborhood(3, 3, 3);
 			GRuint neighbor_id;
 			for (GRuint i(0); i < 3; i++) {
 				for (GRuint j(0); j < 3; j++) {
@@ -1323,7 +1319,7 @@ namespace grapholon {
 			neighborhood.set_voxel(1, 1, 1, false);
 
 			//then thin it
-			neighborhood.AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::AlwaysFalseSkel);
+			neighborhood.AsymmetricThinning(&VoxelComplex::SimpleSelection, &VoxelComplex::AlwaysFalseSkel);
 			
 			//and return whether the thinning has two component or not
 			return neighborhood.true_voxels().size() == 2;
@@ -1370,6 +1366,7 @@ namespace grapholon {
 			return false;
 		}
 
+		/** DEPRECATED -- Used for testing*/
 		bool ManualTipSkel(GRuint voxel_id) {
 			return voxel_id == voxel_coordinates_to_id(1,0,0) || voxel_id == voxel_coordinates_to_id(4, 3, 2);
 		}
@@ -1378,13 +1375,14 @@ namespace grapholon {
 			return std::find(anchor_voxels_.begin(), anchor_voxels_.end(), voxel_id) != anchor_voxels_.end();
 		}
 
+		/** Standard Skel function as described by Couprie et al.*/
 		bool OneIsthmusSkel(GRuint voxel_id) {
 			return is_1_isthmus(voxel_id);
 		}
 
 		/***************************************************************************** THINNING ALGOS **/
 
-
+		/** Skeletonizes the voxel complex */
 		void AsymmetricThinning(SelectionFunction Select, SkelFunction Skel) {
 		
 
@@ -1508,13 +1506,14 @@ namespace grapholon {
 		/******************************************************************* SKELETON-WISE OPERATIONS **/
 		/***********************************************************************************************/
 
-		VoxelSkeleton* subdivide(GRuint subdivision_level) {
+		/** This subdivision creates a copy of this VoxelComplex and then subdivides each voxel in either 8 (subdivision_level = 2) or 27 (sub level = 3)*/
+		VoxelComplex* subdivide(GRuint subdivision_level) {
 			if (subdivision_level > 3) {
 				std::cerr << " subdividing in more that 3 is too risky performance-wise. returning nullptr" << std::endl;
 				return nullptr;
 			}
 
-			VoxelSkeleton* subdivided_skeleton = new VoxelSkeleton(
+			VoxelComplex* subdivided_skeleton = new VoxelComplex(
 				width_*subdivision_level,
 				height_*subdivision_level,
 				slice_*subdivision_level);
@@ -1538,8 +1537,9 @@ namespace grapholon {
 			return subdivided_skeleton;
 		}
 
-		VoxelSkeleton* subdivide_smooth() {
-			VoxelSkeleton* subdivided_skeleton = this->subdivide(2);
+		/** The smooth subdivision does the same as the subdivision except it adds some voxel in 'creases' to make the result smoother*/
+		VoxelComplex* subdivide_smooth() {
+			VoxelComplex* subdivided_skeleton = this->subdivide(2);
 
 			std::vector<GRuint> voxels_to_add;
 
@@ -1586,7 +1586,7 @@ namespace grapholon {
 
 		/* Smoothind of the 0-connected max_distance neighborhood.
 		0.5 threshold means that half of the neighborhood must be set. i.e. each voxel will take the value of the majority over its neighbors**/
-		VoxelSkeleton* smooth_moving_average(GRuint max_distance, GRfloat threshold = 0.5f) {
+		VoxelComplex* smooth_moving_average(GRuint max_distance, GRfloat threshold = 0.5f) {
 			if (max_distance > 2) {
 				throw std::invalid_argument("You are trying to smooth over a distance greater than 2. That means smoothing over at least 125 voxels. This is not allowed");
 			}
@@ -1604,7 +1604,7 @@ namespace grapholon {
 
 			IndexVector to_check;
 
-			VoxelSkeleton* smoothed_skeleton = copy();
+			VoxelComplex* smoothed_skeleton = copy();
 
 			GRuint count(0);
 
@@ -1678,7 +1678,7 @@ namespace grapholon {
 
 
 		/** Returns a new skeleton of just the right size to contain the current skeleton */
-		VoxelSkeleton* fit_to_min_max() {
+		VoxelComplex* fit_to_min_max() {
 
 			GRuint x_min(width_), y_min(height_), z_min(slice_);
 			GRuint x_max(0), y_max(0), z_max(0);
@@ -1703,7 +1703,7 @@ namespace grapholon {
 			//std::cout << "max : " << x_max << " " << y_max << " " << z_max << std::endl;
 		//	std::cout << "min : " << x_min << " " << y_min << " " << z_min << std::endl;
 
-			VoxelSkeleton* fit_skeleton = new VoxelSkeleton(new_width, new_height, new_slice);
+			VoxelComplex* fit_skeleton = new VoxelComplex(new_width, new_height, new_slice);
 
 			for (auto voxel_id : true_voxels_) {
 				voxel_id_to_coordinates(voxel_id, x, y, z);
@@ -1716,8 +1716,8 @@ namespace grapholon {
 
 
 		/** returns an allocated copy of this skeleton*/
-		VoxelSkeleton* copy() {
-			VoxelSkeleton* skeleton_copy = new VoxelSkeleton(width_-2, height_-2, slice_-2);
+		VoxelComplex* copy() {
+			VoxelComplex* skeleton_copy = new VoxelComplex(width_-2, height_-2, slice_-2);
 			for (auto voxel_id : true_voxels_) {
 				skeleton_copy->set_voxel(voxel_id);
 			}
@@ -1725,9 +1725,15 @@ namespace grapholon {
 			return skeleton_copy;
 		}
 
-
+		/** Transforms this complex into a graph-like representation. 
+		The complex should have been skeletonized before calling this method.
+		The algorithm involved is an updated version of the algorithm presented in this thesis : https://tel.archives-ouvertes.fr/tel-01526456
+		\param original_voxel_set the original complex can be used to estimate the radius of each vertex in the final graph
+		\param spline_extraction_method various methods exist to turn a series of voxels into a smooth curve. See the documentation of DiscreteCurve for more details
+		\param smoothing_window_width a parameter used to smooth the edges' curves
+		\param curve_fitting_max_error a parameter used by the DiscreteCurve::CURVE_FITTING method*/
 		SkeletalGraph* extract_skeletal_graph(
-			VoxelSkeleton* original_voxel_set = nullptr,
+			VoxelComplex* original_voxel_set = nullptr,
 			DiscreteCurve::CONVERSION_METHOD spline_extraction_method = DiscreteCurve::CURVE_FITTING,
 			GRuint smoothing_window_width = 5,
 			GRfloat curve_fitting_max_error = 0.1f) {
@@ -1924,7 +1930,7 @@ namespace grapholon {
 						j++;
 					}
 					if (j < (GRuint)terminal_points_ids.size()) {
-						std::cout << "			added voxel " << terminal_points_ids[j] << " to the starting points" << std::endl;
+						//std::cout << "			added voxel " << terminal_points_ids[j] << " to the starting points" << std::endl;
 						starts.push_back(terminal_points_ids[j]);
 					}
 					else {
@@ -1933,12 +1939,13 @@ namespace grapholon {
 					}
 				}
 
+				/*
 				IF_DEBUG_DO(std::cout << "		list of starting points : " << std::endl);
 				for (auto start_id : starts) {
 					GRuint x, y, z;
 					voxel_id_to_coordinates(start_id, x, y, z);
 					IF_DEBUG_DO(std::cout << "			"<<start_id<<" : (" << x << " " << y << " " << z << ")" << std::endl);
-				}
+				}*/
 
 				IndexVector next_starts;
 				//for each starting points, we look for the next vertex
@@ -2092,10 +2099,10 @@ namespace grapholon {
 		/** Generates the voxel set described in [Bertrand 2016]. 
 		Used to compare the result of the various computations (e.g. critical clique detection)
 		with those given in the aforementioned paper*/
-		static VoxelSkeleton* BertrandStructure() {
+		static VoxelComplex* BertrandStructure() {
 			GRuint w(8), h(8), s(8);
 
-			VoxelSkeleton* skeleton = new VoxelSkeleton(w, h, s);
+			VoxelComplex* skeleton = new VoxelComplex(w, h, s);
 
 			skeleton->set_voxel(1, 0, 0);
 			skeleton->set_voxel(1, 1, 0);
@@ -2115,7 +2122,7 @@ namespace grapholon {
 		}
 
 		void generate_single_edge_skeleton() {
-			memset(voxels_, 0, nb_voxels_ * sizeof(SkeletonVoxel));
+			memset(voxels_, 0, nb_voxels_ * sizeof(Voxel));
 
 			//horizontal branch
 			GRuint start_x(width_ / 2), start_y(height_ / 4), start_z(slice_ / 2);
@@ -2131,7 +2138,7 @@ namespace grapholon {
 
 
 		void generate_sinusoidal_skeleton() {
-			memset(voxels_, 0, nb_voxels_ * sizeof(SkeletonVoxel));
+			memset(voxels_, 0, nb_voxels_ * sizeof(Voxel));
 
 			//horizontal branch
 			GRuint start_x(width_/4), start_y(height_/2), start_z(slice_/2);
@@ -2178,7 +2185,7 @@ namespace grapholon {
 			srand(seed);
 
 			//erasing voxel grid
-			memset(voxels_, 0, nb_voxels_ * sizeof(SkeletonVoxel));
+			memset(voxels_, 0, nb_voxels_ * sizeof(Voxel));
 
 			GRuint current_voxel_id = voxel_coordinates_to_id(width_/2, height_/2, slice_/2);
 
@@ -2226,7 +2233,7 @@ namespace grapholon {
 			srand(seed);
 
 			//erasing voxel grid
-			memset(voxels_, 0, nb_voxels_ * sizeof(SkeletonVoxel));
+			memset(voxels_, 0, nb_voxels_ * sizeof(Voxel));
 
 			//phase 1 : generate skeleton
 			GRuint x(width_/2), y(height_/2), z(slice_/2);
@@ -2288,7 +2295,7 @@ namespace grapholon {
 
 			srand(seed);
 			//erasing voxel grid
-			memset(voxels_, 0, nb_voxels_ * sizeof(SkeletonVoxel));
+			memset(voxels_, 0, nb_voxels_ * sizeof(Voxel));
 
 			GRuint nb_skeleton_voxels(nb_voxels / 10);
 			//phase 1 : generate skeleton
@@ -2384,7 +2391,7 @@ namespace grapholon {
 				std::cerr << "can't generate that structure mate" << std::endl;
 				exit(EXIT_FAILURE);
 			}
-			memset(voxels_, 0, nb_voxels_ * sizeof(SkeletonVoxel));
+			memset(voxels_, 0, nb_voxels_ * sizeof(Voxel));
 
 			GRuint x_start(10);
 			GRuint y_start(10);

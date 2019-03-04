@@ -38,6 +38,7 @@
 namespace grapholon {
 
 #define DEFAULT_VERTEX_RADIUS 1.f
+#define MAX_ALLOWED_VERTEX_RADIUS 10000.f
 
 	struct VertexProperties {
 		Vector3f position;
@@ -778,7 +779,7 @@ namespace grapholon {
 				Vector3f direction_to_previous_segment = (original_curve[segment_index].first - new_vertex_position).normalize();
 				Vector3f direction_to_next_segment     = (original_curve[segment_index + 1].first - new_vertex_position).normalize();
 				
-				GRfloat displacement_factor = 2.f;
+				GRfloat displacement_factor = 1.f;
 
 				Vector3f left_vertex_final_position = new_vertex_position +  direction_to_previous_segment * displacement_factor;
 				Vector3f right_vertex_final_position = new_vertex_position + direction_to_next_segment * displacement_factor;
@@ -1410,6 +1411,9 @@ shortest_path(source_edge_target, target_edge_target)
 							GRfloat radius = DEFAULT_VERTEX_RADIUS;
 							if (sscanf_s(line.c_str(), "<radius>%f</radius>", &radius) == 1) {
 								v_props.radius = radius;
+								if (radius > MAX_ALLOWED_VERTEX_RADIUS) {
+									radius = 1.f;
+								}
 							}
 							else {
 								std::cerr << "could not read radius from line : " << line << std::endl;
