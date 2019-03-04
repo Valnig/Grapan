@@ -25,7 +25,7 @@
 
 namespace grapholon {
 
-	class Spline {
+	/*class Spline {
 	private:
 		Vector3f start_pos_;
 		Vector3f start_tangent_;
@@ -35,17 +35,18 @@ namespace grapholon {
 	public:
 		Spline(Vector3f start_pos, Vector3f start_tangent, Vector3f end_pos, Vector3f end_tangent)
 			: start_pos_(start_pos), start_tangent_(start_tangent), end_pos_(end_pos), end_tangent_(end_tangent) {}
-	};
+	};*/
 
 	class Curve {
 
 	};
 
-	//todo : add radius
 	typedef std::pair<Vector3f, Vector3f> PointTangent;
 
 
-	//TODO : replace vector with std::list
+	/** A SplineCurve is a sequence of points and tangents defining a piece-wise spline... curve
+	It inherits from STL's vector<> template to allow to use all of vector's interface.
+	TODO : replace vector with std::list*/
 	class SplineCurve : public Curve, public std::vector<PointTangent> {
 	private:
 		/*std::vector<PointTangent> points_and_tangents_; single vector of pairs to ensure we have the same
@@ -102,6 +103,7 @@ namespace grapholon {
 			return len;
 		}
 
+		
 		PointTangent& after_front() {
 			return (*this)[1];
 		}
@@ -447,7 +449,7 @@ namespace grapholon {
 	};
 
 
-
+	/** Extension of SplineCurve that can be deformed with various methods*/
 	class DeformableSplineCurve : public SplineCurve {
 	public:
 
@@ -502,6 +504,7 @@ namespace grapholon {
 			set_original_shape();
 		}*/
 
+		/** Only keeps the points to get a discrete curve*/
 		DiscreteCurve to_discrete_curve() const {
 			DiscreteCurve discrete_curve;
 			for (auto point_tangent : *this) {
@@ -510,6 +513,7 @@ namespace grapholon {
 			return discrete_curve;
 		}
 
+		/** Used as reference when deforming*/
 		void set_original_shape() {
 			original_lengths_.clear();
 			original_points_.clear();

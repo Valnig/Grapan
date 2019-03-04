@@ -37,13 +37,7 @@ namespace grapholon {
 
 	public:
 
-		/*static Point_3 to_point3(Vector3f vec) {
-			return Point_3(vec.X(), vec.Y(), vec.Z());
-		}
 
-		static Vector3f to_vec3(Point_3 point) {
-			return Vector3f(point.x(), point.y(), point.z());
-		}*/
 
 		static Eigen::Vector3d to_eigen(Vector3f vec) {
 			return Eigen::Vector3d(vec.X(), vec.Y(), vec.Z());
@@ -53,6 +47,7 @@ namespace grapholon {
 			return Vector3f(eigen.x(), eigen.y(), eigen.z());
 		}
 
+		/** Deforms the curve in a As-Rigid-As-Possible manner using the Interactive Geometry Library (IGL)*/
 		static bool deform_curve(DeformableSplineCurve& in_curve, GRuint control_point_index, Vector3f target_position) {
 
 
