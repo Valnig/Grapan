@@ -32,7 +32,7 @@
 #include <fstream>
 
 #include "Curve.hpp"
-#include "VoxelSkeleton.hpp"
+#include "VoxelComplex.hpp"
 #include "CurveDeformer.hpp"
 
 
@@ -44,7 +44,7 @@ using namespace grapholon;
 void sand_box() {
 	GRuint w(100), h(100), s(100);
 
-	VoxelSkeleton skeleton(w, h, s);
+	VoxelComplex skeleton(w, h, s);
 
 	skeleton.generate_random_skeleton_like(5000, 15164);
 
@@ -64,7 +64,7 @@ void sand_box() {
 
 void BertandStructureTests(){
 
-	VoxelSkeleton* skeleton = VoxelSkeleton::BertrandStructure();
+	VoxelComplex* skeleton = VoxelComplex::BertrandStructure();
 	
 	std::cout << "Bertrand's structure has a critical 2-clique at 211-221: "
 		<< skeleton->is_critical_2_clique(2, 1, 1, Y_AXIS) << std::endl;
@@ -97,7 +97,7 @@ void BertandStructureTests(){
 
 
 void SimpleVoxelTests() {
-	VoxelSkeleton* skeleton = VoxelSkeleton::BertrandStructure();
+	VoxelComplex* skeleton = VoxelComplex::BertrandStructure();
 
 	for (GRuint i(0); i < skeleton->true_voxels().size(); i++) {
 		GRuint x, y, z;
@@ -114,7 +114,7 @@ void SimpleVoxelTests() {
 
 
 void K1Tests() {
-	VoxelSkeleton* skeleton = VoxelSkeleton::BertrandStructure();
+	VoxelComplex* skeleton = VoxelComplex::BertrandStructure();
 
 	bool matches = skeleton->clique_matches_K1_mask(
 		0, 0, 0, 
@@ -154,7 +154,7 @@ void K1Tests() {
 
 
 void CliquesInBertrandStructureTest() {
-	VoxelSkeleton* skeleton = VoxelSkeleton::BertrandStructure();
+	VoxelComplex* skeleton = VoxelComplex::BertrandStructure();
 
 	std::vector<std::vector<std::vector<GRuint>>> critical_cliques;
 	skeleton->extract_all_cliques(critical_cliques);
@@ -212,7 +212,7 @@ void CliquesInBertrandStructureTest() {
 
 
 void interiorBlockTest() {
-	VoxelSkeleton* skeleton = new VoxelSkeleton(8, 8, 8);
+	VoxelComplex* skeleton = new VoxelComplex(8, 8, 8);
 
 	for (GRuint i(0); i < 4; i++) {
 		for (GRuint j(0); j < 3; j++) {
@@ -278,7 +278,7 @@ void interiorBlockTest() {
 
 
 void blockCritical2Clique() {
-		VoxelSkeleton* skeleton = new VoxelSkeleton(8, 8, 8);
+		VoxelComplex* skeleton = new VoxelComplex(8, 8, 8);
 
 		for (GRuint i(0); i < 4; i++) {
 			for (GRuint j(0); j < 3; j++) {
@@ -310,7 +310,7 @@ void blockCritical2Clique() {
 }
 
 void BertrandStructureThinningTest() {
-	VoxelSkeleton* skeleton = VoxelSkeleton::BertrandStructure();
+	VoxelComplex* skeleton = VoxelComplex::BertrandStructure();
 
 	cout << "voxels before thinning : " <<skeleton->true_voxels().size()<< std::endl;
 
@@ -321,7 +321,7 @@ void BertrandStructureThinningTest() {
 	}
 
 
-	skeleton->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::ManualTipSkel);
+	skeleton->AsymmetricThinning(&VoxelComplex::SimpleSelection, &VoxelComplex::ManualTipSkel);
 
 	cout << "voxels after thinning : " << skeleton->true_voxels().size() << std::endl;
 
@@ -336,7 +336,7 @@ void BertrandStructureThinningTest() {
 
 
 void InteriorBlockThinningTest() {
-	VoxelSkeleton* skeleton = new VoxelSkeleton(8, 8, 8);
+	VoxelComplex* skeleton = new VoxelComplex(8, 8, 8);
 
 	for (GRuint i(0); i < 4; i++) {
 		for (GRuint j(0); j < 3; j++) {
@@ -355,7 +355,7 @@ void InteriorBlockThinningTest() {
 	}
 
 
-	skeleton->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::AlwaysFalseSkel);
+	skeleton->AsymmetricThinning(&VoxelComplex::SimpleSelection, &VoxelComplex::AlwaysFalseSkel);
 
 	cout << "voxels after thinning : " << skeleton->true_voxels().size() << std::endl;
 
@@ -370,11 +370,11 @@ void InteriorBlockThinningTest() {
 
 
 void SkeletonLikeThinningTest() {
-	VoxelSkeleton* skeleton = new VoxelSkeleton(100, 100, 100);
+	VoxelComplex* skeleton = new VoxelComplex(100, 100, 100);
 
 	skeleton->generate_random_skeleton_like(1000);
 
-	skeleton->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::AlwaysFalseSkel);
+	skeleton->AsymmetricThinning(&VoxelComplex::SimpleSelection, &VoxelComplex::AlwaysFalseSkel);
 
 	cout << "voxels after thinning : " << skeleton->true_voxels().size() << std::endl;
 
@@ -390,7 +390,7 @@ void SkeletonLikeThinningTest() {
 
 
 void predefSkeletonTest() {
-	VoxelSkeleton* skeleton = new VoxelSkeleton(98, 98, 98);
+	VoxelComplex* skeleton = new VoxelComplex(98, 98, 98);
 
 	skeleton->generate_random(10, 102);
 
@@ -402,7 +402,7 @@ void predefSkeletonTest() {
 		std::cout << "	( " << x << " " << y << " " << z << " )" << std::endl;
 	}
 
-	skeleton->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::AlwaysFalseSkel);
+	skeleton->AsymmetricThinning(&VoxelComplex::SimpleSelection, &VoxelComplex::AlwaysFalseSkel);
 
 	cout << "voxels after thinning : " << skeleton->true_voxels().size() << std::endl;
 
@@ -418,7 +418,7 @@ void predefSkeletonTest() {
 
 
 void nonCliqueConfigTest() {
-	VoxelSkeleton* skeleton = new VoxelSkeleton(98, 98, 98);
+	VoxelComplex* skeleton = new VoxelComplex(98, 98, 98);
 
 	skeleton->set_voxel(5, 5, 5);
 
@@ -447,7 +447,7 @@ void nonCliqueConfigTest() {
 	}
 
 
-	skeleton->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::OneIsthmusSkel);
+	skeleton->AsymmetricThinning(&VoxelComplex::SimpleSelection, &VoxelComplex::OneIsthmusSkel);
 
 	cout << "voxels after thinning : " << skeleton->true_voxels().size() << std::endl;
 
@@ -466,14 +466,14 @@ void find_wrong_skeletonization() {
 	GRuint nb_trials(100);
 
 	for (GRuint i(0); i < nb_trials; i++) {
-		VoxelSkeleton* skeleton = new VoxelSkeleton(98, 98, 98);
+		VoxelComplex* skeleton = new VoxelComplex(98, 98, 98);
 
 		GRuint seed(i);
 		skeleton->generate_random(1000, seed);
 
 		std::cout << "checking seed : " << seed << std::endl;
 
-		skeleton->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::OneIsthmusSkel);
+		skeleton->AsymmetricThinning(&VoxelComplex::SimpleSelection, &VoxelComplex::OneIsthmusSkel);
 
 		std::cout <<  " size : " << skeleton->true_voxels().size() << std::endl;
 		if (! skeleton->is_k_connected(skeleton->true_voxels(),0u)) {
@@ -502,10 +502,10 @@ void find_wrong_skeletonization() {
 
 
 void DoubleThinningTest() {
-	VoxelSkeleton* skeleton = new VoxelSkeleton(98, 98, 98);
+	VoxelComplex* skeleton = new VoxelComplex(98, 98, 98);
 
 	skeleton->generate_random(400, 1234);
-	skeleton->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::OneIsthmusSkel);
+	skeleton->AsymmetricThinning(&VoxelComplex::SimpleSelection, &VoxelComplex::OneIsthmusSkel);
 
 	std::cout << " size after first thinning : " << skeleton->true_voxels().size() << std::endl;
 	std::cout << "	connectedness : " << skeleton->is_k_connected(skeleton->true_voxels(), 0u) << std::endl;;
@@ -516,7 +516,7 @@ void DoubleThinningTest() {
 		//cout << "skeleton->set_voxel( " << x << "," << y << "," << z << ");" << endl;
 	}
 
-	skeleton->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::OneIsthmusSkel);
+	skeleton->AsymmetricThinning(&VoxelComplex::SimpleSelection, &VoxelComplex::OneIsthmusSkel);
 
 
 
@@ -528,16 +528,16 @@ void DoubleThinningTest() {
 
 
 void SubdivisionTest() {
-	VoxelSkeleton* skeleton = new VoxelSkeleton(100, 100, 100);
+	VoxelComplex* skeleton = new VoxelComplex(100, 100, 100);
 
 	//skeleton->generate_random(4);
 
 	skeleton->set_voxel(1, 1, 1);
 	
 
-	VoxelSkeleton* subdivided_skeleton1 = skeleton->subdivide(1);
-	VoxelSkeleton* subdivided_skeleton2 = skeleton->subdivide(2);
-	VoxelSkeleton* subdivided_skeleton3 = skeleton->subdivide(3);
+	VoxelComplex* subdivided_skeleton1 = skeleton->subdivide(1);
+	VoxelComplex* subdivided_skeleton2 = skeleton->subdivide(2);
+	VoxelComplex* subdivided_skeleton3 = skeleton->subdivide(3);
 
 	std::cout << " skeleton 1 : " << std::endl;
 	for (GRuint j(0); j < subdivided_skeleton1->true_voxels().size(); j++) {
@@ -594,7 +594,7 @@ void CreateSkeletalGraphAndAddStuff(){
 
 
 void ExtractGraphFromTestStructure2() {
-	VoxelSkeleton* skeleton = new VoxelSkeleton(10, 10, 10);
+	VoxelComplex* skeleton = new VoxelComplex(10, 10, 10);
 
 	skeleton->set_voxel(1, 1, 0);
 
@@ -632,7 +632,7 @@ void ExtractGraphFromTestStructure2() {
 }
 
 void ExtractGraphFromTestStructure3() {
-	VoxelSkeleton* skeleton = new VoxelSkeleton(10, 10, 10);
+	VoxelComplex* skeleton = new VoxelComplex(10, 10, 10);
 
 	skeleton->set_voxel(0, 7, 0);
 
@@ -682,7 +682,7 @@ void ExtractGraphFromTestStructure3() {
 }
 
 void ExtractGraphFromLoop() {
-	VoxelSkeleton* skeleton = new VoxelSkeleton(10, 10, 10);
+	VoxelComplex* skeleton = new VoxelComplex(10, 10, 10);
 
 	skeleton->set_voxel(0, 2, 0);
 
@@ -706,7 +706,7 @@ void ExtractGraphFromLoop() {
 }
 
 void ExtractGraphFromDoubleLoop() {
-	VoxelSkeleton* skeleton = new VoxelSkeleton(10, 10, 10);
+	VoxelComplex* skeleton = new VoxelComplex(10, 10, 10);
 
 	skeleton->set_voxel(0, 2, 0);
 
@@ -741,9 +741,9 @@ void ExtractGraphFromDoubleLoop() {
 }
 
 void ExtractGraphFromRandomSructure() {
-	VoxelSkeleton* skeleton = new VoxelSkeleton(100, 100, 100);
+	VoxelComplex* skeleton = new VoxelComplex(100, 100, 100);
 	skeleton->generate_random(400,1234);
-	skeleton->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::OneIsthmusSkel);
+	skeleton->AsymmetricThinning(&VoxelComplex::SimpleSelection, &VoxelComplex::OneIsthmusSkel);
 
 	std::cout << " voxel count after thinning : " << skeleton->set_voxel_count() << std::endl;
 
@@ -811,15 +811,15 @@ void MovingAverageDiscreteCurve2() {
 
 void movingAverageSmoothSkeletonTest() {
 
-	VoxelSkeleton skeleton(100, 100, 100);
+	VoxelComplex skeleton(100, 100, 100);
 
 	skeleton.generate_random_skeleton_like(1000, 1234);
 
-	VoxelSkeleton* subdivided1 = skeleton.subdivide(2);
-	VoxelSkeleton* subdivided2 = subdivided1->subdivide(2);
+	VoxelComplex* subdivided1 = skeleton.subdivide(2);
+	VoxelComplex* subdivided2 = subdivided1->subdivide(2);
 	cout << "count before : " << subdivided2->set_voxel_count() << endl;
 
-	VoxelSkeleton* smoothed = subdivided2->smooth_moving_average(0, 0.01f);
+	VoxelComplex* smoothed = subdivided2->smooth_moving_average(0, 0.01f);
 	cout << "count after smoothing with distance = 0 : " << smoothed->set_voxel_count() << endl;
 	
 	delete smoothed;
@@ -853,20 +853,20 @@ void movingAverageSmoothSkeletonTest() {
 
 
 void graphExtractionOnSkeletonLikeAndCurveFitting() {
-	VoxelSkeleton* base_skeleton = new VoxelSkeleton(100, 100, 100);
+	VoxelComplex* base_skeleton = new VoxelComplex(100, 100, 100);
 	base_skeleton->generate_random_skeleton_like(1000, 12134);
 	std::cout << "generated voxel count : " << base_skeleton->set_voxel_count() << std::endl;
 
-	VoxelSkeleton* fit_skeleton = base_skeleton->fit_to_min_max();
+	VoxelComplex* fit_skeleton = base_skeleton->fit_to_min_max();
 	std::cout << "fit skeleton dimensions : " << fit_skeleton->width() << " " << fit_skeleton->height() << " " << fit_skeleton->slice() << std::endl;
 
-	VoxelSkeleton* subdivided = fit_skeleton->subdivide(2);
+	VoxelComplex* subdivided = fit_skeleton->subdivide(2);
 	cout << "subdivided voxel count : " << subdivided->set_voxel_count() << std::endl;
 
-	VoxelSkeleton* smoothed = subdivided->smooth_moving_average(1, 0.5f);
+	VoxelComplex* smoothed = subdivided->smooth_moving_average(1, 0.5f);
 	cout << "smoothed voxel count : " << smoothed->set_voxel_count() << endl;
 
-	smoothed->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::OneIsthmusSkel);
+	smoothed->AsymmetricThinning(&VoxelComplex::SimpleSelection, &VoxelComplex::OneIsthmusSkel);
 	cout << "skeleton voxel count : " << smoothed->set_voxel_count() << endl;
 
 	SkeletalGraph* graph = smoothed->extract_skeletal_graph(nullptr, DiscreteCurve::CURVE_FITTING, 5, 1.f);
@@ -1328,7 +1328,7 @@ void modifiyGraphVertexPositions3Points() {
 
 void findCycle() {
 
-	VoxelSkeleton skeleton(100, 100, 100);
+	VoxelComplex skeleton(100, 100, 100);
 	skeleton.generate_artificial_simple_kissing(10);
 
 	SkeletalGraph* graph = skeleton.extract_skeletal_graph(nullptr,DiscreteCurve::START_AND_END, 1, 0);
@@ -1418,7 +1418,7 @@ void findCycles() {
 
 
 void findCycleInSinusoidal() {
-	VoxelSkeleton skeleton(100, 100, 100);
+	VoxelComplex skeleton(100, 100, 100);
 	skeleton.generate_sinusoidal_skeleton();
 
 	SkeletalGraph* graph = skeleton.extract_skeletal_graph(nullptr,DiscreteCurve::START_AND_END, 1, 0);
@@ -1481,12 +1481,12 @@ void CutSimpleEdge() {
 
 
 void SkeletonLikeThinningAndGraphExtraction() {
-	VoxelSkeleton* original_skeleton = new VoxelSkeleton(100, 100, 100);
+	VoxelComplex* original_skeleton = new VoxelComplex(100, 100, 100);
 	original_skeleton->generate_random(200);
 
-	VoxelSkeleton* skeleton = original_skeleton->copy();
+	VoxelComplex* skeleton = original_skeleton->copy();
 
-	skeleton->AsymmetricThinning(&VoxelSkeleton::SimpleSelection, &VoxelSkeleton::AlwaysFalseSkel);
+	skeleton->AsymmetricThinning(&VoxelComplex::SimpleSelection, &VoxelComplex::AlwaysFalseSkel);
 
 	cout << "voxel count before thinning : " << original_skeleton->set_voxel_count() << endl;
 	cout << "voxel count after thinning  : " << skeleton->set_voxel_count() << endl;

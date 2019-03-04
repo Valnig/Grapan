@@ -40,6 +40,9 @@ namespace grapholon {
 #define DEFAULT_VERTEX_RADIUS 1.f
 #define MAX_ALLOWED_VERTEX_RADIUS 10000.f
 
+	/** a simple structure containing all the data of a vertex.
+	NOTE : aside from position and radius, those are all used by some algorithm or another.
+	They should eventually be replaced by a Decorator pattern*/
 	struct VertexProperties {
 		Vector3f position;
 		GRfloat radius = 1.f;
@@ -78,22 +81,28 @@ namespace grapholon {
 
 	typedef std::pair<VertexDescriptor, EdgeVector> VertexNeighborhood;
 
-	/*struct GraphOperationResult {
-		std::vector<std::pair<grapholon::VertexDescriptor, grapholon::VertexProperties>> added_vertices;
-		std::vector<std::pair<grapholon::EdgeDescriptor, grapholon::EdgeProperties>> added_edges;
+	/** This struct should eventually replace all return types of all operations.
+	The goal is to inform the caller of the SkeletalGraph methods of what changed during the method call*/
+	struct GraphOperationResult {
+		std::vector<grapholon::VertexProperties> added_vertices;
+		std::vector<grapholon::EdgeProperties> added_edges;
 
-		std::vector<std::pair<grapholon::VertexDescriptor, grapholon::VertexProperties>> removed_vertices;
-		std::vector<std::pair<grapholon::EdgeDescriptor, grapholon::EdgeProperties>> removed_edges;
-	};*/
+		std::vector<grapholon::VertexProperties> removed_vertices;
+		std::vector<grapholon::EdgeProperties> removed_edges;
+	};
 
+
+	/** This class represents a graph as a set of vertices connected by edges.
+	In Graph Theory terms, it is a directed multi-graph.
+	The vertices and edges are identified by 'Descriptors' and their nature (position, shape, etc.) are stored in 'Properties'
+	It uses a BGL graph internally and can be seen as an interface augmenting a BGL graph with a bunch of functionalities.
+	It thus uses a lot of BGL conventions and the reader is encouraged to read BGL's documentation for more information*/
 	class SkeletalGraph {
 	private:
 
 		GRuint edge_spline_count_ = 0;
 
 		InternalBoostGraph internal_graph_;
-
-		/** Vertices and edges */
 
 	public:
 
@@ -183,6 +192,8 @@ namespace grapholon {
 			return boost::vertices(internal_graph_);
 		}
 
+		/** When updating a vertex's position, the connected edges are deformed to match their new end.
+		By default, the deformations are "As-Rigid-As-Possible" but other deformation methods could be used (e.g. spring-mass)*/
 		bool update_vertex_position(VertexDescriptor vertex, Vector3f new_position, bool maintain_shape_around_tip = true) {
 
 			if (vertex == InternalBoostGraph::null_vertex()
@@ -215,6 +226,7 @@ namespace grapholon {
 			return true;
 		}
 
+		/** DEPRECATED*/
 		bool extrude_tip_vertex(VertexDescriptor vertex, Vector3f new_position, GRfloat min_spline_length) {
 			//checking that this vertex is indeed a target and a tip (i.e. of in-degree 1 and out-degree 0)
 			if (boost::in_degree(vertex, internal_graph_) != 1 || boost::out_degree(vertex, internal_graph_) != 0) {
@@ -296,7 +308,7 @@ namespace grapholon {
 
 		}
 
-
+		/** Returns the list of successive vertices needed to visit from 'from' to reach 'to'*/
 		VertexVector shortest_path(VertexDescriptor from, VertexDescriptor to) {
 
 			if (from == to) {
@@ -441,7 +453,7 @@ namespace grapholon {
 			return add_edge(from, to, properties);
 		}
 
-
+		/** If either vertex connected by the edge is of degree 0 after removal, they are also removed (and their descriptor is returned by this method)*/
 		VertexPair remove_edge(EdgeDescriptor edge) {
 
 			VertexPair vertices(InternalBoostGraph::null_vertex(), InternalBoostGraph::null_vertex());
@@ -495,6 +507,8 @@ namespace grapholon {
 			return internal_graph_[edge];
 		}
 
+		/** Returns whether or not an edge exists between to vertices and if it is in this direction.
+		i.e. if from->to exists, the first boolean is true and if to->from exists, then it's false.*/
 		std::pair<std::pair<EdgeVector, bool>, bool> edge_exists(VertexDescriptor from, VertexDescriptor to) {
 			if (from == InternalBoostGraph::null_vertex() || to == InternalBoostGraph::null_vertex()) {
 				return {{{},false }, false};
@@ -552,6 +566,7 @@ namespace grapholon {
 		}
 
 		//TODO : maybe better
+		/**Does some interpolation between the end vertices's radii to compute the radius of an edge segment*/
 		GRfloat get_edge_radius(EdgeDescriptor edge, GRuint segment_index) const {
 
 			GRfloat r1 = get_vertex(boost::source(edge, internal_graph_)).radius;
@@ -1004,7 +1019,7 @@ namespace grapholon {
 			return new_curve;
 		}
 
-
+		/** Finds the shortest path between two edges. This requires to find the shortest path between each end vertex of each edge, so 4 paths in total.*/
 		VertexVector shortest_path(EdgeDescriptor source_edge, EdgeDescriptor target_edge) {
 			VertexDescriptor source_edge_source = boost::source(source_edge, internal_graph_);
 			VertexDescriptor source_edge_target = boost::target(source_edge, internal_graph_);

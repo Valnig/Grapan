@@ -33,10 +33,10 @@
     <ClInclude Include="..\Include\Vector.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Include\VoxelSkeleton.hpp">
+    <ClInclude Include="..\Include\CurveDeformer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Include\CurveDeformer.hpp">
+    <ClInclude Include="..\Include\VoxelComplex.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
